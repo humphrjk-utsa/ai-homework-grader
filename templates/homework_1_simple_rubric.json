@@ -1,0 +1,30 @@
+{
+    "environment_setup": {
+        "points": 5.5,
+        "description": "R/RStudio environment setup and working directory management"
+    },
+    "package_management": {
+        "points": 5.5, 
+        "description": "Correct loading of tidyverse and readxl packages"
+    },
+    "data_import": {
+        "points": 7.5,
+        "description": "Successful import of all required datasets (sales_df, ratings_df, comments_df)"
+    },
+    "data_inspection": {
+        "points": 4,
+        "description": "Use of head(), str(), summary() functions for data exploration"
+    },
+    "reflection_questions": {
+        "points": 7.5,
+        "description": "Understanding of data types, import process, and data quality concepts"
+    },
+    "code_quality": {
+        "points": 3.75,
+        "description": "Comments, organization, and R best practices"
+    },
+    "data_interpretation": {
+        "points": 3.75,
+        "description": "Analysis and interpretation of initial data inspection results"
+    }
+}

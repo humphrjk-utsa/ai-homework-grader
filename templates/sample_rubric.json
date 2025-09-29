@@ -1,0 +1,22 @@
+{
+    "code_execution": {
+        "points": 25,
+        "description": "Code runs without errors and produces expected outputs"
+    },
+    "code_quality": {
+        "points": 20,
+        "description": "Clean, readable code with appropriate comments and variable names"
+    },
+    "correct_results": {
+        "points": 30,
+        "description": "Calculations and outputs are mathematically correct"
+    },
+    "completeness": {
+        "points": 15,
+        "description": "All required exercises are completed"
+    },
+    "analysis_interpretation": {
+        "points": 10,
+        "description": "Thoughtful analysis and interpretation of results"
+    }
+}

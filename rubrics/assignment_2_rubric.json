@@ -1,0 +1,391 @@
+{
+  "assignment_info": {
+    "title": "Homework 2: Data Cleaning - Handling Missing Values and Outliers",
+    "total_points": 37.5,
+    "learning_objectives": [
+      "Identify and quantify missing values in datasets",
+      "Apply appropriate missing value treatment strategies (removal vs. imputation)",
+      "Detect outliers using statistical methods (IQR, boxplots)",
+      "Compare different data cleaning approaches and their business implications"
+    ],
+    "key_skills": [
+      "Missing value detection (is.na(), complete.cases())",
+      "Missing value treatment (mean imputation, mode imputation)",
+      "Outlier detection (IQR method, visualization)",
+      "Data quality comparison and documentation"
+    ]
+  },
+  "grading_strategy": {
+    "automated_testing": 22.5,
+    "manual_review": 15
+  },
+  "rubric_elements": {
+    "data_import_assessment": {
+      "max_points": 7.5,
+      "weight": 7.5,
+      "category": "automated",
+      "description": "Successful data import and initial assessment",
+      "criteria": {
+        "excellent": {
+          "points": "6.8-7.5",
+          "description": "Successfully imports messy dataset, correctly identifies dimensions, displays structure and summary statistics"
+        },
+        "good": {
+          "points": "5.3-6.7",
+          "description": "Imports data with minor issues, basic assessment completed"
+        },
+        "satisfactory": {
+          "points": "3.8-5.2",
+          "description": "Data imported but assessment incomplete or contains errors"
+        },
+        "needs_improvement": {
+          "points": "0-3.7",
+          "description": "Failed to import data or major errors in assessment"
+        }
+      },
+      "automated_checks": [
+        "Dataset loaded successfully",
+        "Correct dimensions identified (200 rows, 6 columns)",
+        "Column names correctly displayed",
+        "Structure and summary functions executed"
+      ]
+    },
+    "missing_value_identification": {
+      "max_points": 5,
+      "weight": 5,
+      "category": "automated",
+      "description": "Accurate identification and quantification of missing values",
+      "criteria": {
+        "excellent": {
+          "points": "4.5-5.0",
+          "description": "Correctly calculates total missing values, missing per column, and incomplete rows using appropriate R functions"
+        },
+        "good": {
+          "points": "3.5-4.4",
+          "description": "Most missing value calculations correct with minor errors"
+        },
+        "satisfactory": {
+          "points": "2.5-3.4",
+          "description": "Basic missing value identification completed but some calculations incorrect"
+        },
+        "needs_improvement": {
+          "points": "0-2.4",
+          "description": "Failed to properly identify missing values or major calculation errors"
+        }
+      },
+      "automated_checks": [
+        "total_missing variable correctly calculated",
+        "missing_per_column uses colSums(is.na())",
+        "incomplete_rows uses complete.cases()",
+        "Results are numeric and reasonable"
+      ]
+    },
+    "missing_value_treatment": {
+      "max_points": 5,
+      "weight": 5,
+      "category": "automated",
+      "description": "Implementation of both removal and imputation strategies",
+      "criteria": {
+        "excellent": {
+          "points": "4.5-5.0",
+          "description": "Successfully implements both removal and imputation approaches, creates mode function, applies appropriate imputation methods"
+        },
+        "good": {
+          "points": "3.5-4.4",
+          "description": "Both approaches implemented with minor issues in execution"
+        },
+        "satisfactory": {
+          "points": "2.5-3.4",
+          "description": "One approach fully implemented, other partially completed"
+        },
+        "needs_improvement": {
+          "points": "0-2.4",
+          "description": "Failed to implement missing value treatment strategies properly"
+        }
+      },
+      "automated_checks": [
+        "sales_removed_na dataset created using complete.cases()",
+        "get_mode function correctly implemented",
+        "Customer_Name imputed with mode",
+        "Quantity imputed with median",
+        "No missing values remain after imputation"
+      ]
+    },
+    "outlier_detection": {
+      "max_points": 5,
+      "weight": 5,
+      "category": "automated",
+      "description": "Statistical outlier detection using IQR method",
+      "criteria": {
+        "excellent": {
+          "points": "4.5-5.0",
+          "description": "Correctly calculates quartiles, IQR, thresholds, and identifies outliers using statistical methods"
+        },
+        "good": {
+          "points": "3.5-4.4",
+          "description": "Most outlier detection steps correct with minor calculation errors"
+        },
+        "satisfactory": {
+          "points": "2.5-3.4",
+          "description": "Basic outlier detection implemented but some steps incorrect"
+        },
+        "needs_improvement": {
+          "points": "0-2.4",
+          "description": "Failed to properly implement IQR outlier detection method"
+        }
+      },
+      "automated_checks": [
+        "Q1_sales and Q3_sales correctly calculated using quantile()",
+        "IQR_sales = Q3_sales - Q1_sales",
+        "Thresholds calculated using 1.5 * IQR rule",
+        "Outliers correctly identified using threshold conditions",
+        "Boxplot created using ggplot2"
+      ]
+    },
+    "outlier_treatment": {
+      "max_points": 2.5,
+      "weight": 2.5,
+      "category": "automated",
+      "description": "Implementation of outlier removal and capping strategies",
+      "criteria": {
+        "excellent": {
+          "points": "2.25-2.5",
+          "description": "Successfully implements both removal and capping approaches with correct logic"
+        },
+        "good": {
+          "points": "1.75-2.24",
+          "description": "Both approaches implemented with minor issues"
+        },
+        "satisfactory": {
+          "points": "1.25-1.74",
+          "description": "One approach fully implemented, other partially completed"
+        },
+        "needs_improvement": {
+          "points": "0-1.24",
+          "description": "Failed to implement outlier treatment strategies"
+        }
+      },
+      "automated_checks": [
+        "sales_outliers_removed created using filter() or subset()",
+        "sales_outliers_capped created with ifelse() logic",
+        "Capping correctly applied to extreme values",
+        "No outliers remain after capping",
+        "Datasets have expected dimensions"
+      ]
+    },
+    "methodology_justification": {
+      "max_points": 5,
+      "weight": 5,
+      "category": "manual",
+      "description": "Quality of reasoning for chosen cleaning approaches and final dataset selection",
+      "criteria": {
+        "excellent": {
+          "points": "4.5-5.0",
+          "description": "Provides clear, well-reasoned justification for cleaning decisions with strong business context and consideration of trade-offs"
+        },
+        "good": {
+          "points": "3.5-4.4",
+          "description": "Good justification with some business context, minor gaps in reasoning"
+        },
+        "satisfactory": {
+          "points": "2.5-3.4",
+          "description": "Basic justification provided but lacks depth or business context"
+        },
+        "needs_improvement": {
+          "points": "0-2.4",
+          "description": "Poor or missing justification, no clear reasoning for decisions"
+        }
+      },
+      "evaluation_criteria": [
+        "Clear rationale for final dataset choice",
+        "Consideration of sample size vs. data quality trade-offs",
+        "Business impact assessment",
+        "Understanding of when to use different approaches",
+        "Acknowledgment of limitations and assumptions"
+      ]
+    },
+    "reflection_questions": {
+      "max_points": 5,
+      "weight": 5,
+      "category": "manual",
+      "description": "Understanding of business implications and ethical considerations",
+      "criteria": {
+        "excellent": {
+          "points": "4.5-5.0",
+          "description": "Demonstrates deep understanding of business implications, provides specific examples, addresses ethical considerations thoughtfully"
+        },
+        "good": {
+          "points": "3.5-4.4",
+          "description": "Good understanding with some specific examples, addresses most questions adequately"
+        },
+        "satisfactory": {
+          "points": "2.5-3.4",
+          "description": "Basic understanding demonstrated, answers are generic or lack depth"
+        },
+        "needs_improvement": {
+          "points": "0-2.4",
+          "description": "Poor understanding, missing answers, or incorrect responses"
+        }
+      },
+      "questions_assessed": [
+        "Missing value strategy scenarios with specific business examples",
+        "Outlier interpretation and treatment in business context",
+        "Impact on business analytics tasks (averages, forecasting, etc.)",
+        "Ethical implications and transparency considerations"
+      ]
+    },
+    "code_documentation": {
+      "max_points": 2.5,
+      "weight": 2.5,
+      "category": "manual",
+      "description": "Clear explanation of cleaning decisions and code quality",
+      "criteria": {
+        "excellent": {
+          "points": "2.25-2.5",
+          "description": "Code is well-documented, cleaning decisions clearly explained, professional presentation"
+        },
+        "good": {
+          "points": "1.75-2.24",
+          "description": "Good documentation with minor gaps in explanation"
+        },
+        "satisfactory": {
+          "points": "1.25-1.74",
+          "description": "Basic documentation, some cleaning decisions explained"
+        },
+        "needs_improvement": {
+          "points": "0-1.24",
+          "description": "Poor or missing documentation, unclear explanations"
+        }
+      },
+      "evaluation_criteria": [
+        "Code comments explain complex operations",
+        "Cleaning decisions are documented",
+        "Data quality observations are detailed",
+        "Comparison summary is complete and accurate",
+        "Professional presentation and organization"
+      ]
+    }
+  },
+  "automated_validation_tests": {
+    "data_structures": [
+      {
+        "test": "messy_sales dataset exists and has correct dimensions",
+        "expected": "200 rows, 6 columns",
+        "points": 2
+      },
+      {
+        "test": "sales_removed_na dataset created",
+        "expected": "Fewer rows than original, no missing values",
+        "points": 3
+      },
+      {
+        "test": "sales_imputed dataset created",
+        "expected": "Same rows as original, no missing values",
+        "points": 3
+      },
+      {
+        "test": "sales_outliers_removed dataset created",
+        "expected": "Fewer rows than imputed dataset",
+        "points": 2
+      },
+      {
+        "test": "sales_outliers_capped dataset created",
+        "expected": "Same rows as imputed, values within thresholds",
+        "points": 3
+      }
+    ],
+    "function_implementations": [
+      {
+        "test": "get_mode function correctly implemented",
+        "expected": "Returns most frequent value, handles NA values",
+        "points": 3
+      },
+      {
+        "test": "IQR calculations correct",
+        "expected": "Q1, Q3, IQR, thresholds mathematically correct",
+        "points": 4
+      },
+      {
+        "test": "Outlier identification logic correct",
+        "expected": "Uses 1.5 * IQR rule correctly",
+        "points": 3
+      }
+    ],
+    "data_quality_metrics": [
+      {
+        "test": "Missing value counts calculated",
+        "expected": "total_missing, missing_per_column, incomplete_rows",
+        "points": 3
+      },
+      {
+        "test": "Comparison summary created",
+        "expected": "Data frame with before/after metrics",
+        "points": 4
+      },
+      {
+        "test": "Final dataset selection made",
+        "expected": "final_dataset variable assigned",
+        "points": 2
+      }
+    ]
+  },
+  "submission_requirements": {
+    "file_format": "Jupyter notebook (.ipynb)",
+    "naming_convention": "LastName_FirstName_homework_lesson_2_data_cleaning.ipynb",
+    "submission_method": "Canvas upload (after committing to GitHub)",
+    "required_elements": [
+      "All TODO sections completed with working code",
+      "All reflection questions answered thoroughly",
+      "Student name and date filled in header",
+      "All cells executed with visible output",
+      "Final dataset choice clearly indicated and justified"
+    ]
+  },
+  "common_issues_deductions": {
+    "syntax_errors": {
+      "deduction": 5,
+      "description": "Code contains syntax errors that prevent execution"
+    },
+    "incomplete_todo_sections": {
+      "deduction": 3,
+      "description": "Per TODO section left incomplete or with placeholder code"
+    },
+    "missing_justification": {
+      "deduction": 10,
+      "description": "No justification provided for final dataset choice"
+    },
+    "incorrect_statistical_methods": {
+      "deduction": 8,
+      "description": "Incorrect implementation of IQR method or imputation"
+    },
+    "missing_reflection_answers": {
+      "deduction": 5,
+      "description": "Per reflection question left unanswered or inadequately addressed"
+    },
+    "poor_code_organization": {
+      "deduction": 3,
+      "description": "Code is disorganized, lacks comments, or difficult to follow"
+    }
+  },
+  "bonus_opportunities": {
+    "advanced_visualization": {
+      "points": 2,
+      "description": "Creates additional visualizations beyond required boxplot"
+    },
+    "sensitivity_analysis": {
+      "points": 3,
+      "description": "Tests multiple outlier detection thresholds and compares results"
+    },
+    "business_case_study": {
+      "points": 2,
+      "description": "Provides detailed real-world business scenario analysis"
+    }
+  },
+  "grade_scale": {
+    "A": "33.75-37.5 points (90-100%)",
+    "B": "30.0-33.74 points (80-89%)",
+    "C": "26.25-29.99 points (70-79%)",
+    "D": "22.5-26.24 points (60-69%)",
+    "F": "Below 22.5 points (Below 60%)"
+  }
+}
