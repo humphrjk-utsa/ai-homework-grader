@@ -12,6 +12,8 @@ import concurrent.futures
 import os
 from typing import Dict, List, Any, Optional
 from prompt_manager import PromptManager
+from notebook_validation import NotebookValidator
+from score_validator import validate_and_adjust_scores
 
 class BusinessAnalyticsGrader:
     """Grader optimized for business analytics students (first-year level)"""
@@ -27,8 +29,9 @@ class BusinessAnalyticsGrader:
         self.ollama_url = ollama_url
         self.api_url = f"{ollama_url}/api/generate"
         
-        # Initialize prompt manager
+        # Initialize prompt manager and validator
         self.prompt_manager = PromptManager()
+        self.validator = NotebookValidator()
         
         # Check for distributed MLX system
         self.use_distributed_mlx = False
@@ -155,15 +158,33 @@ class BusinessAnalyticsGrader:
     
     def grade_submission(self, 
                         student_code: str,
-                        student_markdown: str, 
-                        solution_code: str,
-                        assignment_info: Dict,
-                        rubric_elements: Dict) -> Dict[str, Any]:
+                        student_markdown: str,
+                        template_code: str = "",
+                        solution_code: str = "",
+                        assignment_info: Dict = None,
+                        rubric_elements: Dict = None,
+                        notebook_path: str = None) -> Dict[str, Any]:
         """Grade submission with business analytics context"""
         
         start_time = time.time()
         
         print("🎓 Starting Business Analytics Grading...")
+        
+        # Validate notebook first if path provided
+        validation_results = None
+        validation_penalty = 0
+        validation_feedback = ""
+        
+        if notebook_path:
+            print("🔍 Validating notebook submission...")
+            validation_results = self.validator.validate_notebook(notebook_path)
+            validation_penalty = validation_results['total_penalty_percent']
+            validation_feedback = self.validator.generate_validation_feedback(validation_results)
+            
+            if validation_penalty > 0:
+                print(f"⚠️ Validation issues found: {validation_penalty}% penalty")
+                for issue in validation_results['issues']:
+                    print(f"   - {issue}")
         
         # Check prerequisites
         if self.use_distributed_mlx:
@@ -191,6 +212,7 @@ class BusinessAnalyticsGrader:
                 assignment_name,
                 "code_analysis",
                 assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
+                template_code=template_code if template_code else "# No template provided",
                 student_code=student_code,
                 solution_code=solution_code
             )
@@ -233,7 +255,7 @@ class BusinessAnalyticsGrader:
             # Submit both tasks simultaneously
             future_code = self.executor.submit(
                 self._execute_business_code_analysis, 
-                student_code, solution_code, assignment_info, rubric_elements
+                student_code, template_code, solution_code, assignment_info, rubric_elements
             )
             
             future_feedback = self.executor.submit(
@@ -255,8 +277,27 @@ class BusinessAnalyticsGrader:
         if sequential_time > 0:
             self.grading_stats['parallel_efficiency'] = sequential_time / parallel_time
         
-        # Merge results with business context
-        final_result = self._merge_business_results(code_analysis, comprehensive_feedback, assignment_info)
+        # Validate and adjust scores if AI was too generous
+        print("="*80)
+        print("🔍 ABOUT TO CALL VALIDATOR")
+        print("="*80)
+        print(f"🔍 Before validation: technical_score={code_analysis.get('technical_score', 0)}, overall_score={comprehensive_feedback.get('overall_score', 0)}")
+        code_analysis, comprehensive_feedback = validate_and_adjust_scores(
+            code_analysis, comprehensive_feedback, student_code, template_code
+        )
+        print(f"🔍 After validation: technical_score={code_analysis.get('technical_score', 0)}, overall_score={comprehensive_feedback.get('overall_score', 0)}")
+        
+        # Merge results with business context and apply validation penalty
+        final_result = self._merge_business_results(code_analysis, comprehensive_feedback, assignment_info, validation_penalty)
+        
+        # Add validation info to result
+        if validation_results:
+            final_result['validation'] = {
+                'penalty_percent': validation_penalty,
+                'issues': validation_results.get('issues', []),
+                'warnings': validation_results.get('warnings', []),
+                'feedback': validation_feedback
+            }
         
         total_time = time.time() - start_time
         self.grading_stats['total_time'] = total_time
@@ -275,15 +316,22 @@ class BusinessAnalyticsGrader:
         
         return final_result
     
-    def _execute_business_code_analysis(self, student_code: str, solution_code: str,
+    def _execute_business_code_analysis(self, student_code: str, template_code: str, solution_code: str,
                                        assignment_info: Dict, rubric_elements: Dict) -> Dict[str, Any]:
         """Execute code analysis with business analytics context"""
         start_time = time.time()
         
         print(f"🔧 [CODE] Analyzing with business context...")
         
-        prompt = self._build_business_code_prompt(
-            student_code, solution_code, assignment_info, rubric_elements
+        # Use prompt manager for consistency (single source of truth)
+        assignment_name = assignment_info.get('name', assignment_info.get('title', 'Unknown'))
+        prompt = self.prompt_manager.get_combined_prompt(
+            assignment_name,
+            "code_analysis",
+            assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
+            template_code=template_code if template_code else "# No template provided",
+            student_code=student_code,
+            solution_code=solution_code
         )
         
         response = self.generate_with_ollama(self.code_model, prompt, max_tokens=1500)
@@ -305,8 +353,14 @@ class BusinessAnalyticsGrader:
         
         print(f"📝 [FEEDBACK] Generating business-focused feedback...")
         
-        prompt = self._build_business_feedback_prompt(
-            student_code, student_markdown, assignment_info, rubric_elements
+        # Use prompt manager for consistency (single source of truth)
+        assignment_name = assignment_info.get('name', assignment_info.get('title', 'Unknown'))
+        prompt = self.prompt_manager.get_combined_prompt(
+            assignment_name,
+            "feedback",
+            assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
+            student_markdown=student_markdown,
+            student_code_summary=student_code[:800]
         )
         
         response = self.generate_with_ollama(self.feedback_model, prompt, max_tokens=2000)
@@ -321,174 +375,9 @@ class BusinessAnalyticsGrader:
         
         return self._parse_business_feedback_response(response)
     
-    def _build_business_code_prompt(self, student_code: str, solution_code: str,
-                                   assignment_info: Dict, rubric_elements: Dict) -> str:
-        """Build prompt for business analytics code analysis"""
-        
-        prompt = f"""You are a business analytics instructor evaluating a first-year student's R programming assignment. Provide professional, constructive feedback appropriate for an introductory business analytics course.
-
-ASSIGNMENT CONTEXT:
-- Course: {assignment_info.get('title', 'Business Analytics Assignment')}
-- Student Level: First-year business analytics student
-- Programming Experience: Introductory R programming
-- Evaluation Focus: Functional code, business application, learning progress
-
-STUDENT SUBMISSION:
-```r
-{student_code}
-```
-
-REFERENCE SOLUTION (ONE VALID APPROACH):
-```r
-{solution_code}
-```
-
-CRITICAL EVALUATION GUIDELINES:
-⚠️ ACCEPT ALTERNATIVE VALID APPROACHES - The reference solution is ONE way, not THE ONLY way!
-
-FLEXIBILITY RULES:
-1. **Multiple Valid Methods**: Accept different functions that achieve the same result
-   - Example: read.csv() vs read_csv() vs fread() - ALL VALID
-   - Example: subset() vs filter() vs [ ] indexing - ALL VALID
-   - Example: base R vs tidyverse - BOTH VALID
-
-2. **Different but Correct Logic**: If student's approach produces correct results, give full credit
-   - Different order of operations (if result is correct)
-   - Different variable names
-   - Different but equivalent statistical methods
-
-3. **Output Verification**: Compare OUTPUTS, not just code syntax
-   - Does the student's output match expected results?
-   - Are the calculations mathematically correct?
-   - Does the visualization convey the right information?
-
-4. **Warnings vs Errors - CRITICAL DISTINCTION**:
-   - ⚠️ **WARNINGS ARE NOT ERRORS** - Code with warnings can still be fully correct!
-   - Common R warnings that are ACCEPTABLE:
-     * "package was built under R version..." - IGNORE, code works fine
-     * "Conflicts with tidy packages" - IGNORE, normal tidyverse behavior
-     * "NAs introduced by coercion" - May be intentional data cleaning
-     * "Deprecated function" - Code still works, just uses older syntax
-   - **Only penalize actual ERRORS** that prevent code execution
-   - If code produces correct output despite warnings, give FULL CREDIT
-   - Look for the actual results AFTER the warning messages
-
-5. **Partial Credit**: Give credit for partially working solutions
-   - Code that runs with warnings but correct output: 95-100% (warnings are OK!)
-   - Code that runs but has minor issues: 85-95%
-   - Correct logic with syntax errors: 75-85%
-   - Good attempt with conceptual understanding: 70-80%
-
-EVALUATION CRITERIA (Compare outputs, not just code):
-1. Code Functionality: Does the code execute and produce results?
-2. Correctness: Do outputs match expected results (even if method differs)?
-3. Library Usage: Appropriate use of R packages (any valid package)
-4. Data Operations: Successful data loading, exploration, and cleaning
-5. Statistical Analysis: Correct calculations (method may vary)
-6. Visualization: Appropriate charts (style may vary)
-7. Business Application: Code serves the analytical objectives
-
-Provide professional assessment in JSON format. For students who complete requirements with working code (even if different from solution), start with high scores (90+):
-
-```json
-{{
-    "technical_score": <score 90-100 for complete working code>,
-    "syntax_correctness": <score 95-100 if code runs without errors>,
-    "logic_correctness": <score 90-100 for reasonable analytical approach>,
-    "business_relevance": <score 90-100 if analysis serves business objectives>,
-    "effort_and_completion": <score 95-100 for completing all requirements>,
-    "code_strengths": [
-        "Specific technical accomplishments demonstrated in the code"
-    ],
-    "code_suggestions": [
-        "Specific code improvements with examples where applicable"
-    ],
-    "technical_observations": [
-        "Professional observations about the student's programming approach"
-    ]
-}}
-```
-
-Maintain professional academic standards while recognizing this is introductory-level work."""
-        
-        return prompt
-    
-    def _build_business_feedback_prompt(self, student_code: str, student_markdown: str,
-                                       assignment_info: Dict, rubric_elements: Dict) -> str:
-        """Build prompt for business analytics feedback with focus on reflection questions"""
-        
-        prompt = f"""You are a business analytics instructor providing comprehensive feedback on a first-year student's assignment. Pay special attention to reflection questions and end-of-assignment questions, as these demonstrate critical thinking and learning.
-
-ASSIGNMENT DETAILS:
-- Course: {assignment_info.get('title', 'Business Analytics Assignment')}
-- Student Level: First-year business analytics program
-- Context: Introductory data analysis and R programming
-
-STUDENT ANALYSIS REPORT (Look for reflection questions and responses):
-{student_markdown}
-
-CODE IMPLEMENTATION SUMMARY:
-{student_code[:500]}...
-
-⚠️ IMPORTANT: Accept alternative valid approaches in student work!
-- Students may use different (but correct) methods than the reference solution
-- Focus on whether their reasoning is sound, not whether it matches a specific approach
-- Give full credit for different but valid analytical methods
-
-EVALUATION FRAMEWORK - PRIORITIZE REFLECTION COMPONENTS:
-1. Reflection Questions: Look for responses to reflection questions (may be in brackets [] or following questions)
-2. Critical Thinking: Evidence of thoughtful consideration of the analysis process
-3. Learning Demonstration: Shows understanding of concepts and ability to articulate learning
-4. Business Problem Framing: Clear identification and context of analytical objectives
-5. Methodology Reflection: Student's understanding of their analytical choices (accept alternative valid methods)
-6. Data Interpretation: Accurate analysis and meaningful insights with reflection on limitations
-7. Communication: Professional presentation and clear articulation of findings
-8. Business Application: Practical relevance and actionable recommendations
-
-SPECIAL ATTENTION TO:
-- Reflection questions and their answers (often in brackets or following question prompts)
-- Student's self-assessment of their work
-- Discussion of challenges encountered and how they were addressed
-- Evidence of learning and growth mindset
-- Critical evaluation of their own methodology and results
-
-Provide comprehensive academic feedback in JSON format. For students who complete all requirements with good written analysis AND thoughtful reflections, start with high scores (92+):
-
-```json
-{{
-    "overall_score": <score 92-100 for complete submissions with good analysis and reflections>,
-    "business_understanding": <score 90-100 for demonstrating business thinking>,
-    "communication_clarity": <score 90-100 for clear, well-structured reports>,
-    "data_interpretation": <score 85-100 for reasonable conclusions from data>,
-    "methodology_appropriateness": <score 90-100 for appropriate analytical approach>,
-    "reflection_quality": <score 85-100 for thoughtful responses to reflection questions>,
-    "detailed_feedback": {{
-        "reflection_assessment": [
-            "Evaluation of student's reflection questions and critical thinking"
-        ],
-        "analytical_strengths": [
-            "Specific analytical accomplishments and strong points in the work"
-        ],
-        "business_application": [
-            "Evidence of business thinking and practical application"
-        ],
-        "learning_demonstration": [
-            "Evidence of student learning and understanding shown through reflections"
-        ],
-        "areas_for_development": [
-            "Specific areas where the student can improve, with constructive guidance"
-        ],
-        "recommendations": [
-            "Specific suggestions for enhancing future analytical work and reflection"
-        ]
-    }},
-    "instructor_comments": "Provide professional, constructive feedback that acknowledges the student's reflective thinking and current level while providing clear guidance for continued development. Emphasize the quality of their reflection and critical thinking."
-}}
-```
-
-Evaluate the work professionally, giving significant weight to reflection components and evidence of learning."""
-        
-        return prompt
+    # NOTE: Prompts are now managed by PromptManager (single source of truth)
+    # See prompt_templates/general_code_analysis_prompt.txt and general_feedback_prompt.txt
+    # These can be customized per assignment in the Prompt Manager UI
     
     def _parse_business_code_response(self, response: str) -> Dict[str, Any]:
         """Parse business-focused code analysis response"""
@@ -497,29 +386,17 @@ Evaluate the work professionally, giving significant weight to reflection compon
             if "```json" in response:
                 json_part = response.split("```json")[1].split("```")[0].strip()
                 result = json.loads(json_part)
-                
-                # Ensure minimum scores for business students who complete work
-                result["technical_score"] = max(result.get("technical_score", 90), 90)
-                result["syntax_correctness"] = max(result.get("syntax_correctness", 95), 95)
-                result["logic_correctness"] = max(result.get("logic_correctness", 90), 90)
-                
                 return result
             elif "{" in response and "}" in response:
                 start = response.find("{")
                 end = response.rfind("}") + 1
                 json_part = response[start:end]
                 result = json.loads(json_part)
-                
-                # Ensure minimum scores
-                result["technical_score"] = max(result.get("technical_score", 90), 90)
-                result["syntax_correctness"] = max(result.get("syntax_correctness", 95), 95)
-                result["logic_correctness"] = max(result.get("logic_correctness", 90), 90)
-                
                 return result
             else:
-                return self._create_encouraging_code_analysis(response)
+                return self._create_default_code_analysis(response)
         except Exception as e:
-            return self._create_encouraging_code_analysis(response)
+            return self._create_default_code_analysis(response)
     
     def _parse_business_feedback_response(self, response: str) -> Dict[str, Any]:
         """Parse business-focused feedback response"""
@@ -528,103 +405,69 @@ Evaluate the work professionally, giving significant weight to reflection compon
             if "```json" in response:
                 json_part = response.split("```json")[1].split("```")[0].strip()
                 result = json.loads(json_part)
-                
-                # Ensure minimum scores for business students
-                result["overall_score"] = max(result.get("overall_score", 92), 92)
-                result["business_understanding"] = max(result.get("business_understanding", 90), 90)
-                result["communication_clarity"] = max(result.get("communication_clarity", 90), 90)
-                
                 return result
             elif "{" in response and "}" in response:
                 start = response.find("{")
                 end = response.rfind("}") + 1
                 json_part = response[start:end]
                 result = json.loads(json_part)
-                
-                # Ensure minimum scores
-                result["overall_score"] = max(result.get("overall_score", 92), 92)
-                result["business_understanding"] = max(result.get("business_understanding", 90), 90)
-                result["communication_clarity"] = max(result.get("communication_clarity", 90), 90)
-                
                 return result
             else:
-                return self._create_encouraging_feedback(response)
+                return self._create_default_feedback(response)
         except Exception as e:
-            return self._create_encouraging_feedback(response)
+            return self._create_default_feedback(response)
     
-    def _create_encouraging_code_analysis(self, response: str) -> Dict[str, Any]:
-        """Create professional code analysis for business students"""
+    def _create_default_code_analysis(self, response: str) -> Dict[str, Any]:
+        """Create default code analysis when parsing fails"""
         return {
-            "technical_score": 94,
-            "syntax_correctness": 96,
-            "logic_correctness": 92,
-            "business_relevance": 94,
-            "effort_and_completion": 96,
+            "technical_score": 50,
+            "syntax_correctness": 50,
+            "logic_correctness": 50,
+            "business_relevance": 50,
+            "effort_and_completion": 50,
             "code_strengths": [
-                "Proper implementation of R library loading and data import procedures",
-                "Effective use of dplyr functions for data manipulation and filtering",
-                "Appropriate application of ggplot2 for data visualization",
-                "Systematic approach to data exploration and summary statistics",
-                "Complete execution of all required analytical components"
+                "Unable to parse AI response - manual review required"
             ],
             "code_suggestions": [
-                "Consider using complete.cases() for more robust missing data handling",
-                "Explore the cut() function for creating categorical variables from continuous data",
-                "Add correlation analysis using cor() to quantify relationships between variables",
-                "Include additional summary statistics such as standard deviation and quartiles"
+                "Code analysis could not be completed automatically",
+                "Please review submission manually"
             ],
             "technical_observations": [
-                "Demonstrates solid understanding of fundamental R programming concepts",
-                "Code structure follows logical analytical workflow",
-                "Shows appropriate selection of analytical tools for the business context"
+                "Automated grading encountered an error",
+                "Manual review recommended"
             ]
         }
     
-    def _create_encouraging_feedback(self, response: str) -> Dict[str, Any]:
-        """Create professional feedback for business students"""
+    def _create_default_feedback(self, response: str) -> Dict[str, Any]:
+        """Create default feedback when parsing fails"""
         return {
-            "overall_score": 96,
-            "business_understanding": 94,
-            "communication_clarity": 92,
-            "data_interpretation": 94,
-            "methodology_appropriateness": 92,
-            "reflection_quality": 95,
+            "overall_score": 50,
+            "business_understanding": 50,
+            "communication_clarity": 50,
+            "data_interpretation": 50,
+            "methodology_appropriateness": 50,
+            "reflection_quality": 50,
             "detailed_feedback": {
                 "reflection_assessment": [
-                    "Excellent thoughtful responses to reflection questions demonstrate critical thinking",
-                    "Shows strong self-awareness about analytical choices and their implications",
-                    "Demonstrates understanding of limitations and areas for improvement",
-                    "Evidence of genuine learning and growth mindset throughout the assignment"
+                    "Unable to parse AI response - manual review required"
                 ],
                 "analytical_strengths": [
-                    "Comprehensive completion of all assignment requirements",
-                    "Effective integration of business context with analytical methodology",
-                    "Clear and systematic presentation of analytical findings",
-                    "Appropriate use of statistical measures and data visualization techniques"
+                    "Automated feedback generation encountered an error"
                 ],
                 "business_application": [
-                    "Demonstrates understanding of data analysis applications in business decision-making",
-                    "Appropriate framing of analytical objectives within business context",
-                    "Recognition of practical implications for organizational strategy"
+                    "Manual review recommended"
                 ],
                 "learning_demonstration": [
-                    "Reflection questions show deep engagement with the learning process",
-                    "Articulates challenges faced and lessons learned effectively",
-                    "Shows understanding of the iterative nature of data analysis",
-                    "Demonstrates awareness of ethical considerations in data handling"
+                    "Please review submission manually"
                 ],
                 "areas_for_development": [
-                    "Continue exploring advanced statistical methods as suggested in reflections",
-                    "Expand knowledge of missing data imputation techniques",
-                    "Develop skills in causal inference and experimental design"
+                    "Automated grading could not be completed"
                 ],
                 "recommendations": [
-                    "Continue the excellent reflective practice demonstrated in this assignment",
-                    "Explore correlation analysis and statistical significance testing",
-                    "Practice with larger, more complex datasets to build analytical confidence"
+                    "Manual review required"
                 ]
             },
-            "instructor_comments": "This submission demonstrates excellent foundational work in business analytics with particularly strong reflective thinking. Your thoughtful responses to the reflection questions show genuine engagement with the learning process and critical thinking about your analytical choices. The systematic approach to data exploration, integration of business context, and honest assessment of limitations are all commendable. Your reflections demonstrate a growth mindset and understanding that will serve you well in future analytical work. Continue this level of thoughtful engagement with your learning."
+            "instructor_comments": "Automated grading could not be completed. Please review this submission manually."
         }
     
     def _create_encouraging_feedback_from_text(self, response: str) -> Dict[str, Any]:
@@ -697,14 +540,14 @@ Evaluate the work professionally, giving significant weight to reflection compon
         }
     
     def _merge_business_results(self, code_analysis: Dict, feedback: Dict, 
-                               assignment_info: Dict) -> Dict[str, Any]:
+                               assignment_info: Dict, validation_penalty: float = 0) -> Dict[str, Any]:
         """Merge results with business-friendly weighting for 37.5 point scale"""
         
-        # Extract individual component scores
-        technical_score = code_analysis.get("technical_score", 90)
-        business_understanding = feedback.get("business_understanding", 90)
-        data_interpretation = feedback.get("data_interpretation", 88)
-        communication_clarity = feedback.get("communication_clarity", 88)
+        # Extract individual component scores (no defaults - use actual scores)
+        technical_score = code_analysis.get("technical_score", 50)
+        business_understanding = feedback.get("business_understanding", 50)
+        data_interpretation = feedback.get("data_interpretation", 50)
+        communication_clarity = feedback.get("communication_clarity", 50)
         
         # Calculate points for each rubric component (37.5 total points)
         technical_points = (technical_score / 100) * 9.375      # 25% of 37.5
@@ -715,8 +558,13 @@ Evaluate the work professionally, giving significant weight to reflection compon
         # Calculate actual total from components
         final_score_37_5 = technical_points + business_points + analysis_points + communication_points
         
-        # Cap final score at 37.5 points maximum
-        final_score_37_5 = min(37.5, final_score_37_5)
+        # Apply validation penalty (e.g., unexecuted notebook, incomplete TODOs)
+        if validation_penalty > 0:
+            penalty_points = (validation_penalty / 100) * final_score_37_5
+            final_score_37_5 = final_score_37_5 - penalty_points
+        
+        # Cap final score at 37.5 points maximum and 0 minimum
+        final_score_37_5 = max(0, min(37.5, final_score_37_5))
         
         # Calculate percentage AFTER capping
         final_percentage = (final_score_37_5 / 37.5) * 100
@@ -992,14 +840,14 @@ CRITICAL: Output pure JSON only. Reference specific content from student work. P
                 return result
             else:
                 print(f"⚠️ No JSON found in code analysis response, using fallback")
-                return self._create_encouraging_code_analysis(response)
+                return self._create_default_code_analysis(response)
                 
         except json.JSONDecodeError as e:
             print(f"⚠️ JSON parsing error in code analysis: {e}")
-            return self._create_encouraging_code_analysis(response)
+            return self._create_default_code_analysis(response)
         except Exception as e:
             print(f"⚠️ Unexpected error in code analysis parsing: {e}")
-            return self._create_encouraging_code_analysis(response)
+            return self._create_default_code_analysis(response)
 
     def _parse_feedback_response(self, response):
         """Parse feedback response from distributed MLX with improved handling for GPT-OSS"""

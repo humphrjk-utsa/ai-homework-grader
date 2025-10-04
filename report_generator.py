@@ -244,6 +244,10 @@ class PDFReportGenerator:
         # Add score summary
         self._add_score_summary(story, analysis_result)
         
+        # Add validation issues if present (CRITICAL - show first)
+        if analysis_result.get('validation'):
+            self._add_validation_section(story, analysis_result['validation'])
+        
         # Add human feedback if available (takes priority)
         if analysis_result.get('human_feedback'):
             story.append(Paragraph("Instructor Review", self.styles['CustomHeading']))
@@ -309,6 +313,51 @@ class PDFReportGenerator:
         
         story.append(table)
         story.append(Spacer(1, 20))
+    
+    def _add_validation_section(self, story, validation: Dict[str, Any]):
+        """Add validation issues section - shown prominently if issues exist"""
+        penalty = validation.get('penalty_percent', 0)
+        issues = validation.get('issues', [])
+        warnings = validation.get('warnings', [])
+        
+        if penalty > 0 or issues or warnings:
+            story.append(Paragraph("⚠️ SUBMISSION ISSUES", self.styles['CustomHeading']))
+            
+            if penalty > 0:
+                story.append(Paragraph(
+                    f"<b>Penalty Applied: {penalty}% deduction</b>",
+                    self.styles['Normal']
+                ))
+                story.append(Spacer(1, 6))
+            
+            if issues:
+                story.append(Paragraph("<b>Critical Issues:</b>", self.styles['Heading2']))
+                for issue in issues:
+                    clean_issue = self._clean_text(issue)
+                    story.append(Paragraph(f"• {clean_issue}", self.styles['CustomBullet']))
+                story.append(Spacer(1, 6))
+            
+            if warnings:
+                story.append(Paragraph("<b>Warnings:</b>", self.styles['Heading2']))
+                for warning in warnings:
+                    clean_warning = self._clean_text(warning)
+                    story.append(Paragraph(f"• {clean_warning}", self.styles['CustomBullet']))
+                story.append(Spacer(1, 6))
+            
+            # Add guidance from validation feedback
+            feedback_text = validation.get('feedback', '')
+            if feedback_text:
+                story.append(Paragraph("<b>How to Fix:</b>", self.styles['Heading2']))
+                # Extract just the "How to Fix" sections
+                if "### How to Fix:" in feedback_text:
+                    fix_sections = feedback_text.split("### How to Fix:")[1:]
+                    for section in fix_sections:
+                        clean_section = self._clean_text(section.strip())
+                        if clean_section:
+                            story.append(Paragraph(clean_section, self.styles['Normal']))
+                            story.append(Spacer(1, 6))
+            
+            story.append(Spacer(1, 20))
     
     def _add_score_summary(self, story, analysis_result: Dict[str, Any]):
         """Add score summary section"""

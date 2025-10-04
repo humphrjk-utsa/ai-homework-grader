@@ -71,10 +71,18 @@ class HomeworkGrader:
                 description TEXT,
                 total_points INTEGER,
                 rubric TEXT,
+                template_notebook TEXT,
                 solution_notebook TEXT,
                 created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        
+        # Migration: Add template_notebook column if it doesn't exist
+        try:
+            cursor.execute("SELECT template_notebook FROM assignments LIMIT 1")
+        except sqlite3.OperationalError:
+            print("📝 Migrating database: Adding template_notebook column...")
+            cursor.execute("ALTER TABLE assignments ADD COLUMN template_notebook TEXT")
         
         # Students table
         cursor.execute('''

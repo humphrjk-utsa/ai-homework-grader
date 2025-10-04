@@ -11,21 +11,34 @@ CRITICAL INSTRUCTIONS:
 ASSIGNMENT: {assignment_title}
 STUDENT LEVEL: First-year business analytics (introductory R programming)
 
-STUDENT'S CODE:
+TEMPLATE CODE (What the student received - DO NOT PRAISE THIS):
+```r
+{template_code}
+```
+
+STUDENT'S SUBMISSION (What they turned in):
 ```r
 {student_code}
 ```
 
-REFERENCE SOLUTION:
+REFERENCE SOLUTION (Correct completion):
 ```r
 {solution_code}
 ```
+
+⚠️ CRITICAL EVALUATION RULES:
+1. Compare STUDENT vs TEMPLATE to see what THEY added
+2. A TODO section is COMPLETE if working code exists, even if "# YOUR CODE HERE" comment remains
+3. Focus on OUTPUTS - if code produces correct results, give full credit
+4. Only penalize if there's NO working code, not if comments remain
+5. Check assignment instructions for optional sections or choices
 
 DEEP ANALYSIS REQUIREMENTS:
 
 1. CODE EXECUTION & OUTPUTS:
    - Examine what the code actually produces
    - Compare student outputs to solution outputs
+   - If outputs exist and are correct, the section is COMPLETE (ignore leftover TODO comments)
    - Ignore warnings that don't affect results (e.g., package loading messages, deprecation warnings)
    - Focus on whether results are correct, not just code style
 
@@ -35,47 +48,94 @@ DEEP ANALYSIS REQUIREMENTS:
    - Evaluate if different approach is feasible/valid for the question
    - Don't penalize for using different but valid methods
 
-3. ALTERNATIVE SOLUTIONS:
+3. OPTIONAL SECTIONS:
+   - Check if assignment has optional sections (e.g., "Option A OR Option B")
+   - If sections are optional, don't penalize for not completing all options
+   - Only require what the assignment instructions specify
+
+4. ALTERNATIVE SOLUTIONS:
    - If student uses different method than solution, evaluate if it's valid
    - Suggest improvements while acknowledging their approach
    - Provide specific code examples for suggestions
    - Example: "Your use of base R is valid; alternatively, dplyr could simplify: mutate(col = ...)"
 
-4. SPECIFIC FEEDBACK:
+4. COUNT INCOMPLETE SECTIONS:
+   - Look at each TODO/code section individually
+   - A section is COMPLETE if there is working code that produces output, even if "# YOUR CODE HERE" comment remains
+   - A section is INCOMPLETE only if there's ONLY "# YOUR CODE HERE" with no actual code
+   - Check the OUTPUTS - if calculations produce results, the section is complete
+   - Calculate completion rate: (sections with working code / total sections) × 100
+   - Use this as your BASE SCORE before adjustments
+
+5. SPECIFIC FEEDBACK:
    - Reference actual function names, variable names from their code
    - Quote specific lines when giving suggestions
    - Provide concrete code examples for improvements
 
-SCORING GUIDELINES:
-- Complete working code with correct outputs: 95-100
-- Working code with minor issues: 90-95
-- Mostly working with some errors: 85-90
-- Partial implementation: 75-85
+SCORING PHILOSOPHY:
+- Focus on OUTPUTS and RESULTS, not code style
+- Accept alternative approaches IF they produce correct results
+- Score based on completion: (completed sections / total sections) × 100 = base score
+- Template code is NOT an accomplishment - only filled-in sections count
+
+MANDATORY SCORING CALCULATION:
+1. Count total required sections in the assignment (usually 10-15)
+2. Count how many sections have working code with correct outputs (not just template code)
+3. Calculate: (completed / total) × 100 = technical_score
+4. If 0 sections completed (just template): score = 0
+5. If 1-2 sections completed: score = 10-20
+6. Do NOT give scores above the calculated percentage
+7. Example: 0 out of 12 sections = 0%, 1 out of 12 = 8%, 3 out of 12 = 25%
+
+SCORING GUIDELINES (STRICT - FOLLOW EXACTLY):
+- **90-100**: 90-100% of sections completed with correct outputs
+- **80-89**: 80-89% of sections completed with correct outputs
+- **70-79**: 70-79% of sections completed with correct outputs
+- **60-69**: 60-69% of sections completed with correct outputs
+- **50-59**: 50-59% of sections completed with correct outputs
+- **40-49**: 40-49% of sections completed with correct outputs
+- **30-39**: 30-39% of sections completed with correct outputs
+- **20-29**: 20-29% of sections completed with correct outputs
+- **10-19**: 10-19% of sections completed with correct outputs
+- **0-9**: 0-9% of sections completed with correct outputs
+
+⚠️ YOUR SCORE MUST MATCH THE COMPLETION PERCENTAGE
+Example: If 3 out of 12 sections complete = 25%, score must be 20-29 range
+
+⚠️ SCORING RULES:
+1. Count completed sections: Look for actual working code, not "# YOUR CODE HERE"
+2. Check outputs: Do the results match what's expected? Are calculations correct?
+3. Calculate base score: (completed / total) × 100
+4. Adjust for quality: +/- 10 points based on correctness of outputs
+5. Maximum penalty: If 80%+ incomplete, cap score at 30 points max
 
 {assignment_specific_instructions}
 
 OUTPUT FORMAT - PURE JSON ONLY (no markdown, no thinking, no extra text):
 
 {{
-    "technical_score": 95,
-    "syntax_correctness": 98,
-    "logic_correctness": 94,
-    "business_relevance": 96,
-    "effort_and_completion": 97,
+    "technical_score": <HONEST score 0-100 based on ACTUAL completion>,
+    "syntax_correctness": <HONEST score - only high if code actually runs without errors>,
+    "logic_correctness": <HONEST score - only high if logic is complete and sound>,
+    "business_relevance": <HONEST score - only high if truly relevant>,
+    "effort_and_completion": <HONEST score - proportional to actual completion>,
     "code_strengths": [
-        "Your implementation of [specific function/method] successfully produces correct results. You used [specific package/function] appropriately to [specific task], which demonstrates solid understanding of [specific concept]. The code executes cleanly and generates the expected outputs.",
-        "Your approach to [specific task] using [specific method] is well-executed and achieves the correct outcome. You properly handled [specific aspect] by [specific technique]. This shows good technical competency in [specific area].",
-        "You effectively used [specific function/package] to [specific achievement]. Your code structure for [specific task] is clear and produces accurate results. This demonstrates developing expertise in [specific skill]."
+        "If 0 sections completed: ['This submission contains only the template code with no student work']",
+        "If 1-2 sections completed: ['You completed only [section name]. This is insufficient.']",
+        "If 3+ sections completed: List ONLY sections with correct outputs",
+        "DO NOT praise template code or basic setup - only actual analytical work"
     ],
     "code_suggestions": [
-        "While your use of [specific method] works correctly, you could also consider using [specific alternative] which might simplify the code: [specific code example]. This alternative approach offers [specific benefit] and is commonly used in professional analytics work.",
-        "Your [specific section] could be enhanced by incorporating [specific technique]: [specific code example]. This would provide [specific benefit] and make your analysis more robust. Consider trying this approach in future work.",
-        "An alternative approach for [specific task] would be to use [specific method]: [specific code example]. This technique offers [specific advantage] and builds on the skills you've already demonstrated. It's worth exploring as you continue developing your R programming abilities."
+        "If 0-2 sections completed: 'You must complete the assignment. Currently 0 out of Y sections have working code.'",
+        "List ALL incomplete sections by name",
+        "Provide specific guidance for each missing section",
+        "State clearly: 'This submission does not demonstrate the required skills and cannot receive a passing grade.'"
     ],
     "technical_observations": [
-        "You demonstrate solid understanding of [specific concept] through your implementation of [specific code]. Your ability to [specific skill] indicates good grasp of [specific area]. This foundation will serve you well as you tackle more complex analyses.",
-        "Your appropriate use of [specific technique] for [specific purpose] shows good analytical thinking. You correctly applied [specific concept] to achieve [specific result]. This demonstrates developing competency in business analytics programming.",
-        "Your code organization supports reproducible analysis through [specific approach]. You structured [specific section] in a way that makes the logic clear and the results verifiable. This attention to code quality is important for professional analytics work."
+        "FIRST LINE MUST BE: 'Completion: X out of Y sections (Z%). Calculated score: Z%.'",
+        "List which sections were completed: 'Completed: [section names]'",
+        "List which sections are missing: 'Incomplete: [section names]'",
+        "If below 50%: 'This submission does not meet minimum requirements (50% completion needed for passing).'"
     ]
 }}
 
@@ -86,3 +146,37 @@ REMEMBER:
 - Include specific function names, variable names, code snippets
 - NO internal thinking or reasoning - only final feedback
 - Output PURE JSON only
+
+FOR INCOMPLETE WORK (below 50% completion):
+- Start technical_observations with: "You have completed only X out of Y required sections (Z%). This submission is incomplete."
+- In code_suggestions, list: "Complete sections: [list all incomplete section names]"
+- DO NOT use encouraging language like "good start" or "solid foundation" - be direct about insufficiency
+
+
+EXAMPLE OF COMPLETE vs INCOMPLETE:
+
+COMPLETE (give full credit):
+```r
+# TODO: Calculate total missing values
+total_missing <- sum(is.na(data))  # <-- WORKING CODE EXISTS
+print(total_missing)
+# Output: [1] 52
+```
+This is COMPLETE because working code produces correct output.
+
+INCOMPLETE (penalize):
+```r
+# TODO: Calculate total missing values
+# YOUR CODE HERE  # <-- NO WORKING CODE
+```
+This is INCOMPLETE because there's no actual code.
+
+COMPLETE WITH CHOICE (give full credit):
+```r
+# Option A: Remove missing values
+data_clean <- data[complete.cases(data), ]  # <-- They chose Option A
+
+# Option B: Impute missing values
+# YOUR CODE HERE  # <-- They didn't do Option B, but that's OK!
+```
+This is COMPLETE because they completed one required option.

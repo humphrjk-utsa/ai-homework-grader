@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Qwen Coder Server for Mac Studio 1
+Qwen Coder Server for Mac Studio 2
 Serves the Qwen 3.0 Coder model via HTTP API
 """
 
@@ -25,8 +25,8 @@ def load_model():
     global model, tokenizer, model_loaded
     
     try:
-        logger.info("🔄 Loading GPT-OSS-120B MLX-8bit model...")
-        model, tokenizer = load('lmstudio-community/gpt-oss-120b-MLX-8bit')
+        logger.info("🔄 Loading Qwen 3.0 Coder model...")
+        model, tokenizer = load('mlx-community/Qwen3-Coder-30B-A3B-Instruct-bf16')
         model_loaded = True
         logger.info("✅ Qwen 3.0 Coder loaded successfully!")
         return True
@@ -40,7 +40,7 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         'status': 'healthy' if model_loaded else 'loading',
-        'model': 'gpt-oss-120b-MLX-8bit',
+        'model': 'Qwen3-Coder-30B-A3B-Instruct-bf16',
         'loaded': model_loaded
     })
 
@@ -62,9 +62,13 @@ def generate_text():
             return jsonify({'error': 'No prompt provided'}), 400
         
         logger.info(f"🚀 Generating response (max_tokens: {max_tokens})")
+        logger.info(f"📝 Prompt length: {len(prompt)} chars")
+        logger.info(f"📝 Prompt preview: {prompt[:200]}...")
         start_time = time.time()
         
-        # Generate response
+        # Generate response (returns a generator)
+        # Note: MLX-LM 0.28.1 doesn't support temp parameter in generate_step
+        # Temperature control would require upgrading MLX-LM or using different sampling
         response_generator = generate(
             model=model,
             tokenizer=tokenizer,
@@ -73,17 +77,24 @@ def generate_text():
             verbose=False
         )
         
-        # Collect all tokens
-        response_text = ''.join(response_generator)
+        # Collect all generated tokens into a list first, then join
+        tokens = []
+        for token in response_generator:
+            tokens.append(token)
+        response_text = ''.join(tokens)
+        
+        logger.info(f"🔍 Collected {len(tokens)} tokens from generator")
         
         generation_time = time.time() - start_time
         logger.info(f"✅ Response generated in {generation_time:.2f}s")
+        logger.info(f"📏 Response length: {len(response_text)} chars")
+        logger.info(f"📝 Response preview: {response_text[:100] if response_text else 'EMPTY!'}")
         
         return jsonify({
             'response': response_text,
             'generation_time': generation_time,
             'tokens': len(response_text.split()),
-            'model': 'gpt-oss-120b-MLX-8bit'
+            'model': 'Qwen3-Coder-30B-A3B-Instruct-bf16'
         })
         
     except Exception as e:
@@ -94,22 +105,22 @@ def generate_text():
 def get_status():
     """Get detailed server status"""
     return jsonify({
-        'server': 'GPT-OSS Feedback Server',
-        'model': 'gpt-oss-120b-MLX-8bit',
+        'server': 'Qwen Coder Server',
+        'model': 'Qwen3-Coder-30B-A3B-Instruct-bf16',
         'loaded': model_loaded,
-        'mac_studio': 1,
-        'purpose': 'Feedback Generation',
-        'optimal_tokens': 1200,
-        'temperature': 0.3
+        'mac_studio': 2,
+        'purpose': 'Code Analysis',
+        'optimal_tokens': 2400,
+        'temperature': 0.1
     })
 
 if __name__ == '__main__':
-    print("🖥️ Starting GPT-OSS-120B Server on Mac Studio 1 (M3 Ultra 512GB)...")
+    print("🖥️ Starting Qwen Coder Server on Mac Studio 2...")
     print("📡 Loading model on startup...")
     
     # Load model on startup
     if load_model():
         print("🚀 Server ready! Starting Flask app...")
-        app.run(host='0.0.0.0', port=5001, debug=False, threaded=True)
+        app.run(host='0.0.0.0', port=5002, debug=False, threaded=True)
     else:
         print("❌ Failed to start server - model loading failed")

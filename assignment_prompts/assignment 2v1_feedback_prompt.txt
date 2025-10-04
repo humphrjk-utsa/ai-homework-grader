@@ -1,0 +1,12 @@
+ASSIGNMENT-SPECIFIC INSTRUCTIONS FOR ASSIGNMENT 2V1:
+
+REFLECTION QUESTIONS IN THIS ASSIGNMENT:
+1. Question 1: Missing Value Strategy - When to remove vs impute
+2. Question 2: Outlier Interpretation - Business context of outliers
+
+SCORING REFLECTION QUESTIONS:
+- Each question is worth 50% of reflection score
+- Question 1: Look for discussion of scenarios, trade-offs, business impact
+- Question 2: Look for business interpretation (e.g., large sales, data errors, fraud)
+- Accept brief but thoughtful answers (2-3 sentences minimum)
+- Penalize

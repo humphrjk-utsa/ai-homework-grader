@@ -221,11 +221,11 @@ def upload_batch_submissions(grader, assignment_id):
                             clean_student_id = student_id if student_id != 'Unknown' else student_name.lower().replace(' ', '_')
                             
                             # First, try to find existing student by student_id
-                            cursor.execute('SELECT id, name FROM students WHERE student_id = ?', (clean_student_id,))
+                            cursor.execute('SELECT id, name, student_id FROM students WHERE student_id = ?', (clean_student_id,))
                             existing_student = cursor.fetchone()
                             
                             if existing_student:
-                                existing_student_db_id, existing_name = existing_student
+                                existing_student_db_id, existing_name, existing_canvas_id = existing_student
                                 
                                 # Check if this student already has a submission for this assignment
                                 cursor.execute('''
@@ -236,14 +236,14 @@ def upload_batch_submissions(grader, assignment_id):
                                 existing_submission = cursor.fetchone()
                                 if existing_submission:
                                     with results_container:
-                                        st.write(f"⚠️ Skipping duplicate: {existing_name} (ID: {clean_student_id}) already submitted")
+                                        st.write(f"⚠️ Skipping duplicate: {existing_name} (Canvas ID: {existing_canvas_id}) already submitted")
                                     skipped_count += 1
                                     continue
                                 
                                 # Student exists but no submission for this assignment - use existing student
                                 student_db_id = existing_student_db_id
                                 with results_container:
-                                    st.write(f"🔗 Linking to existing student: {existing_name} (ID: {clean_student_id})")
+                                    st.write(f"🔗 Linking to existing student: {existing_name} (Canvas ID: {existing_canvas_id})")
                                 linked_count += 1
                             
                             else:
@@ -275,8 +275,10 @@ def upload_batch_submissions(grader, assignment_id):
                                             st.write(f"📝 Updated student ID: {student_name} ({existing_student_id} → {clean_student_id})")
                                     
                                     student_db_id = existing_student_db_id
+                                    # Use the updated ID if it was changed, otherwise use existing
+                                    display_id = clean_student_id if existing_student_id != clean_student_id else existing_student_id
                                     with results_container:
-                                        st.write(f"🔗 Linking to existing student: {student_name}")
+                                        st.write(f"🔗 Linking to existing student: {student_name} (Canvas ID: {display_id})")
                                     linked_count += 1
                                 
                                 else:

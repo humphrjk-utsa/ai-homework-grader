@@ -51,9 +51,13 @@ def create_assignment_with_upload(grader):
                 st.info(f"💡 Suggested rubric: {suggestion}")
         
         with col2:
+            st.subheader("📁 Template Notebook")
+            template_file = st.file_uploader("Template Notebook (What students receive)", type=['ipynb'], key="template_upload")
+            st.caption("Upload the template notebook with TODO sections that students fill in")
+            
             st.subheader("📁 Solution Notebook")
-            solution_file = st.file_uploader("Solution Notebook (Required for grading)", type=['ipynb'], key="solution_upload")
-            st.caption("Upload the solution notebook that will be used to compare student submissions")
+            solution_file = st.file_uploader("Solution Notebook (Correct answers)", type=['ipynb'], key="solution_upload")
+            st.caption("Upload the solution notebook showing correct completion")
         
         st.subheader("📋 Grading Rubric")
         rubric_method = st.radio("Rubric Input Method:", ["Upload JSON File", "Manual Entry"])
@@ -159,8 +163,7 @@ def create_assignment_with_upload(grader):
         submitted = st.form_submit_button("🚀 Create Assignment", type="primary")
         
         if submitted:
-            # Template file is optional (not used in current workflow)
-            template_file = None
+            # Use the uploaded template file
             create_assignment_in_db(grader, assignment_name, description, total_points, 
                                   rubric_data, template_file, solution_file)
 
@@ -175,9 +178,16 @@ def create_assignment_in_db(grader, name, description, total_points, rubric_data
             st.error("❌ Rubric is required!")
             return
         
+        # Save template file
+        template_path = None
+        if template_file:
+            template_path = os.path.join(grader.assignments_dir, f"{name}_template.ipynb")
+            os.makedirs(grader.assignments_dir, exist_ok=True)
+            with open(template_path, "wb") as f:
+                f.write(template_file.getbuffer())
+        
         # Save solution file
         solution_path = None
-        
         if solution_file:
             solution_path = os.path.join(grader.assignments_dir, f"{name}_solution.ipynb")
             os.makedirs(grader.assignments_dir, exist_ok=True)
@@ -189,9 +199,9 @@ def create_assignment_in_db(grader, name, description, total_points, rubric_data
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO assignments (name, description, total_points, rubric, solution_notebook)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (name, description, total_points, json.dumps(rubric_data), solution_path))
+            INSERT INTO assignments (name, description, total_points, rubric, template_notebook, solution_notebook)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (name, description, total_points, json.dumps(rubric_data), template_path, solution_path))
         
         conn.commit()
         conn.close()
@@ -267,6 +277,10 @@ def edit_assignments(grader):
             new_name = st.text_input("Assignment Name", value=assignment_data['name'])
             new_description = st.text_area("Description", value=assignment_data['description'] or "")
             new_total_points = st.number_input("Total Points", value=float(assignment_data['total_points']), step=0.5)
+            
+            st.subheader("📁 Update Notebooks")
+            new_template_file = st.file_uploader("Upload New Template Notebook (optional)", type=['ipynb'], key=f"edit_template_{assignment_id}")
+            new_solution_file = st.file_uploader("Upload New Solution Notebook (optional)", type=['ipynb'], key=f"edit_solution_{assignment_id}")
             
             st.subheader("📋 Update Rubric")
             rubric_update_method = st.radio("Rubric Update Method:", ["Upload New JSON File", "Edit Current JSON"])

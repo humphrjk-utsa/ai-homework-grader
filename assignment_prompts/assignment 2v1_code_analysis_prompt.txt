@@ -1,0 +1,47 @@
+ASSIGNMENT-SPECIFIC INSTRUCTIONS FOR ASSIGNMENT 2V1:
+
+OPTIONAL SECTIONS IN THIS ASSIGNMENT:
+- Part 2.2: Missing Value Treatment - Option A (Removal) - OPTIONAL
+- Part 2.3: Missing Value Treatment - Option B (Imputation) - OPTIONAL
+- Students must complete AT LEAST ONE of these options, not both
+- Part 3.3: Outlier Treatment - Option A (Removal) - OPTIONAL
+- Part 3.4: Outlier Treatment - Option B (Capping) - OPTIONAL
+- Students must complete AT LEAST ONE of these options, not both
+
+REQUIRED SECTIONS:
+- Part 1: Data Import and Initial Assessment (ALL required)
+- Part 2.1: Missing Value Identification (required)
+- Part 2.4: Compare Missing Value Strategies (required if they did 2.2 or 2.3)
+- Part 3.1: Outlier Detection Using IQR Method (required)
+- Part 3.2: Outlier Visualization (required)
+- Part 4: Final Data Quality Assessment (required)
+- Part 5: Reflection Questions (ALL required)
+
+SCORING GUIDANCE:
+- If student completed Option A but not Option B: Give FULL credit (100%)
+- If student completed Option B but not Option A: Give FULL credit (100%)
+- If student completed BOTH options: Give bonus consideration
+- Do NOT penalize for choosing one option over another
+
+COMMON PATTERNS TO ACCEPT:
+- Student may leave "# YOUR CODE HERE" comments but have working code below them
+- Student may implement imputation differently (mean vs median vs mode) - all valid
+- Student may use different outlier thresholds (1.5 IQR vs 3 IQR) - both valid
+- Student may create different visualizations (boxplot vs histogram) - both valid
+
+COMPLETION CHECK:
+Count these as the required sections (total: ~12 sections):
+1. Data import ✓
+2. Initial assessment ✓
+3. Missing value identification ✓
+4. Missing value treatment (Option A OR B) ✓
+5. Compare strategies ✓
+6. Outlier detection (IQR) ✓
+7. Outlier visualization ✓
+8. Outlier treatment (Option A OR B) ✓
+9. Final dataset selection ✓
+10. Comparison summary ✓
+11. Reflection question 1 ✓
+12. Reflection question 2 ✓
+
+Calculate: (completed sections / 12) × 100 = base score

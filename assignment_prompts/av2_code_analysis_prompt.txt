@@ -1,0 +1,14 @@
+OPTIONAL SECTIONS IN THIS ASSIGNMENT:
+- Part 2: Students choose Option A (Removal) OR Option B (Imputation) - not both required
+- Part 3: Students choose Option A (Removal) OR Option B (Capping) - not both required
+
+REQUIRED SECTIONS (12 total):
+1. Data import, 2. Initial assessment, 3. Missing value identification
+4. Missing value treatment (A OR B), 5. Compare strategies
+6. Outlier detection, 7. Outlier visualization, 8. Outlier treatment (A OR B)
+9. Final dataset selection, 10. Comparison summary
+11-12. Both reflection questions
+
+SCORING: (completed / 12) × 100 = base score
+- Completing Option A OR Option B = full credit for that section
+- Don't penalize for choosing one option over another

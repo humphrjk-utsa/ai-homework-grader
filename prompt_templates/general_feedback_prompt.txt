@@ -35,28 +35,52 @@ EVALUATION PRIORITIES:
    - Don't penalize for different but correct approaches
    - Suggest alternatives as enhancements, not corrections
 
-4. SPECIFIC FEEDBACK:
+4. COUNT UNANSWERED REFLECTIONS:
+   - Count how many reflection questions exist in the assignment
+   - Count how many contain "[YOUR ANSWER HERE]" or are blank
+   - Calculate answer rate: (answered / total) × 100
+   - Use this as your BASE SCORE before adjustments
+
+5. SPECIFIC FEEDBACK:
    - Reference actual content from their submission
    - Quote specific reflections or findings
    - Provide concrete examples
 
-SCORING GUIDELINES:
-- Complete work with thoughtful reflections: 92-100
-- Complete work with basic reflections: 88-92
-- Mostly complete with good effort: 85-88
-- Partial completion: 75-85
+SCORING GUIDELINES - STRICT MATHEMATICAL:
+- **90-100**: 90-100% of reflections complete with deep, thoughtful responses
+- **80-89**: 80-89% of reflections complete with good responses
+- **70-79**: 70-79% of reflections complete with basic responses
+- **60-69**: 60-69% of reflections complete with minimal responses
+- **50-59**: 50-59% of reflections complete
+- **40-49**: 40-49% of reflections complete
+- **30-39**: 30-39% of reflections complete
+- **20-29**: 20-29% of reflections complete
+- **10-19**: 10-19% of reflections complete
+- **0-9**: 0-9% of reflections complete (essentially nothing answered)
+
+Calculate: (answered questions / total questions) × 100 = reflection_quality score
+
+⚠️ CRITICAL SCORING RULES FOR REFLECTIONS - ENFORCE STRICTLY:
+- If ALL reflection questions contain "[YOUR ANSWER HERE]" or are blank: score = 0
+- If 1 out of 2 questions answered: score = 50% max
+- If 2+ reflection questions unanswered: score 0-30 MAX
+- If answers are incomplete (1-2 sentences when detailed response expected): score 30-50
+- If answers show no critical thinking or just restate the question: score 40-60
+- Count total reflection questions and score proportionally: (answered / total) × 100 = base score
+- ONLY give 85+ scores for genuinely thoughtful, complete, well-reasoned responses
+- ZERO TOLERANCE - no answers = zero score
 
 {assignment_specific_instructions}
 
 OUTPUT FORMAT - PURE JSON ONLY (no markdown, no thinking, no extra text):
 
 {{
-    "overall_score": 94,
-    "business_understanding": 92,
-    "communication_clarity": 90,
-    "data_interpretation": 91,
-    "methodology_appropriateness": 93,
-    "reflection_quality": 95,
+    "overall_score": <HONEST score 0-100 based on ACTUAL completion and quality>,
+    "business_understanding": <HONEST score - only high if truly demonstrated>,
+    "communication_clarity": <HONEST score - only high if actually clear and complete>,
+    "data_interpretation": <HONEST score - only high if interpretations present and sound>,
+    "methodology_appropriateness": <HONEST score - only high if methodology actually appropriate>,
+    "reflection_quality": <CRITICAL: score HONESTLY based on actual reflection responses>,
     "detailed_feedback": {{
         "reflection_assessment": [
             "Your response to [specific question] demonstrates thoughtful consideration of [specific concept]. You effectively explained [specific point] and connected it to [specific context]. This shows strong critical thinking about [specific aspect].",
@@ -98,3 +122,9 @@ REMEMBER:
 - Reference ACTUAL student work - no generic templates
 - NO internal thinking or reasoning - only final feedback
 - Output PURE JSON only
+
+
+FOR INCOMPLETE REFLECTIONS (below 50% answered):
+- Start reflection_assessment with: "You answered only X out of Y reflection questions. This is insufficient."
+- In areas_for_development, state: "Complete all reflection questions with detailed, thoughtful responses"
+- DO NOT use phrases like "good effort" or "shows promise" - be direct about the lack of completion

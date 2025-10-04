@@ -1,0 +1,52 @@
+========================================
+COPY THIS INTO PROMPT MANAGER UI
+========================================
+
+Go to: Prompt Manager → Assignment Prompts → Select "assignment 2v1"
+
+---FOR CODE ANALYSIS PROMPT---
+
+ASSIGNMENT 2V1 SPECIFIC RULES:
+
+OPTIONAL SECTIONS (choose ONE, not both):
+- Part 2: Option A (remove NAs) OR Option B (impute NAs) - completing ONE = full credit
+- Part 3: Option A (remove outliers) OR Option B (cap outliers) - completing ONE = full credit
+
+REQUIRED SECTIONS (12 total):
+1. Data import ✓
+2. Initial assessment ✓  
+3. Missing value identification ✓
+4. Missing value treatment (A OR B) ✓
+5. Compare strategies ✓
+6. Outlier detection IQR ✓
+7. Outlier boxplot ✓
+8. Outlier treatment (A OR B) ✓
+9. Final dataset selection ✓
+10. Comparison summary ✓
+11. Reflection Q1 ✓
+12. Reflection Q2 ✓
+
+SCORING: (completed / 12) × 100 = score
+- If student did Option A but not Option B: FULL CREDIT (don't penalize)
+- If student did Option B but not Option A: FULL CREDIT (don't penalize)
+- Only penalize if NEITHER option completed
+
+---FOR FEEDBACK PROMPT---
+
+ASSIGNMENT 2V1 SPECIFIC RULES:
+
+REFLECTION QUESTIONS (2 required):
+1. Missing value strategy - when to remove vs impute
+2. Outlier interpretation - what they represent, should they be removed
+
+METHODOLOGY EVALUATION:
+- Option A (removal) = valid if justified
+- Option B (imputation/capping) = valid if justified
+- Don't penalize choice, only evaluate justification quality
+
+SCORING: (answered questions / 2) × 100 = reflection_quality
+- 0 questions answered = 0%
+- 1 question answered = 50%
+- 2 questions answered = score based on quality (70-100%)
+
+========================================

@@ -107,11 +107,23 @@ def show_auto_grading_interface(grader, assignment_id, ungraded_submissions):
             grade_batch_submissions(grader, ungraded_submissions, assignment_id, use_validation)
     
     else:
-        # Individual grading
+        # Individual grading - let user select which student
         if len(ungraded_submissions) > 0:
-            submission = ungraded_submissions.iloc[0]
+            st.subheader("📝 Select Student to Grade")
             
-            st.write("**Next submission:**")
+            # Create dropdown options
+            student_options = {}
+            for idx, row in ungraded_submissions.iterrows():
+                student_name = row['student_name'] or f"Student {row['student_identifier']}"
+                display_name = anonymize_name(student_name, row['student_identifier'])
+                option_label = f"{display_name} (Submitted: {row['submission_date']})"
+                student_options[option_label] = idx
+            
+            selected_option = st.selectbox("Choose student:", list(student_options.keys()))
+            selected_idx = student_options[selected_option]
+            submission = ungraded_submissions.loc[selected_idx]
+            
+            st.write("**Selected submission:**")
             student_name = submission['student_name'] or f"Student {submission['student_identifier']}"
             display_name = anonymize_name(student_name, submission['student_identifier'])
             st.write(f"👤 **{display_name}**")
@@ -138,11 +150,16 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
             return
         
         # Check if notebook needs execution and execute if necessary
-        executor = NotebookExecutor(data_folder='data', timeout=30)
-        notebook_to_use, exec_info = executor.execute_if_needed(notebook_path)
+        try:
+            executor = NotebookExecutor(data_folder='data', timeout=30)
+            notebook_to_use, exec_info = executor.execute_if_needed(notebook_path)
+        except Exception as e:
+            st.warning(f"⚠️ Notebook execution failed. Using original notebook.")
+            notebook_to_use = notebook_path
+            exec_info = {'needed_execution': False, 'message': 'Execution skipped due to error'}
         
         # Show execution info
-        if exec_info['needed_execution']:
+        if exec_info.get('needed_execution', False):
             if exec_info['execution_success']:
                 st.success(f"✅ Executed notebook ({exec_info['executed_cells']}/{exec_info['total_cells']} cells were run by student)")
             elif exec_info['execution_attempted']:
@@ -178,7 +195,7 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
         # Get assignment info including solution notebook
         conn = sqlite3.connect(grader.db_path)
         assignment_info_df = pd.read_sql_query("""
-            SELECT name, description, rubric, solution_notebook, total_points FROM assignments WHERE id = ?
+            SELECT name, description, rubric, template_notebook, solution_notebook, total_points FROM assignments WHERE id = ?
         """, conn, params=(assignment_id,))
         conn.close()
         
@@ -210,6 +227,26 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
             except:
                 pass
         
+        # Load template code (what students received)
+        template_code = ""
+        print(f"🔍 DEBUG: template_notebook from DB = {assignment_row.get('template_notebook')}")
+        if assignment_row.get('template_notebook'):
+            print(f"🔍 DEBUG: Checking if file exists: {os.path.exists(assignment_row['template_notebook'])}")
+        
+        if assignment_row.get('template_notebook') and os.path.exists(assignment_row['template_notebook']):
+            try:
+                with open(assignment_row['template_notebook'], 'r', encoding='utf-8') as f:
+                    template_nb = nbformat.read(f, as_version=4)
+                
+                # Extract code from template
+                for cell in template_nb.cells:
+                    if cell.cell_type == 'code':
+                        template_code += cell.source + "\n\n"
+                
+                st.info(f"✅ Loaded template notebook: {os.path.basename(assignment_row['template_notebook'])}")
+            except Exception as e:
+                st.warning(f"⚠️ Could not load template notebook: {e}")
+        
         # Load solution code from solution notebook
         solution_code = ""
         solution_markdown = ""
@@ -239,13 +276,15 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
         # Show progress
         with st.spinner("🎓 Grading with Business Analytics AI..."):
             
-            # Grade the submission
+            # Grade the submission (pass notebook path for validation and template for comparison)
             result = business_grader.grade_submission(
                 student_code=student_code,
                 student_markdown=student_markdown,
+                template_code=template_code,
                 solution_code=solution_code,
                 assignment_info=assignment_info,
-                rubric_elements=rubric_elements
+                rubric_elements=rubric_elements,
+                notebook_path=notebook_to_use
             )
             
             # Validate if requested
@@ -465,7 +504,7 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
             submission_start = time.time()
             
             # Grade this submission (similar to single submission logic)
-            result = grade_submission_internal(business_grader, submission, assignment_id)
+            result = grade_submission_internal(business_grader, submission, assignment_id, grader)
             
             # Capture performance metrics from result
             submission_time = time.time() - submission_start
@@ -617,15 +656,20 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
     with col3:
         st.metric("Success Rate", f"{(graded_count/total_submissions)*100:.1f}%")
 
-def grade_submission_internal(business_grader, submission, assignment_id):
+def grade_submission_internal(business_grader, submission, assignment_id, grader):
     """Internal function to grade a single submission"""
     
     # Extract notebook content
     notebook_path = submission['notebook_path']
     
     # Execute notebook if needed
-    executor = NotebookExecutor(data_folder='data', timeout=30)
-    notebook_to_use, exec_info = executor.execute_if_needed(notebook_path)
+    try:
+        executor = NotebookExecutor(data_folder='data', timeout=30)
+        notebook_to_use, exec_info = executor.execute_if_needed(notebook_path)
+    except Exception as e:
+        print(f"⚠️ Notebook execution failed. Using original notebook.")
+        notebook_to_use = notebook_path
+        exec_info = {'needed_execution': False, 'message': 'Execution skipped due to error'}
     
     with open(notebook_to_use, 'r', encoding='utf-8') as f:
         nb = nbformat.read(f, as_version=4)
@@ -653,41 +697,83 @@ def grade_submission_internal(business_grader, submission, assignment_id):
         elif cell.cell_type == 'markdown':
             student_markdown += cell.source + "\n\n"
     
+    # Get assignment info from database (including template and solution notebooks)
+    conn = sqlite3.connect(grader.db_path)
+    assignment_info_df = pd.read_sql_query("""
+        SELECT name, description, rubric, template_notebook, solution_notebook, total_points FROM assignments WHERE id = ?
+    """, conn, params=(assignment_id,))
+    conn.close()
+    
+    if assignment_info_df.empty:
+        raise ValueError(f"Assignment {assignment_id} not found")
+    
+    assignment_row = assignment_info_df.iloc[0]
+    
     # Prepare assignment info
     assignment_info = {
-        "title": "Assignment 1 - Introduction to R",
+        "title": assignment_row['name'],
+        "name": assignment_row['name'],
+        "description": assignment_row['description'],
         "student_name": submission['student_name'] or f"Student {submission['student_identifier']}"
     }
     
-    # Rubric elements
+    # Parse rubric
     rubric_elements = {
-        "technical_execution": {"weight": 0.25, "max_score": 37.5},
-        "business_thinking": {"weight": 0.30, "max_score": 37.5},
-        "data_analysis": {"weight": 0.25, "max_score": 37.5},
-        "communication": {"weight": 0.20, "max_score": 37.5}
+        "technical_execution": {"weight": 0.25, "max_score": assignment_row['total_points']},
+        "business_thinking": {"weight": 0.30, "max_score": assignment_row['total_points']},
+        "data_analysis": {"weight": 0.25, "max_score": assignment_row['total_points']},
+        "communication": {"weight": 0.20, "max_score": assignment_row['total_points']}
     }
     
-    # Solution code
-    solution_code = '''
-    library(tidyverse)
-    library(readxl)
+    # Load template code (what students received) - CRITICAL for score validation
+    template_code = ""
+    if assignment_row.get('template_notebook') and os.path.exists(assignment_row['template_notebook']):
+        try:
+            with open(assignment_row['template_notebook'], 'r', encoding='utf-8') as f:
+                template_nb = nbformat.read(f, as_version=4)
+            
+            # Extract code from template
+            for cell in template_nb.cells:
+                if cell.cell_type == 'code':
+                    template_code += cell.source + "\n\n"
+            
+            print(f"✅ Batch grading: Loaded template notebook: {os.path.basename(assignment_row['template_notebook'])}")
+        except Exception as e:
+            print(f"⚠️ Batch grading: Could not load template notebook: {e}")
     
-    sales_df <- read_csv("data/sales_data.csv")
-    ratings_df <- read_excel("data/customer_feedback.xlsx", sheet = "ratings")
-    comments_df <- read_excel("data/customer_feedback.xlsx", sheet = "customer_feedback")
+    # Load solution code from solution notebook
+    solution_code = ""
+    solution_markdown = ""
     
-    head(sales_df)
-    str(sales_df)
-    summary(sales_df)
-    '''
+    if assignment_row['solution_notebook'] and os.path.exists(assignment_row['solution_notebook']):
+        try:
+            with open(assignment_row['solution_notebook'], 'r', encoding='utf-8') as f:
+                solution_nb = nbformat.read(f, as_version=4)
+            
+            # Extract code and markdown from solution
+            for cell in solution_nb.cells:
+                if cell.cell_type == 'code':
+                    solution_code += cell.source + "\n\n"
+                elif cell.cell_type == 'markdown':
+                    solution_markdown += cell.source + "\n\n"
+            
+            print(f"✅ Batch grading: Loaded solution notebook: {os.path.basename(assignment_row['solution_notebook'])}")
+        except Exception as e:
+            print(f"⚠️ Batch grading: Could not load solution notebook: {e}")
+            solution_code = "# Solution notebook not available\n# Grading based on general criteria"
+    else:
+        print("⚠️ Batch grading: No solution notebook found for this assignment")
+        solution_code = "# Solution notebook not available\n# Grading based on general criteria"
     
-    # Grade the submission
+    # Grade the submission (now includes template_code for validation)
     return business_grader.grade_submission(
         student_code=student_code,
         student_markdown=student_markdown,
+        template_code=template_code,
         solution_code=solution_code,
         assignment_info=assignment_info,
-        rubric_elements=rubric_elements
+        rubric_elements=rubric_elements,
+        notebook_path=notebook_to_use
     )
 
 def save_grading_result(grader, submission_id, result):
