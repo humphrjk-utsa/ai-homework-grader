@@ -159,6 +159,8 @@ def create_assignment_with_upload(grader):
         submitted = st.form_submit_button("🚀 Create Assignment", type="primary")
         
         if submitted:
+            # Template file is optional (not used in current workflow)
+            template_file = None
             create_assignment_in_db(grader, assignment_name, description, total_points, 
                                   rubric_data, template_file, solution_file)
 

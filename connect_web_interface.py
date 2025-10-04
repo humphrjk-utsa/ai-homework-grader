@@ -15,6 +15,7 @@ from grading_validator import GradingValidator
 from report_generator import PDFReportGenerator
 from ai_grader import filter_ai_feedback_for_storage
 from anonymization_utils import anonymize_name
+from notebook_executor import NotebookExecutor
 
 def grade_submissions_page(grader):
     """Enhanced grade submissions page using our business analytics grader"""
@@ -136,8 +137,19 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
             st.error(f"Notebook file not found: {notebook_path}")
             return
         
-        # Read notebook
-        with open(notebook_path, 'r', encoding='utf-8') as f:
+        # Check if notebook needs execution and execute if necessary
+        executor = NotebookExecutor(data_folder='data', timeout=30)
+        notebook_to_use, exec_info = executor.execute_if_needed(notebook_path)
+        
+        # Show execution info
+        if exec_info['needed_execution']:
+            if exec_info['execution_success']:
+                st.success(f"✅ Executed notebook ({exec_info['executed_cells']}/{exec_info['total_cells']} cells were run by student)")
+            elif exec_info['execution_attempted']:
+                st.warning(f"⚠️ Execution failed: {exec_info['error_message']}. Using original notebook.")
+        
+        # Read notebook (either executed or original)
+        with open(notebook_to_use, 'r', encoding='utf-8') as f:
             nb = nbformat.read(f, as_version=4)
         
         # Extract code and markdown (including outputs for code cells)
@@ -611,16 +623,33 @@ def grade_submission_internal(business_grader, submission, assignment_id):
     # Extract notebook content
     notebook_path = submission['notebook_path']
     
-    with open(notebook_path, 'r', encoding='utf-8') as f:
+    # Execute notebook if needed
+    executor = NotebookExecutor(data_folder='data', timeout=30)
+    notebook_to_use, exec_info = executor.execute_if_needed(notebook_path)
+    
+    with open(notebook_to_use, 'r', encoding='utf-8') as f:
         nb = nbformat.read(f, as_version=4)
     
-    # Extract code and markdown
+    # Extract code and markdown (including outputs)
     student_code = ""
     student_markdown = ""
     
     for cell in nb.cells:
         if cell.cell_type == 'code':
             student_code += cell.source + "\n\n"
+            
+            # Include outputs
+            if hasattr(cell, 'outputs') and cell.outputs:
+                student_code += "# OUTPUT:\n"
+                for output in cell.outputs:
+                    if output.output_type == 'stream':
+                        student_code += output.text + "\n"
+                    elif output.output_type == 'execute_result' and 'text/plain' in output.data:
+                        student_code += output.data['text/plain'] + "\n"
+                    elif output.output_type == 'display_data' and 'text/plain' in output.data:
+                        student_code += output.data['text/plain'] + "\n"
+                student_code += "\n"
+                
         elif cell.cell_type == 'markdown':
             student_markdown += cell.source + "\n\n"
     
