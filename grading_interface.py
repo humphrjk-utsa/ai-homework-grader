@@ -8,6 +8,7 @@ from nbconvert import HTMLExporter
 import os
 from datetime import datetime
 from report_generator import PDFReportGenerator
+from anonymization_utils import anonymize_name, anonymize_student_id
 
 def parse_old_feedback_format(feedback_list):
     """Parse old feedback format (list of strings) into structured data"""
@@ -199,7 +200,8 @@ def create_assignment_zip(grader, assignment_id: int, assignment_name: str):
         st.error(f"Details: {traceback.format_exc()}")
 
 def view_results_page(grader):
-    st.header("📊 View Results")
+    st.header("👀 Quick View")
+    st.caption("Read-only view of graded submissions")
     
     # Select assignment
     conn = sqlite3.connect(grader.db_path)
@@ -207,11 +209,12 @@ def view_results_page(grader):
     
     if assignments.empty:
         st.warning("No assignments found.")
+        conn.close()
         return
     
     assignment_options = {row['name']: row['id'] for _, row in assignments.iterrows()}
-    selected_assignment = st.selectbox("Select Assignment", list(assignment_options.keys()))
-    assignment_id = assignment_options[selected_assignment]
+    selected_assignment_name = st.selectbox("Select Assignment", list(assignment_options.keys()))
+    assignment_id = assignment_options[selected_assignment_name]
     
     # Get submissions for this assignment
     submissions = pd.read_sql_query("""
@@ -222,9 +225,10 @@ def view_results_page(grader):
         ORDER BY s.submission_date DESC
     """, conn, params=(assignment_id,))
     
+    conn.close()
+    
     if submissions.empty:
         st.info("No submissions found for this assignment.")
-        conn.close()
         return
     
     # Display summary statistics
@@ -248,49 +252,116 @@ def view_results_page(grader):
         ai_graded = len(submissions[submissions['ai_score'].notna()])
         st.metric("AI Graded", ai_graded)
     
-    # Management options
-    col1, col2, col3 = st.columns([2, 1, 1])
+    # Initialize session state for selected submission
+    if 'quick_view_selected_id' not in st.session_state:
+        st.session_state.quick_view_selected_id = submissions.iloc[0]['id'] if not submissions.empty else None
     
-    with col1:
-        st.subheader("Submissions")
+    # Dual panel layout: Left 1/3, Right 2/3
+    left_col, right_col = st.columns([1, 2])
     
-    with col2:
-        if st.button("🗑️ Clear Results", help="Clear submissions for this assignment"):
-            st.session_state.show_clear_confirm = True
+    with left_col:
+        st.subheader("📋 Submissions")
         
-        # Show confirmation dialog if requested
-        if st.session_state.get('show_clear_confirm', False):
-            st.warning("⚠️ This will permanently delete all submissions for this assignment!")
-            
-            col_confirm1, col_confirm2 = st.columns(2)
-            with col_confirm1:
-                if st.button("✅ Yes, Delete All", type="primary"):
-                    conn = sqlite3.connect(grader.db_path)
-                    cursor = conn.cursor()
-                    cursor.execute("DELETE FROM submissions WHERE assignment_id = ?", (assignment_id,))
-                    conn.commit()
-                    conn.close()
-                    st.success("✅ Cleared all submissions (training data preserved)")
-                    st.session_state.show_clear_confirm = False
-                    st.rerun()
-            
-            with col_confirm2:
-                if st.button("❌ Cancel"):
-                    st.session_state.show_clear_confirm = False
-                    st.rerun()
+        # Scrollable container for student list
+        with st.container(height=800):
+            for _, submission in submissions.iterrows():
+                with st.container():
+                    is_selected = submission['id'] == st.session_state.quick_view_selected_id
+                    button_type = "primary" if is_selected else "secondary"
+                    
+                    # Get display name
+                    student_name = submission['student_name'] if submission['student_name'] else f"Student {submission['student_identifier']}"
+                    display_name = anonymize_name(student_name, submission['student_identifier'])
+                    
+                    # Grade indicator
+                    final_score = submission['final_score'] if pd.notna(submission['final_score']) else 0
+                    if final_score >= 35:
+                        grade_indicator = "🎉"
+                    elif final_score >= 30:
+                        grade_indicator = "👍"
+                    elif final_score >= 25:
+                        grade_indicator = "⚠️"
+                    elif final_score > 0:
+                        grade_indicator = "❌"
+                    else:
+                        grade_indicator = "⏳"
+                    
+                    if st.button(
+                        f"{grade_indicator} {display_name} ({final_score:.1f})",
+                        key=f"quick_view_{submission['id']}",
+                        type=button_type,
+                        use_container_width=True
+                    ):
+                        st.session_state.quick_view_selected_id = submission['id']
+                        st.rerun()
+                    
+                    # Add spacing
+                    st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
     
-    with col3:
-        if not submissions.empty:
-            col3a, col3b = st.columns(2)
-            with col3a:
-                if st.button("📝 Generate All Reports"):
-                    st.session_state.generate_all_reports = True
-            
-            with col3b:
-                if st.button("📦 Download Zip"):
-                    create_assignment_zip(grader, assignment_id, selected_assignment)
-            
-            if st.session_state.get('generate_all_reports', False):
+    with right_col:
+        # Get selected submission
+        selected_submission = submissions[submissions['id'] == st.session_state.quick_view_selected_id].iloc[0]
+        student_name = selected_submission['student_name'] if selected_submission['student_name'] else f"Student {selected_submission['student_identifier']}"
+        display_name = anonymize_name(student_name, selected_submission['student_identifier'])
+        
+        st.subheader(f"📊 {display_name}")
+        
+        # Tabs for notebook and feedback
+        tab1, tab2 = st.tabs(["📓 Notebook", "📊 AI Feedback"])
+        
+        with tab1:
+            # Display notebook
+            if selected_submission['notebook_path'] and os.path.exists(selected_submission['notebook_path']):
+                try:
+                    with open(selected_submission['notebook_path'], 'r', encoding='utf-8') as f:
+                        nb = nbformat.read(f, as_version=4)
+                    
+                    html_exporter = HTMLExporter()
+                    html_exporter.template_name = 'classic'
+                    (body, resources) = html_exporter.from_notebook_node(nb)
+                    
+                    st.components.v1.html(body, height=800, scrolling=True)
+                except Exception as e:
+                    st.error(f"Error displaying notebook: {e}")
+            else:
+                st.warning("Notebook not found")
+        
+        with tab2:
+            # Display AI feedback
+            if pd.notna(selected_submission['ai_feedback']):
+                try:
+                    feedback = json.loads(selected_submission['ai_feedback'])
+                    
+                    # Score display
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("AI Score", f"{selected_submission['ai_score']:.1f}/37.5")
+                    with col2:
+                        if pd.notna(selected_submission['final_score']):
+                            st.metric("Final Score", f"{selected_submission['final_score']:.1f}/37.5")
+                    
+                    # Display feedback
+                    if 'comprehensive_feedback' in feedback:
+                        comp_feed = feedback['comprehensive_feedback']
+                        if isinstance(comp_feed, dict) and 'instructor_comments' in comp_feed:
+                            st.markdown("**Instructor Assessment:**")
+                            st.info(comp_feed['instructor_comments'])
+                    
+                    st.markdown("---")
+                    st.caption("This is a read-only view. Use 'Review & Grade' to edit scores.")
+                    
+                except Exception as e:
+                    st.error(f"Error parsing feedback: {e}")
+            else:
+                st.info("No AI feedback available")
+
+
+def old_view_results_page_backup(grader):
+    """Old implementation - kept for reference"""
+    # Management options
+    pass
+    
+    if False:  # Disabled old code
                 generate_student_reports_interface(grader, assignment_id, selected_assignment)
                 st.session_state.generate_all_reports = False
     
@@ -309,7 +380,8 @@ def view_results_page(grader):
                 student_options = []
                 for _, row in graded_submissions.iterrows():
                     student_name = row['student_name'] if row['student_name'] != 'Unknown' else f"Student_{row['student_id']}"
-                    student_options.append(f"{student_name} (Score: {row['ai_score']:.1f})")
+                    display_name = anonymize_name(student_name, row['student_id'])
+                    student_options.append(f"{display_name} (Score: {row['ai_score']:.1f})")
                 
                 selected_student = st.selectbox(
                     "Select student for individual report:",
@@ -400,7 +472,10 @@ def view_results_page(grader):
                 elif row['student_id']:
                     student_name = f"Student {row['student_id']}"
                 
-                st.write(f"**{student_name}**")
+                # Apply anonymization
+                display_name = anonymize_name(student_name, row['student_id'])
+                
+                st.write(f"**{display_name}**")
                 st.caption(f"Submitted: {row['submission_date']}")
             
             with col2:
@@ -581,18 +656,24 @@ def generate_student_reports_interface(grader, assignment_id: int, assignment_na
                 
                 for _, submission in submissions.iterrows():
                     try:
-                        # Get the detailed analysis result and parse old format if needed
+                        # Parse the FULL AI feedback structure (SAME as individual report)
                         if submission['ai_feedback']:
                             try:
                                 analysis_result = json.loads(submission['ai_feedback'])
-                                # If it's the old format (list of strings), convert it
-                                if isinstance(analysis_result, list):
-                                    analysis_result = parse_old_feedback_format(analysis_result)
+                                
+                                # Ensure it has the required structure
+                                if not isinstance(analysis_result, dict):
+                                    analysis_result = {'comprehensive_feedback': {}}
+                                
+                                # Keep the full comprehensive_feedback including detailed_feedback
+                                # The report generator will handle formatting and filtering
+                                
                             except Exception as e:
                                 print(f"Error parsing feedback: {e}")
-                                analysis_result = {'detailed_feedback': ['Feedback parsing error']}
+                                analysis_result = {}
                         else:
-                            analysis_result = {'detailed_feedback': ['No detailed feedback available']}
+                            analysis_result = {}
+                        
                         analysis_result['total_score'] = submission['ai_score']
                         analysis_result['max_score'] = 37.5
                         
@@ -651,45 +732,13 @@ def generate_student_reports_interface(grader, assignment_id: int, assignment_na
                 st.error(f"Details: {traceback.format_exc()}")
 
 def generate_individual_report(grader, submission_row, assignment_name):
-    """Generate a PDF report for an individual submission"""
+    """Generate a PDF report - SINGLE SOURCE OF TRUTH with all sections"""
     try:
         from report_generator import PDFReportGenerator
         
         report_generator = PDFReportGenerator()
         
-        # Get the detailed analysis result and parse old format if needed
-        if submission_row['ai_feedback']:
-            try:
-                ai_feedback_data = json.loads(submission_row['ai_feedback'])
-                # Handle both list and dict formats
-                if isinstance(ai_feedback_data, list):
-                    analysis_result = parse_old_feedback_format(ai_feedback_data)
-                else:
-                    analysis_result = ai_feedback_data
-            except Exception as e:
-                print(f"Error parsing individual report feedback: {e}")
-                analysis_result = {
-                    'detailed_feedback': ['AI feedback available but could not be parsed'],
-                    'element_scores': {},
-                    'missing_elements': [],
-                    'code_issues': [],
-                    'question_analysis': {},
-                    'overall_assessment': 'Report generated from basic scoring data.'
-                }
-        else:
-            analysis_result = {
-                'detailed_feedback': ['No detailed feedback available'],
-                'element_scores': {},
-                'missing_elements': [],
-                'code_issues': [],
-                'question_analysis': {},
-                'overall_assessment': 'Basic scoring report.'
-            }
-        
-        analysis_result['total_score'] = submission_row['ai_score'] or 0
-        analysis_result['max_score'] = 37.5
-        
-        # Generate report - extract student name from filename if not available
+        # Get student name
         student_name = submission_row.get('student_name')
         if pd.isna(student_name) or student_name == 'Unknown' or not student_name:
             # Try to extract name from the notebook filename
@@ -698,16 +747,44 @@ def generate_individual_report(grader, submission_row, assignment_name):
                 from pathlib import Path
                 from assignment_manager import parse_github_classroom_filename
                 
-                filename = Path(notebook_path).stem  # Get filename without extension
+                filename = Path(notebook_path).stem
                 parsed_info = parse_github_classroom_filename(filename)
                 student_name = parsed_info.get('name') or f"Student_{submission_row.get('student_id', 'Unknown')}"
             else:
                 student_name = f"Student_{submission_row.get('student_id', 'Unknown')}"
+        
+        # Parse the FULL AI feedback structure
+        if submission_row['ai_feedback']:
+            try:
+                analysis_result = json.loads(submission_row['ai_feedback'])
+                
+                # Ensure it has the required structure
+                if not isinstance(analysis_result, dict):
+                    analysis_result = {'comprehensive_feedback': {}}
+                
+                # Keep the full comprehensive_feedback including detailed_feedback
+                # The report generator will handle formatting and converting to paragraphs
+                
+            except Exception as e:
+                print(f"Error parsing feedback: {e}")
+                analysis_result = {}
+        else:
+            analysis_result = {}
+        
+        # Ensure required fields
+        analysis_result['total_score'] = submission_row['ai_score'] or 0
+        analysis_result['max_score'] = 37.5
+        
+        # Generate report with all technical sections + short instructor feedback
         report_path = report_generator.generate_report(
             student_name=student_name,
             assignment_id=assignment_name,
             analysis_result=analysis_result
         )
+        
+        if not report_path:
+            st.error("Failed to generate report")
+            return
         
         # Show success and provide download
         st.success(f"✅ Report generated for {student_name}")

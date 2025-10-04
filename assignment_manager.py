@@ -32,9 +32,9 @@ def create_assignment_page(grader):
             height=200
         )
         
-        st.subheader("Template and Solution Notebooks")
-        template_file = st.file_uploader("Upload Template Notebook", type=['ipynb'])
-        solution_file = st.file_uploader("Upload Solution Notebook", type=['ipynb'])
+        st.subheader("Solution Notebook")
+        solution_file = st.file_uploader("Upload Solution Notebook (Required for grading)", type=['ipynb'])
+        st.caption("This notebook will be used to compare student submissions during grading")
         
         submitted = st.form_submit_button("Create Assignment")
         
@@ -43,14 +43,8 @@ def create_assignment_page(grader):
                 # Validate rubric JSON
                 rubric = json.loads(rubric_text) if rubric_text else {}
                 
-                # Save notebooks
-                template_path = None
+                # Save solution notebook
                 solution_path = None
-                
-                if template_file:
-                    template_path = os.path.join(grader.assignments_dir, f"{assignment_name}_template.ipynb")
-                    with open(template_path, "wb") as f:
-                        f.write(template_file.getbuffer())
                 
                 if solution_file:
                     solution_path = os.path.join(grader.assignments_dir, f"{assignment_name}_solution.ipynb")
@@ -62,9 +56,9 @@ def create_assignment_page(grader):
                 cursor = conn.cursor()
                 
                 cursor.execute('''
-                    INSERT INTO assignments (name, description, total_points, rubric, template_notebook, solution_notebook)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (assignment_name, description, total_points, json.dumps(rubric), template_path, solution_path))
+                    INSERT INTO assignments (name, description, total_points, rubric, solution_notebook)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (assignment_name, description, total_points, json.dumps(rubric), solution_path))
                 
                 conn.commit()
                 conn.close()
@@ -93,12 +87,12 @@ def upload_submissions_page(grader):
     assignment_id = assignment_options[selected_assignment]
     
     st.subheader("Upload Methods")
-    upload_method = st.radio("Choose upload method:", ["Single File", "Batch Upload (ZIP)"])
+    upload_method = st.radio("Choose upload method:", ["Batch Upload (ZIP)", "Single File"], index=0)
     
-    if upload_method == "Single File":
-        upload_single_submission(grader, assignment_id)
-    else:
+    if upload_method == "Batch Upload (ZIP)":
         upload_batch_submissions(grader, assignment_id)
+    else:
+        upload_single_submission(grader, assignment_id)
 
 def upload_single_submission(grader, assignment_id):
     with st.form("single_upload"):
@@ -433,40 +427,51 @@ def extract_student_info_from_notebook(nb):
     return student_info
 
 def parse_github_classroom_filename(filename):
-    """Parse GitHub Classroom filename to extract student name and ID"""
+    """Parse Canvas/GitHub Classroom filename to extract student name and Canvas user ID"""
     import re
     
     try:
-        # GitHub Classroom format examples:
-        # aguirrejulissa_152822_11544283_homework_lesson_1
-        # alexandermichaelgregory_9711_11548355_homework_lesson_1_Michael_Alexander
-        # balfourloganscott_21869_11533679_Balfour_Logan_homework_lesson_1
+        # Canvas filename format examples:
+        # 152822_aguirrejulissa_11544283_homework_lesson_1  (Canvas user ID is FIRST)
+        # 9711_alexandermichaelgregory_11548355_homework_lesson_1_Michael_Alexander
+        # 21869_balfourloganscott_11533679_Balfour_Logan_homework_lesson_1
         
         # Split by underscores
         parts = filename.split('_')
         
         if len(parts) >= 3:
-            username = parts[0]  # First part is usually lastnamefirstname
+            # Canvas user ID is the FIRST part (numeric)
+            canvas_user_id = parts[0] if parts[0].isdigit() else None
             
-            # Handle Canvas LATE submissions - LATE is inserted between name and student ID
-            student_id = parts[1]  # Default to second part
+            # If first part is not numeric, try old GitHub Classroom format
+            if not canvas_user_id:
+                username = parts[0]  # First part is username
+                # Look for numeric ID in second position or anywhere
+                student_id = parts[1] if parts[1].isdigit() else None
+                if not student_id:
+                    # Find first numeric ID in the filename
+                    numeric_ids = [part for part in parts if part.isdigit() and len(part) > 3]
+                    student_id = numeric_ids[0] if numeric_ids else 'unknown'
+            else:
+                # Canvas format: user_id_username_submission_id_...
+                student_id = canvas_user_id
+                username = parts[1] if len(parts) > 1 else 'unknown'
             
-            # If we see LATE in the filename, it's a Canvas late submission marker
+            # Handle Canvas LATE submissions
             if 'LATE' in parts:
                 late_index = parts.index('LATE')
-                
-                # Look for numeric student ID after LATE marker
-                numeric_ids = [part for part in parts[late_index+1:] if part.isdigit() and len(part) > 3]
-                if numeric_ids:
-                    student_id = numeric_ids[0]  # Use first numeric ID found after LATE
+                # Canvas user ID should still be first, even with LATE marker
+                if parts[0].isdigit():
+                    student_id = parts[0]  # Canvas user ID is first
+                    # Username might be after LATE or before it
+                    if late_index > 1:
+                        username = parts[1]  # Username before LATE
+                    elif late_index + 1 < len(parts):
+                        username = parts[late_index + 1]  # Username after LATE
                 else:
-                    # Look for numeric ID anywhere in the filename
-                    all_numeric_ids = [part for part in parts if part.isdigit() and len(part) > 3]
-                    if all_numeric_ids:
-                        student_id = all_numeric_ids[0]
-                    else:
-                        # If no numeric ID found, use LATE as the ID (Canvas export without student ID)
-                        student_id = 'LATE'
+                    # Fallback for complex LATE formats
+                    numeric_ids = [part for part in parts if part.isdigit() and len(part) > 3]
+                    student_id = numeric_ids[0] if numeric_ids else 'LATE'
             
             # Check if there are explicit name parts later in the filename
             name_parts = []

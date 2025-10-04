@@ -16,6 +16,8 @@ import tempfile
 import sys
 import requests
 import time
+import logging
+from typing import Dict, Any, Optional
 
 # Import two-model grading system
 try:
@@ -24,9 +26,276 @@ try:
 except ImportError:
     TWO_MODEL_AVAILABLE = False
 
+# Set up logging
+logger = logging.getLogger(__name__)
+
+def filter_ai_feedback_for_storage(feedback_data: Any) -> Any:
+    """
+    Filter AI feedback to remove internal monologue before storing in database.
+    This ensures clean content is stored at the source.
+    """
+    if not feedback_data:
+        return feedback_data
+    
+    # Handle different feedback formats
+    if isinstance(feedback_data, str):
+        try:
+            # Try to parse as JSON first
+            parsed_data = json.loads(feedback_data)
+            return filter_ai_feedback_for_storage(parsed_data)
+        except json.JSONDecodeError:
+            # If it's just a string, apply basic filtering
+            return _filter_text_content(feedback_data)
+    
+    elif isinstance(feedback_data, dict):
+        # Filter dictionary content
+        filtered_dict = {}
+        
+        for key, value in feedback_data.items():
+            if key == 'comprehensive_feedback':
+                # Apply comprehensive feedback filtering
+                filtered_dict[key] = _filter_comprehensive_feedback(value)
+            elif key == 'detailed_feedback':
+                # Apply detailed feedback filtering
+                filtered_dict[key] = _filter_detailed_feedback(value)
+            elif key == 'instructor_comments':
+                # Apply instructor comments filtering
+                filtered_dict[key] = _filter_instructor_comments(value)
+            elif isinstance(value, (str, dict, list)):
+                # Recursively filter nested content
+                filtered_dict[key] = filter_ai_feedback_for_storage(value)
+            else:
+                # Keep non-text content as is
+                filtered_dict[key] = value
+        
+        return filtered_dict
+    
+    elif isinstance(feedback_data, list):
+        # Filter list content
+        return [filter_ai_feedback_for_storage(item) for item in feedback_data]
+    
+    else:
+        # Return non-text content as is
+        return feedback_data
+
+def _filter_comprehensive_feedback(comp_feedback: Any) -> Any:
+    """Filter comprehensive feedback section"""
+    if isinstance(comp_feedback, str):
+        # Extract JSON from string if possible
+        json_data = _extract_json_from_response(comp_feedback)
+        if json_data:
+            return _filter_comprehensive_feedback(json_data)
+        else:
+            return _filter_text_content(comp_feedback)
+    
+    elif isinstance(comp_feedback, dict):
+        filtered = {}
+        
+        # Filter instructor comments
+        if 'instructor_comments' in comp_feedback:
+            filtered['instructor_comments'] = _filter_instructor_comments(comp_feedback['instructor_comments'])
+        
+        # Filter detailed feedback
+        if 'detailed_feedback' in comp_feedback:
+            filtered['detailed_feedback'] = _filter_detailed_feedback(comp_feedback['detailed_feedback'])
+        
+        # Keep other fields as is (scores, etc.)
+        for key, value in comp_feedback.items():
+            if key not in ['instructor_comments', 'detailed_feedback']:
+                filtered[key] = value
+        
+        return filtered
+    
+    return comp_feedback
+
+def _filter_detailed_feedback(detailed_feedback: Any) -> Any:
+    """Filter detailed feedback sections"""
+    if not isinstance(detailed_feedback, dict):
+        return detailed_feedback
+    
+    filtered = {}
+    
+    for section_name, section_content in detailed_feedback.items():
+        if isinstance(section_content, list):
+            # Filter each item in the list
+            filtered_items = []
+            for item in section_content:
+                if isinstance(item, str) and len(item) > 20:
+                    # Check if this looks like instructor feedback vs internal reasoning
+                    # Expanded patterns to catch more internal AI dialog
+                    if not any(pattern in item.lower() for pattern in [
+                        "we need", "let's", "the student", "they have", "first,", "now", 
+                        "good.", "thus", "maybe", "overall score:", "business understanding:",
+                        "communication clarity:", "data interpretation:", "methodology appropriateness:",
+                        "reflection quality:", "now produce", "let's craft",
+                        "they answered", "they gave", "they completed", "they did", "they also",
+                        "they wrote", "they provided", "they used", "they could", "they should",
+                        "part 1:", "part 2:", "part 3:", "part 4:", "part 5:",
+                        "q1", "q2", "q3", "q4", "q5",
+                        "missing value strategy", "outlier interpretation", "data quality impact",
+                        "ethical considerations", "thorough answers"
+                    ]):
+                        clean_item = _filter_text_content(item)
+                        if clean_item and len(clean_item) > 15:
+                            filtered_items.append(clean_item)
+            
+            # If we have clean items, use them; otherwise provide appropriate fallback
+            if filtered_items:
+                filtered[section_name] = filtered_items[:3]  # Limit to 3 items
+            else:
+                filtered[section_name] = [_get_fallback_for_section(section_name)]
+        else:
+            filtered[section_name] = section_content
+    
+    return filtered
+
+def _filter_instructor_comments(comments: str) -> str:
+    """Filter instructor comments to remove AI artifacts - NO FALLBACK"""
+    if not isinstance(comments, str):
+        return str(comments) if comments else ""
+    
+    # Remove internal reasoning patterns - EXPANDED LIST
+    patterns_to_remove = [
+        r"We need to.*?\.",
+        r"Let's.*?\.",
+        r"First,.*?\.",
+        r"Now.*?\.",
+        r"The student provided.*?\.",
+        r"They have.*?\.",
+        r"<\|.*?\|>",
+        r"\{.*?\}",
+        r"JSON.*?",
+        r"Overall score:.*?\.",
+        r"Business understanding:.*?\.",
+        r"Communication clarity:.*?\.",
+        r"Data interpretation:.*?\.",
+        r"Methodology appropriateness:.*?\.",
+        r"Reflection quality:.*?\.",
+        r"Now produce.*?\.",
+        r"Let's craft.*?\.",
+        r"<think>.*?</think>",
+        r"<reasoning>.*?</reasoning>",
+        r"\[thinking\].*?\[/thinking\]",
+        r"\[internal\].*?\[/internal\]",
+    ]
+    
+    clean_comments = comments
+    for pattern in patterns_to_remove:
+        clean_comments = re.sub(pattern, '', clean_comments, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Clean up whitespace
+    clean_comments = re.sub(r'\s+', ' ', clean_comments).strip()
+    
+    # If too much was removed, return empty - NO FALLBACK
+    if len(clean_comments) < 30:
+        logger.warning(f"Instructor comments too short after filtering ({len(clean_comments)} chars) - AI model needs to generate more verbose, personalized feedback")
+        return ""
+    
+    return clean_comments
+
+def _filter_text_content(text: str) -> str:
+    """Apply basic text filtering to remove internal AI patterns"""
+    if not isinstance(text, str):
+        return str(text) if text else ""
+    
+    # Remove internal AI patterns - EXPANDED LIST
+    forbidden_patterns = [
+        "we need to", "let's", "first, check", "now evaluate", "now assign",
+        "now produce", "let's craft", "the student provided", "they have code",
+        "did they complete", "the assignment required", "good.", "thus they",
+        "reflection quality:", "business understanding:", "communication clarity:",
+        "data interpretation:", "methodology appropriateness:", "overall score:",
+        "maybe", "now produce json", "<|end|>", "<|start|>", "assistant", "channel",
+        "they answered", "they gave", "they completed", "they did", "they also",
+        "they wrote", "they provided", "they used", "they could", "they should",
+        "part 1:", "part 2:", "part 3:", "part 4:", "part 5:",
+        "q1 (", "q2 (", "q3 (", "q4 (", "q5 (",
+        "missing value strategy", "outlier interpretation", "data quality impact",
+        "ethical considerations", "thorough answers", "gave thorough"
+    ]
+    
+    lines = text.split('\n')
+    clean_lines = []
+    
+    for line in lines:
+        line = line.strip()
+        
+        # Skip lines with forbidden patterns
+        if any(pattern in line.lower() for pattern in forbidden_patterns):
+            continue
+        
+        # Skip very short lines
+        if len(line) < 15:
+            continue
+        
+        # Skip lines that start with internal reasoning markers
+        if line.startswith(("We ", "Let's ", "First ", "Now ", "The student ", "They ", "Part ")):
+            continue
+        
+        # Skip lines that contain question references
+        if re.search(r'\bQ\d+\b', line):
+            continue
+        
+        clean_lines.append(line)
+    
+    return ' '.join(clean_lines[:3])  # Limit to first 3 clean lines
+
+def _extract_json_from_response(ai_response: str) -> Optional[Dict[str, Any]]:
+    """Extract JSON content from AI response, ignoring internal monologue"""
+    if not ai_response:
+        return None
+    
+    try:
+        # Pattern to find JSON objects
+        json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+        json_matches = re.findall(json_pattern, ai_response, re.DOTALL)
+        
+        if not json_matches:
+            return None
+        
+        # Try to parse each JSON match, starting from the last one
+        for json_text in reversed(json_matches):
+            try:
+                clean_json = json_text.strip()
+                if clean_json.endswith('```'):
+                    clean_json = clean_json[:-3].strip()
+                
+                parsed_json = json.loads(clean_json)
+                
+                # Validate it has expected structure
+                if isinstance(parsed_json, dict) and ('detailed_feedback' in parsed_json or 'instructor_comments' in parsed_json):
+                    return parsed_json
+                    
+            except json.JSONDecodeError:
+                continue
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error extracting JSON from AI response: {e}")
+        return None
+
+def _get_fallback_for_section(section_name: str) -> str:
+    """Get appropriate fallback content for each section - SHOULD NOT BE USED"""
+    # Fallbacks should not be used - AI must generate personalized feedback
+    logger.warning(f"Fallback requested for section '{section_name}' - AI model needs to generate more verbose, personalized feedback")
+    return f"[Feedback not available for {section_name} - please regenerate with more verbose AI model]"
+
 class LocalAIClient:
-    def __init__(self, model_name="gpt-oss:120b", base_url="http://localhost:11434"):
+    def __init__(self, model_name=None, base_url="http://localhost:11434"):
         """Initialize connection to local AI model (Ollama)"""
+        # Import model configuration
+        try:
+            from model_config import PRIMARY_GRADING_MODEL, get_model_config
+            if model_name is None:
+                model_name = PRIMARY_GRADING_MODEL
+            self.model_config = get_model_config(model_name)
+        except ImportError:
+            # Fallback if config file doesn't exist
+            if model_name is None:
+                model_name = "gemma3:27b"  # Default to gemma for cleaner feedback
+            self.model_config = {"temperature": 0.3, "max_tokens": 3000}
+        
         self.model_name = model_name
         self.base_url = base_url
         self.api_url = f"{base_url}/api/generate"
@@ -209,13 +478,17 @@ class LocalAIClient:
         except Exception as e:
             return False, str(e)
     
-    def generate_response(self, prompt, max_tokens=2000, show_progress=False):
+    def generate_response(self, prompt, max_tokens=None, show_progress=False):
         """Generate response from local AI model"""
         start_time = time.time()
         
+        # Use model-specific max_tokens if not specified
+        if max_tokens is None:
+            max_tokens = self.model_config.get('max_tokens', 3000)
+        
         # Check if this is likely the first request (model not in memory)
         if not self.model_loaded_in_memory and show_progress:
-            st.info("🔄 Loading gpt-oss:120b from external drive (1.5GB/s - should take ~45-60 seconds)...")
+            st.info(f"🔄 Loading {self.model_name} from external drive (1.5GB/s - should take ~45-60 seconds)...")
             progress_bar = st.progress(0)
             status_text = st.empty()
             
@@ -232,8 +505,8 @@ class LocalAIClient:
                 "prompt": prompt,
                 "stream": False,
                 "options": {
-                    "temperature": 0.3,
-                    "max_tokens": max_tokens
+                    "temperature": self.model_config.get('temperature', 0.3),
+                    "num_predict": max_tokens  # Ollama uses num_predict instead of max_tokens
                 }
             }
             
@@ -294,7 +567,8 @@ class AIGrader:
             self.ai_backend = "Unified"
         except Exception:
             # Fallback to Ollama for backward compatibility
-            preferred_model = os.environ.get('HOMEWORK_GRADER_MODEL', 'gpt-oss:120b')
+            # Use gemma3:27b by default for cleaner, more verbose feedback
+            preferred_model = os.environ.get('HOMEWORK_GRADER_MODEL', 'gemma3:27b')
             self.local_ai = LocalAIClient(model_name=preferred_model)
             self.use_local_ai = self.local_ai.is_available()
             self.ai_backend = "Ollama"
@@ -1451,19 +1725,23 @@ def grade_all_submissions(grader, ai_grader, ungraded, assignment_id):
             continue  # Skip this submission and continue with others
         
         if result:
+            # Filter AI feedback to remove internal monologue before storing
+            filtered_feedback = filter_ai_feedback_for_storage(result['feedback'])
+            
             # Update database
             cursor.execute("""
                 UPDATE submissions
                 SET ai_score = ?, ai_feedback = ?
                 WHERE id = ?
-            """, (result['score'], json.dumps(result['feedback']), submission['id']))
+            """, (result['score'], json.dumps(filtered_feedback), submission['id']))
             
             # Store training data if features available
             if 'features' in result:
+                # Use filtered feedback for training data too
                 cursor.execute("""
                     INSERT INTO ai_training_data (assignment_id, cell_content, features, ai_score, ai_feedback)
                     VALUES (?, ?, ?, ?, ?)
-                """, (assignment_id, submission['notebook_path'], json.dumps(result['features']), result['score'], json.dumps(result['feedback'])))
+                """, (assignment_id, submission['notebook_path'], json.dumps(result['features']), result['score'], json.dumps(filtered_feedback)))
             
             # Generate PDF report
             try:
@@ -1572,11 +1850,14 @@ def grade_single_submission(grader, ai_grader, submission, assignment_id):
             conn = sqlite3.connect(grader.db_path)
             cursor = conn.cursor()
             
+            # Filter AI feedback to remove internal monologue before storing
+            filtered_feedback = filter_ai_feedback_for_storage(result['feedback'])
+            
             cursor.execute("""
                 UPDATE submissions
                 SET ai_score = ?, ai_feedback = ?
                 WHERE id = ?
-            """, (result['score'], json.dumps(result['feedback']), submission['id']))
+            """, (result['score'], json.dumps(filtered_feedback), submission['id']))
             
             if 'features' in result:
                 cursor.execute("""
@@ -1699,6 +1980,10 @@ def grade_all_submissions_two_model(grader, ungraded, assignment_id):
             )
             
             if result and 'final_score' in result:
+                # Filter AI feedback to remove internal monologue before storing
+                raw_feedback = result.get('detailed_feedback', 'No feedback available')
+                filtered_feedback = filter_ai_feedback_for_storage(raw_feedback)
+                
                 # Update database
                 cursor.execute("""
                     UPDATE submissions 
@@ -1706,7 +1991,7 @@ def grade_all_submissions_two_model(grader, ungraded, assignment_id):
                     WHERE id = ?
                 """, (
                     result['final_score'],
-                    result.get('detailed_feedback', 'No feedback available'),
+                    json.dumps(filtered_feedback) if isinstance(filtered_feedback, (dict, list)) else filtered_feedback,
                     result['final_score'],
                     datetime.now(),
                     submission['id']
@@ -1763,6 +2048,10 @@ def grade_single_submission_two_model(grader, submission, assignment_id):
             )
             
             if result and 'final_score' in result:
+                # Filter AI feedback to remove internal monologue before storing
+                raw_feedback = result.get('detailed_feedback', 'No feedback available')
+                filtered_feedback = filter_ai_feedback_for_storage(raw_feedback)
+                
                 # Update database
                 cursor = conn.cursor()
                 cursor.execute("""
@@ -1771,7 +2060,7 @@ def grade_single_submission_two_model(grader, submission, assignment_id):
                     WHERE id = ?
                 """, (
                     result['final_score'],
-                    result.get('detailed_feedback', 'No feedback available'),
+                    json.dumps(filtered_feedback) if isinstance(filtered_feedback, (dict, list)) else filtered_feedback,
                     result['final_score'],
                     datetime.now(),
                     submission['id']

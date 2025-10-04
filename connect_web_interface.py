@@ -8,10 +8,13 @@ import sqlite3
 import pandas as pd
 import json
 import os
+import time
 import nbformat
 from business_analytics_grader import BusinessAnalyticsGrader
 from grading_validator import GradingValidator
 from report_generator import PDFReportGenerator
+from ai_grader import filter_ai_feedback_for_storage
+from anonymization_utils import anonymize_name
 
 def grade_submissions_page(grader):
     """Enhanced grade submissions page using our business analytics grader"""
@@ -87,33 +90,34 @@ def show_auto_grading_interface(grader, assignment_id, ungraded_submissions):
     
     with col1:
         grade_mode = st.selectbox("Grading Mode", [
-            "Individual (one at a time)",
-            "Batch (all at once)"
-        ])
+            "Batch (all at once)",
+            "Individual (one at a time)"
+        ], index=0)
     
     with col2:
         use_validation = st.checkbox("Enable validation", value=True, 
                                    help="Validate all calculations for accuracy")
     
-    if grade_mode == "Individual (one at a time)":
+    if grade_mode == "Batch (all at once)":
+        # Batch grading
+        st.write("**Batch grading will process all ungraded submissions**")
+        
+        if st.button("🚀 Grade All Submissions", type="primary"):
+            grade_batch_submissions(grader, ungraded_submissions, assignment_id, use_validation)
+    
+    else:
         # Individual grading
         if len(ungraded_submissions) > 0:
             submission = ungraded_submissions.iloc[0]
             
             st.write("**Next submission:**")
             student_name = submission['student_name'] or f"Student {submission['student_identifier']}"
-            st.write(f"👤 **{student_name}**")
+            display_name = anonymize_name(student_name, submission['student_identifier'])
+            st.write(f"👤 **{display_name}**")
             st.write(f"📅 Submitted: {submission['submission_date']}")
             
             if st.button("⚡ Grade This Submission", type="primary"):
                 grade_single_submission(grader, submission, assignment_id, use_validation)
-    
-    else:
-        # Batch grading
-        st.write("**Batch grading will process all ungraded submissions**")
-        
-        if st.button("🚀 Grade All Submissions", type="primary"):
-            grade_batch_submissions(grader, ungraded_submissions, assignment_id, use_validation)
 
 def grade_single_submission(grader, submission, assignment_id, use_validation=True):
     """Grade a single submission using business analytics grader"""
@@ -136,20 +140,33 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
         with open(notebook_path, 'r', encoding='utf-8') as f:
             nb = nbformat.read(f, as_version=4)
         
-        # Extract code and markdown
+        # Extract code and markdown (including outputs for code cells)
         student_code = ""
         student_markdown = ""
         
         for cell in nb.cells:
             if cell.cell_type == 'code':
                 student_code += cell.source + "\n\n"
+                
+                # Include cell outputs if available
+                if hasattr(cell, 'outputs') and cell.outputs:
+                    student_code += "# OUTPUT:\n"
+                    for output in cell.outputs:
+                        if output.output_type == 'stream':
+                            student_code += output.text + "\n"
+                        elif output.output_type == 'execute_result' and 'text/plain' in output.data:
+                            student_code += output.data['text/plain'] + "\n"
+                        elif output.output_type == 'display_data' and 'text/plain' in output.data:
+                            student_code += output.data['text/plain'] + "\n"
+                    student_code += "\n"
+                    
             elif cell.cell_type == 'markdown':
                 student_markdown += cell.source + "\n\n"
         
-        # Get assignment info
+        # Get assignment info including solution notebook
         conn = sqlite3.connect(grader.db_path)
         assignment_info_df = pd.read_sql_query("""
-            SELECT name, description, rubric FROM assignments WHERE id = ?
+            SELECT name, description, rubric, solution_notebook, total_points FROM assignments WHERE id = ?
         """, conn, params=(assignment_id,))
         conn.close()
         
@@ -162,6 +179,7 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
         # Prepare assignment info
         assignment_info = {
             "title": assignment_row['name'],
+            "name": assignment_row['name'],  # Add name for prompt manager
             "description": assignment_row['description'],
             "student_name": submission['student_name'] or f"Student {submission['student_identifier']}"
         }
@@ -172,29 +190,39 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
             try:
                 rubric_data = json.loads(assignment_row['rubric'])
                 rubric_elements = {
-                    "technical_execution": {"weight": 0.25, "max_score": 37.5},
-                    "business_thinking": {"weight": 0.30, "max_score": 37.5},
-                    "data_analysis": {"weight": 0.25, "max_score": 37.5},
-                    "communication": {"weight": 0.20, "max_score": 37.5}
+                    "technical_execution": {"weight": 0.25, "max_score": assignment_row['total_points']},
+                    "business_thinking": {"weight": 0.30, "max_score": assignment_row['total_points']},
+                    "data_analysis": {"weight": 0.25, "max_score": assignment_row['total_points']},
+                    "communication": {"weight": 0.20, "max_score": assignment_row['total_points']}
                 }
             except:
                 pass
         
-        # Solution code (basic reference)
-        solution_code = '''
-        library(tidyverse)
-        library(readxl)
+        # Load solution code from solution notebook
+        solution_code = ""
+        solution_markdown = ""
         
-        # Import data
-        sales_df <- read_csv("data/sales_data.csv")
-        ratings_df <- read_excel("data/customer_feedback.xlsx", sheet = "ratings")
-        comments_df <- read_excel("data/customer_feedback.xlsx", sheet = "customer_feedback")
-        
-        # Data inspection
-        head(sales_df)
-        str(sales_df)
-        summary(sales_df)
-        '''
+        if assignment_row['solution_notebook'] and os.path.exists(assignment_row['solution_notebook']):
+            try:
+                with open(assignment_row['solution_notebook'], 'r', encoding='utf-8') as f:
+                    solution_nb = nbformat.read(f, as_version=4)
+                
+                # Extract code and markdown from solution
+                for cell in solution_nb.cells:
+                    if cell.cell_type == 'code':
+                        solution_code += cell.source + "\n\n"
+                    elif cell.cell_type == 'markdown':
+                        solution_markdown += cell.source + "\n\n"
+                
+                st.info(f"✅ Loaded solution notebook: {os.path.basename(assignment_row['solution_notebook'])}")
+            except Exception as e:
+                st.warning(f"⚠️ Could not load solution notebook: {e}")
+                # Fallback to basic solution
+                solution_code = "# Solution notebook not available\n# Grading based on general criteria"
+        else:
+            st.warning("⚠️ No solution notebook found for this assignment")
+            # Fallback to basic solution
+            solution_code = "# Solution notebook not available\n# Grading based on general criteria"
         
         # Show progress
         with st.spinner("🎓 Grading with Business Analytics AI..."):
@@ -371,7 +399,7 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
         st.error(f"Details: {traceback.format_exc()}")
 
 def grade_batch_submissions(grader, submissions, assignment_id, use_validation=True):
-    """Grade multiple submissions in batch"""
+    """Grade multiple submissions in batch with performance metrics tracking"""
     
     total_submissions = len(submissions)
     
@@ -381,10 +409,32 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
     
     st.info("🤖 **Parallel Two-Model Processing**: Code analysis + feedback generation running simultaneously")
     
+    # Performance metrics tracking
+    batch_performance = {
+        'total_submissions': total_submissions,
+        'start_time': time.time(),
+        'submission_times': [],
+        'qwen_metrics': [],
+        'gemma_metrics': [],
+        'parallel_efficiencies': [],
+        'tokens_per_second_history': [],
+        'combined_throughput_history': []
+    }
+    
     # Progress tracking
     progress_bar = st.progress(0)
     status_text = st.empty()
     results_container = st.container()
+    
+    # Performance metrics display
+    perf_container = st.container()
+    with perf_container:
+        st.subheader("📊 Real-Time Performance Metrics")
+        col1, col2, col3, col4 = st.columns(4)
+        qwen_metric = col1.empty()
+        gemma_metric = col2.empty()
+        efficiency_metric = col3.empty()
+        throughput_metric = col4.empty()
     
     graded_count = 0
     failed_count = 0
@@ -395,11 +445,43 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
         progress_bar.progress(progress)
         
         student_name = submission['student_name'] or f"Student {submission['student_identifier']}"
-        status_text.text(f"Grading {i+1}/{total_submissions}: {student_name}")
+        display_name = anonymize_name(student_name, submission['student_identifier'])
+        status_text.text(f"Grading {i+1}/{total_submissions}: {display_name}")
         
         try:
+            # Track submission start time
+            submission_start = time.time()
+            
             # Grade this submission (similar to single submission logic)
             result = grade_submission_internal(business_grader, submission, assignment_id)
+            
+            # Capture performance metrics from result
+            submission_time = time.time() - submission_start
+            batch_performance['submission_times'].append(submission_time)
+            
+            # Extract performance diagnostics if available
+            perf_diag = result.get('performance_diagnostics', {})
+            if perf_diag:
+                qwen_perf = perf_diag.get('qwen_performance', {})
+                gemma_perf = perf_diag.get('gemma_performance', {})
+                combined = perf_diag.get('combined_metrics', {})
+                
+                batch_performance['qwen_metrics'].append(qwen_perf.get('tokens_per_second', 0))
+                batch_performance['gemma_metrics'].append(gemma_perf.get('tokens_per_second', 0))
+                batch_performance['parallel_efficiencies'].append(combined.get('parallel_efficiency', 0))
+                batch_performance['combined_throughput_history'].append(combined.get('combined_throughput_tokens_per_second', 0))
+                
+                # Update real-time metrics display
+                if batch_performance['qwen_metrics']:
+                    avg_qwen = sum(batch_performance['qwen_metrics']) / len(batch_performance['qwen_metrics'])
+                    avg_gemma = sum(batch_performance['gemma_metrics']) / len(batch_performance['gemma_metrics'])
+                    avg_efficiency = sum(batch_performance['parallel_efficiencies']) / len(batch_performance['parallel_efficiencies'])
+                    avg_throughput = sum(batch_performance['combined_throughput_history']) / len(batch_performance['combined_throughput_history'])
+                    
+                    qwen_metric.metric("🔧 Qwen Avg", f"{avg_qwen:.1f} tok/s")
+                    gemma_metric.metric("📝 GPT-OSS Avg", f"{avg_gemma:.1f} tok/s")
+                    efficiency_metric.metric("⚡ Efficiency", f"{avg_efficiency:.1f}x")
+                    throughput_metric.metric("🚀 Throughput", f"{avg_throughput:.1f} tok/s")
             
             # Validate if requested
             if validator:
@@ -412,17 +494,108 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
             
             # Show progress
             with results_container:
-                st.success(f"✅ {student_name}: {result['final_score']:.1f}/37.5 ({result['final_score_percentage']:.1f}%)")
+                st.success(f"✅ {display_name}: {result['final_score']:.1f}/37.5 ({result['final_score_percentage']:.1f}%) - {submission_time:.1f}s")
             
             graded_count += 1
             
         except Exception as e:
             with results_container:
-                st.error(f"❌ {student_name}: Failed - {str(e)}")
+                st.error(f"❌ {display_name}: Failed - {str(e)}")
             failed_count += 1
+    
+    # Calculate final batch performance metrics
+    batch_performance['total_time'] = time.time() - batch_performance['start_time']
     
     # Final results
     status_text.text("🎉 Batch grading complete!")
+    
+    # Display comprehensive performance summary
+    st.subheader("📊 Batch Performance Summary")
+    
+    if batch_performance['submission_times']:
+        avg_submission_time = sum(batch_performance['submission_times']) / len(batch_performance['submission_times'])
+        total_time = batch_performance['total_time']
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Time", f"{total_time:.1f}s")
+        with col2:
+            st.metric("Avg per Submission", f"{avg_submission_time:.1f}s")
+        with col3:
+            st.metric("Submissions/Hour", f"{3600/avg_submission_time:.0f}")
+        with col4:
+            st.metric("Throughput", f"{graded_count/total_time*60:.1f}/min")
+        
+        # Performance metrics averages
+        if batch_performance['qwen_metrics']:
+            st.subheader("🖥️ Model Performance Averages")
+            
+            avg_qwen = sum(batch_performance['qwen_metrics']) / len(batch_performance['qwen_metrics'])
+            avg_gemma = sum(batch_performance['gemma_metrics']) / len(batch_performance['gemma_metrics'])
+            avg_efficiency = sum(batch_performance['parallel_efficiencies']) / len(batch_performance['parallel_efficiencies'])
+            avg_combined_throughput = sum(batch_performance['combined_throughput_history']) / len(batch_performance['combined_throughput_history'])
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("🔧 Qwen Average", f"{avg_qwen:.1f} tok/s", 
+                         delta=f"{max(batch_performance['qwen_metrics']) - min(batch_performance['qwen_metrics']):.1f} range")
+            with col2:
+                st.metric("📝 GPT-OSS Average", f"{avg_gemma:.1f} tok/s",
+                         delta=f"{max(batch_performance['gemma_metrics']) - min(batch_performance['gemma_metrics']):.1f} range")
+            with col3:
+                st.metric("⚡ Parallel Efficiency", f"{avg_efficiency:.1f}x",
+                         delta=f"{max(batch_performance['parallel_efficiencies']) - min(batch_performance['parallel_efficiencies']):.1f} range")
+            with col4:
+                st.metric("🚀 Combined Throughput", f"{avg_combined_throughput:.1f} tok/s",
+                         delta=f"{max(batch_performance['combined_throughput_history']) - min(batch_performance['combined_throughput_history']):.1f} range")
+            
+            # Performance trends
+            st.subheader("📈 Performance Trends")
+            
+            import pandas as pd
+            import matplotlib.pyplot as plt
+            
+            # Create performance DataFrame
+            perf_df = pd.DataFrame({
+                'Submission': range(1, len(batch_performance['qwen_metrics']) + 1),
+                'Qwen (tok/s)': batch_performance['qwen_metrics'],
+                'GPT-OSS (tok/s)': batch_performance['gemma_metrics'],
+                'Parallel Efficiency': batch_performance['parallel_efficiencies'],
+                'Combined Throughput': batch_performance['combined_throughput_history'],
+                'Submission Time (s)': batch_performance['submission_times']
+            })
+            
+            # Display trends chart
+            st.line_chart(perf_df.set_index('Submission')[['Qwen (tok/s)', 'GPT-OSS (tok/s)', 'Combined Throughput']])
+            
+            # Performance analysis
+            st.subheader("🎯 Performance Analysis")
+            
+            if avg_qwen > 30 and avg_gemma > 35:
+                st.success("✅ **Excellent Performance**: Both models operating at optimal speeds")
+            elif avg_qwen > 25 and avg_gemma > 30:
+                st.warning("⚠️ **Good Performance**: Models performing well, minor optimization possible")
+            else:
+                st.error("❌ **Performance Issues**: Models may need optimization or system resources")
+            
+            if avg_efficiency > 1.7:
+                st.success("✅ **Excellent Parallelization**: High efficiency from distributed processing")
+            elif avg_efficiency > 1.4:
+                st.warning("⚠️ **Good Parallelization**: Decent parallel efficiency")
+            else:
+                st.error("❌ **Poor Parallelization**: Parallel processing not optimal")
+            
+            # Recommendations
+            st.subheader("💡 Optimization Recommendations")
+            
+            if max(batch_performance['submission_times']) - min(batch_performance['submission_times']) > 10:
+                st.info("📊 **Timing Variance**: Large variation in submission times detected. Consider checking for thermal throttling or memory pressure.")
+            
+            if avg_combined_throughput < 50:
+                st.info("🚀 **Throughput**: Combined throughput below 50 tok/s. Consider optimizing prompts or checking network latency.")
+            
+            if avg_efficiency < 1.5:
+                st.info("⚡ **Efficiency**: Parallel efficiency below 1.5x. Check if both Mac Studios are fully utilized.")
     
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -504,6 +677,9 @@ def save_grading_result(grader, submission_id, result):
         'grading_stats': result.get('grading_stats', {})
     }
     
+    # Filter AI feedback to remove internal monologue before storing
+    filtered_feedback = filter_ai_feedback_for_storage(feedback_data)
+    
     # Update submission
     cursor.execute("""
         UPDATE submissions 
@@ -511,7 +687,7 @@ def save_grading_result(grader, submission_id, result):
         WHERE id = ?
     """, (
         result['final_score'],
-        json.dumps(feedback_data),
+        json.dumps(filtered_feedback),
         result['final_score'],
         result.get('grading_timestamp'),
         submission_id

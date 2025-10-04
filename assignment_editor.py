@@ -51,9 +51,9 @@ def create_assignment_with_upload(grader):
                 st.info(f"💡 Suggested rubric: {suggestion}")
         
         with col2:
-            st.subheader("📁 File Uploads")
-            template_file = st.file_uploader("Template Notebook", type=['ipynb'], key="template_upload")
-            solution_file = st.file_uploader("Solution Notebook", type=['ipynb'], key="solution_upload")
+            st.subheader("📁 Solution Notebook")
+            solution_file = st.file_uploader("Solution Notebook (Required for grading)", type=['ipynb'], key="solution_upload")
+            st.caption("Upload the solution notebook that will be used to compare student submissions")
         
         st.subheader("📋 Grading Rubric")
         rubric_method = st.radio("Rubric Input Method:", ["Upload JSON File", "Manual Entry"])
@@ -173,15 +173,8 @@ def create_assignment_in_db(grader, name, description, total_points, rubric_data
             st.error("❌ Rubric is required!")
             return
         
-        # Save uploaded files
-        template_path = None
+        # Save solution file
         solution_path = None
-        
-        if template_file:
-            template_path = os.path.join(grader.assignments_dir, f"{name}_template.ipynb")
-            os.makedirs(grader.assignments_dir, exist_ok=True)
-            with open(template_path, "wb") as f:
-                f.write(template_file.getbuffer())
         
         if solution_file:
             solution_path = os.path.join(grader.assignments_dir, f"{name}_solution.ipynb")
@@ -194,9 +187,9 @@ def create_assignment_in_db(grader, name, description, total_points, rubric_data
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO assignments (name, description, total_points, rubric, template_notebook, solution_notebook)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (name, description, total_points, json.dumps(rubric_data), template_path, solution_path))
+            INSERT INTO assignments (name, description, total_points, rubric, solution_notebook)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (name, description, total_points, json.dumps(rubric_data), solution_path))
         
         conn.commit()
         conn.close()

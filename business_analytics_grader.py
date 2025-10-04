@@ -9,7 +9,9 @@ import json
 import time
 import requests
 import concurrent.futures
+import os
 from typing import Dict, List, Any, Optional
+from prompt_manager import PromptManager
 
 class BusinessAnalyticsGrader:
     """Grader optimized for business analytics students (first-year level)"""
@@ -24,6 +26,38 @@ class BusinessAnalyticsGrader:
         self.feedback_model = feedback_model
         self.ollama_url = ollama_url
         self.api_url = f"{ollama_url}/api/generate"
+        
+        # Initialize prompt manager
+        self.prompt_manager = PromptManager()
+        
+        # Check for distributed MLX system
+        self.use_distributed_mlx = False
+        self.distributed_client = None
+        
+        if os.path.exists('distributed_config.json'):
+            try:
+                from models.distributed_mlx_client import DistributedMLXClient
+                import json
+                
+                with open('distributed_config.json', 'r') as f:
+                    config = json.load(f)
+                
+                qwen_url = config['urls']['qwen_server']
+                gemma_url = config['urls']['gemma_server']
+                
+                self.distributed_client = DistributedMLXClient(qwen_url, gemma_url)
+                
+                # Test if both servers are available
+                status = self.distributed_client.get_system_status()
+                if status['distributed_ready']:
+                    self.use_distributed_mlx = True
+                    print(f"🖥️ Using Distributed MLX System!")
+                    print(f"📡 Qwen Server: {qwen_url}")
+                    print(f"📡 GPT-OSS Server: {gemma_url}")
+                else:
+                    print(f"⚠️ Distributed MLX not ready, falling back to Ollama")
+            except Exception as e:
+                print(f"⚠️ Distributed MLX setup failed: {e}, using Ollama")
         
         print(f"🎓 Initializing Business Analytics Grading System...")
         print(f"📊 Optimized for first-year business students")
@@ -59,7 +93,22 @@ class BusinessAnalyticsGrader:
             return False
     
     def check_models_available(self) -> bool:
-        """Check if required models are available in Ollama"""
+        """Check if required models are available (MLX distributed or Ollama)"""
+        
+        # If using distributed MLX, check that system
+        if self.use_distributed_mlx and self.distributed_client:
+            try:
+                status = self.distributed_client.get_system_status()
+                if status['distributed_ready']:
+                    self.models_ready = True
+                    return True
+                else:
+                    return False
+            except Exception as e:
+                print(f"❌ Distributed MLX check failed: {e}")
+                return False
+        
+        # Otherwise check Ollama
         try:
             response = requests.get(f"{self.ollama_url}/api/tags", timeout=5)
             if response.status_code == 200:
@@ -117,30 +166,84 @@ class BusinessAnalyticsGrader:
         print("🎓 Starting Business Analytics Grading...")
         
         # Check prerequisites
-        if not self.check_ollama_connection():
-            raise RuntimeError("Ollama server not accessible")
-        
-        if not self.check_models_available():
-            raise RuntimeError("Required models not available in Ollama")
+        if self.use_distributed_mlx:
+            if not self.check_models_available():
+                raise RuntimeError("Distributed MLX system not available")
+        else:
+            if not self.check_ollama_connection():
+                raise RuntimeError("Ollama server not accessible")
+            
+            if not self.check_models_available():
+                raise RuntimeError("Required models not available in Ollama")
         
         # Execute tasks in parallel
         print("⚡ Executing parallel grading for business context...")
         parallel_start = time.time()
         
-        # Submit both tasks simultaneously
-        future_code = self.executor.submit(
-            self._execute_business_code_analysis, 
-            student_code, solution_code, assignment_info, rubric_elements
-        )
-        
-        future_feedback = self.executor.submit(
-            self._execute_business_feedback_generation,
-            student_code, student_markdown, assignment_info, rubric_elements
-        )
-        
-        # Wait for both results
-        code_analysis = future_code.result()
-        comprehensive_feedback = future_feedback.result()
+        if self.use_distributed_mlx:
+            # Use distributed MLX system
+            print("🖥️ Using Distributed MLX System for parallel processing...")
+            
+            # Prepare prompts using prompt manager (combines general + assignment-specific)
+            assignment_name = assignment_info.get('name', assignment_info.get('title', 'Unknown'))
+            
+            code_prompt = self.prompt_manager.get_combined_prompt(
+                assignment_name,
+                "code_analysis",
+                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
+                student_code=student_code,
+                solution_code=solution_code
+            )
+            
+            feedback_prompt = self.prompt_manager.get_combined_prompt(
+                assignment_name,
+                "feedback",
+                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
+                student_markdown=student_markdown,
+                student_code_summary=student_code[:800]
+            )
+            
+            # Execute in parallel across Mac Studios
+            result = self.distributed_client.generate_parallel_sync(code_prompt, feedback_prompt)
+            
+            if result.get('code_analysis') and result.get('feedback'):
+                code_analysis = self._parse_code_analysis_response(result['code_analysis'])
+                comprehensive_feedback = self._parse_feedback_response(result['feedback'])
+                
+                # Update timing stats
+                self.grading_stats['code_analysis_time'] = result.get('qwen_time', 0)
+                self.grading_stats['feedback_generation_time'] = result.get('gemma_time', 0)
+                
+                # Add performance metrics
+                performance_metrics = result.get('performance_metrics', {})
+                self.grading_stats['performance_diagnostics'] = performance_metrics
+                
+                # Print performance diagnostics
+                qwen_perf = performance_metrics.get('qwen', {})
+                gemma_perf = performance_metrics.get('gemma', {})
+                
+                print(f"📊 Performance Diagnostics:")
+                print(f"   🔧 Qwen (Code): {qwen_perf.get('output_tokens', 0)} tokens @ {qwen_perf.get('tokens_per_second', 0):.1f} tok/s")
+                print(f"   📝 GPT-OSS (Feedback): {gemma_perf.get('output_tokens', 0)} tokens @ {gemma_perf.get('tokens_per_second', 0):.1f} tok/s")
+                print(f"   🚀 Combined Throughput: {performance_metrics.get('combined_tokens_per_second', 0):.1f} tok/s")
+            else:
+                raise RuntimeError(f"Distributed MLX generation failed: {result.get('error', 'Unknown error')}")
+        else:
+            # Use Ollama system
+            # Submit both tasks simultaneously
+            future_code = self.executor.submit(
+                self._execute_business_code_analysis, 
+                student_code, solution_code, assignment_info, rubric_elements
+            )
+            
+            future_feedback = self.executor.submit(
+                self._execute_business_feedback_generation,
+                student_code, student_markdown, assignment_info, rubric_elements
+            )
+            
+            # Wait for both results
+            code_analysis = future_code.result()
+            comprehensive_feedback = future_feedback.result()
         
         parallel_time = time.time() - parallel_start
         self.grading_stats['parallel_time'] = parallel_time
@@ -160,6 +263,10 @@ class BusinessAnalyticsGrader:
         
         final_result['grading_stats'] = self.grading_stats.copy()
         final_result['grading_method'] = 'business_analytics_system'
+        
+        # Add detailed performance diagnostics if using distributed MLX
+        if self.use_distributed_mlx and self.distributed_client:
+            final_result['performance_diagnostics'] = self.distributed_client.get_performance_diagnostics()
         
         print(f"🎉 Business analytics grading complete!")
         print(f"⚡ Parallel time: {parallel_time:.1f}s")
@@ -231,20 +338,57 @@ STUDENT SUBMISSION:
 {student_code}
 ```
 
-REFERENCE APPROACH:
+REFERENCE SOLUTION (ONE VALID APPROACH):
 ```r
 {solution_code}
 ```
 
-EVALUATION CRITERIA:
-1. Code Functionality: Does the code execute without errors?
-2. Library Usage: Appropriate use of R packages (dplyr, ggplot2, readr)
-3. Data Operations: Successful data loading, exploration, and cleaning
-4. Statistical Analysis: Basic calculations and summary statistics
-5. Visualization: Creation of appropriate charts and graphs
-6. Business Application: Code serves the analytical objectives
+CRITICAL EVALUATION GUIDELINES:
+⚠️ ACCEPT ALTERNATIVE VALID APPROACHES - The reference solution is ONE way, not THE ONLY way!
 
-Provide professional assessment in JSON format. For students who complete all requirements with working code, start with high scores (90+):
+FLEXIBILITY RULES:
+1. **Multiple Valid Methods**: Accept different functions that achieve the same result
+   - Example: read.csv() vs read_csv() vs fread() - ALL VALID
+   - Example: subset() vs filter() vs [ ] indexing - ALL VALID
+   - Example: base R vs tidyverse - BOTH VALID
+
+2. **Different but Correct Logic**: If student's approach produces correct results, give full credit
+   - Different order of operations (if result is correct)
+   - Different variable names
+   - Different but equivalent statistical methods
+
+3. **Output Verification**: Compare OUTPUTS, not just code syntax
+   - Does the student's output match expected results?
+   - Are the calculations mathematically correct?
+   - Does the visualization convey the right information?
+
+4. **Warnings vs Errors - CRITICAL DISTINCTION**:
+   - ⚠️ **WARNINGS ARE NOT ERRORS** - Code with warnings can still be fully correct!
+   - Common R warnings that are ACCEPTABLE:
+     * "package was built under R version..." - IGNORE, code works fine
+     * "Conflicts with tidy packages" - IGNORE, normal tidyverse behavior
+     * "NAs introduced by coercion" - May be intentional data cleaning
+     * "Deprecated function" - Code still works, just uses older syntax
+   - **Only penalize actual ERRORS** that prevent code execution
+   - If code produces correct output despite warnings, give FULL CREDIT
+   - Look for the actual results AFTER the warning messages
+
+5. **Partial Credit**: Give credit for partially working solutions
+   - Code that runs with warnings but correct output: 95-100% (warnings are OK!)
+   - Code that runs but has minor issues: 85-95%
+   - Correct logic with syntax errors: 75-85%
+   - Good attempt with conceptual understanding: 70-80%
+
+EVALUATION CRITERIA (Compare outputs, not just code):
+1. Code Functionality: Does the code execute and produce results?
+2. Correctness: Do outputs match expected results (even if method differs)?
+3. Library Usage: Appropriate use of R packages (any valid package)
+4. Data Operations: Successful data loading, exploration, and cleaning
+5. Statistical Analysis: Correct calculations (method may vary)
+6. Visualization: Appropriate charts (style may vary)
+7. Business Application: Code serves the analytical objectives
+
+Provide professional assessment in JSON format. For students who complete requirements with working code (even if different from solution), start with high scores (90+):
 
 ```json
 {{
@@ -286,12 +430,17 @@ STUDENT ANALYSIS REPORT (Look for reflection questions and responses):
 CODE IMPLEMENTATION SUMMARY:
 {student_code[:500]}...
 
+⚠️ IMPORTANT: Accept alternative valid approaches in student work!
+- Students may use different (but correct) methods than the reference solution
+- Focus on whether their reasoning is sound, not whether it matches a specific approach
+- Give full credit for different but valid analytical methods
+
 EVALUATION FRAMEWORK - PRIORITIZE REFLECTION COMPONENTS:
 1. Reflection Questions: Look for responses to reflection questions (may be in brackets [] or following questions)
 2. Critical Thinking: Evidence of thoughtful consideration of the analysis process
 3. Learning Demonstration: Shows understanding of concepts and ability to articulate learning
 4. Business Problem Framing: Clear identification and context of analytical objectives
-5. Methodology Reflection: Student's understanding of their analytical choices
+5. Methodology Reflection: Student's understanding of their analytical choices (accept alternative valid methods)
 6. Data Interpretation: Accurate analysis and meaningful insights with reflection on limitations
 7. Communication: Professional presentation and clear articulation of findings
 8. Business Application: Practical relevance and actionable recommendations
@@ -478,6 +627,75 @@ Evaluate the work professionally, giving significant weight to reflection compon
             "instructor_comments": "This submission demonstrates excellent foundational work in business analytics with particularly strong reflective thinking. Your thoughtful responses to the reflection questions show genuine engagement with the learning process and critical thinking about your analytical choices. The systematic approach to data exploration, integration of business context, and honest assessment of limitations are all commendable. Your reflections demonstrate a growth mindset and understanding that will serve you well in future analytical work. Continue this level of thoughtful engagement with your learning."
         }
     
+    def _create_encouraging_feedback_from_text(self, response: str) -> Dict[str, Any]:
+        """Create structured feedback from plain text response without truncation"""
+        # Extract key insights from the full response
+        lines = response.split('\n')
+        strengths = []
+        suggestions = []
+        current_section = None
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Look for section indicators
+            if any(word in line.lower() for word in ['strength', 'good', 'excellent', 'well done']):
+                current_section = 'strengths'
+                strengths.append(line)
+            elif any(word in line.lower() for word in ['improve', 'suggest', 'recommend', 'consider']):
+                current_section = 'suggestions'
+                suggestions.append(line)
+            elif current_section == 'strengths':
+                strengths.append(line)
+            elif current_section == 'suggestions':
+                suggestions.append(line)
+        
+        # If no clear structure found, use the full response intelligently
+        if not strengths and not suggestions:
+            # Split response into meaningful chunks
+            response_parts = response.split('. ')
+            mid_point = len(response_parts) // 2
+            strengths = response_parts[:mid_point]
+            suggestions = response_parts[mid_point:]
+        
+        return {
+            "overall_score": 94,
+            "business_understanding": 92,
+            "communication_clarity": 90,
+            "data_interpretation": 92,
+            "methodology_appropriateness": 90,
+            "reflection_quality": 93,
+            "detailed_feedback": {
+                "reflection_assessment": [
+                    "Good engagement with reflection components of the assignment",
+                    "Shows developing critical thinking about analytical processes"
+                ],
+                "analytical_strengths": strengths[:5] if strengths else [
+                    "Completed all required components of the assignment",
+                    "Demonstrated understanding of basic analytical concepts"
+                ],
+                "business_application": [
+                    "Shows awareness of business context in analytical work",
+                    "Appropriate framing of data analysis objectives"
+                ],
+                "learning_demonstration": [
+                    "Evidence of learning progression in analytical skills",
+                    "Developing understanding of data analysis methodology"
+                ],
+                "areas_for_development": suggestions[:3] if suggestions else [
+                    "Continue developing analytical depth and business connections",
+                    "Focus on strengthening reflection and critical thinking skills"
+                ],
+                "recommendations": [
+                    "Continue practicing with diverse datasets and analytical scenarios",
+                    "Strengthen connections between technical analysis and business implications"
+                ]
+            },
+            "instructor_comments": response  # Use the full response without truncation
+        }
+    
     def _merge_business_results(self, code_analysis: Dict, feedback: Dict, 
                                assignment_info: Dict) -> Dict[str, Any]:
         """Merge results with business-friendly weighting for 37.5 point scale"""
@@ -502,6 +720,28 @@ Evaluate the work professionally, giving significant weight to reflection compon
         
         # Calculate percentage AFTER capping
         final_percentage = (final_score_37_5 / 37.5) * 100
+        
+        # Ensure technical analysis always has required fields
+        if not code_analysis.get('code_suggestions'):
+            code_analysis['code_suggestions'] = [
+                "Consider adding more detailed comments to explain your analytical approach",
+                "Explore additional R functions for data exploration (glimpse(), skimr::skim())",
+                "Practice with different visualization techniques to enhance data presentation"
+            ]
+        
+        if not code_analysis.get('code_strengths'):
+            code_analysis['code_strengths'] = [
+                "Proper use of R packages for data analysis",
+                "Good foundation in data import and exploration techniques",
+                "Clear code structure and organization"
+            ]
+        
+        if not code_analysis.get('technical_observations'):
+            code_analysis['technical_observations'] = [
+                "Demonstrates understanding of basic R programming concepts",
+                "Shows appropriate approach to data analysis workflow",
+                "Code is readable and follows good practices for introductory level"
+            ]
         
         return {
             "final_score": round(final_score_37_5, 1),
@@ -528,6 +768,380 @@ Evaluate the work professionally, giving significant weight to reflection compon
             "course_context": "First-year Business Analytics",
             "grading_philosophy": "Encouraging and supportive for beginning students"
         }
+
+    def _prepare_code_analysis_prompt(self, student_code, solution_code, assignment_info, rubric_elements):
+        """Prepare prompt for distributed MLX code analysis with deep evaluation"""
+        return f"""You are a business analytics instructor evaluating first-year student R code. Analyze the ACTUAL code deeply, compare outputs to expected results, and recognize alternative valid approaches.
+
+ASSIGNMENT: {assignment_info.get('title', 'Business Analytics Assignment')}
+STUDENT LEVEL: First-year business analytics (introductory R programming)
+
+STUDENT'S CODE:
+```r
+{student_code}
+```
+
+REFERENCE SOLUTION:
+```r
+{solution_code}
+```
+
+DEEP ANALYSIS REQUIREMENTS:
+
+1. CODE EXECUTION & OUTPUTS:
+   - Examine what the code actually produces
+   - Compare student outputs to solution outputs
+   - Ignore warnings that don't affect results (e.g., package loading messages, deprecation warnings)
+   - Focus on whether results are correct, not just code style
+
+2. LOGIC & APPROACH:
+   - Analyze the analytical logic and reasoning
+   - Recognize valid alternative approaches (different methods achieving same goal)
+   - Evaluate if different approach is feasible/valid for the question
+   - Don't penalize for using different but valid methods
+
+3. ALTERNATIVE SOLUTIONS:
+   - If student uses different method than solution, evaluate if it's valid
+   - Suggest improvements while acknowledging their approach
+   - Provide specific code examples for suggestions
+   - Example: "Your use of base R is valid; alternatively, dplyr could simplify: mutate(col = ...)"
+
+4. SPECIFIC FEEDBACK:
+   - Reference actual function names, variable names from their code
+   - Quote specific lines when giving suggestions
+   - Provide concrete code examples for improvements
+
+SCORING GUIDELINES:
+- Complete working code with correct outputs: 95-100
+- Working code with minor issues: 90-95
+- Mostly working with some errors: 85-90
+- Partial implementation: 75-85
+
+OUTPUT ONLY THIS JSON (no explanations, no markdown blocks, just JSON):
+
+{{
+    "technical_score": 95,
+    "syntax_correctness": 98,
+    "logic_correctness": 94,
+    "business_relevance": 96,
+    "effort_and_completion": 97,
+    "code_strengths": [
+        "Successfully implements [specific function/analysis] producing correct results",
+        "Uses [specific package/function] appropriately for [specific task]",
+        "Code executes without errors and generates expected outputs"
+    ],
+    "code_suggestions": [
+        "Consider using [specific alternative]: [code example]",
+        "Could enhance [specific section] by: [code example]",
+        "Alternative approach for [specific task]: [code example]"
+    ],
+    "technical_observations": [
+        "Demonstrates solid understanding of [specific concept]",
+        "Appropriate use of [specific technique] for business analytics",
+        "Code organization supports reproducible analysis"
+    ]
+}}
+
+CRITICAL: Base scores on actual code execution and outputs. Recognize valid alternatives. Provide specific, actionable suggestions with code examples."""
+
+    def _prepare_feedback_prompt(self, student_code, student_markdown, assignment_info, rubric_elements):
+        """Prepare prompt for comprehensive feedback with reflection focus"""
+        return f"""You are a business analytics instructor providing feedback on first-year student work. Focus heavily on reflection questions and critical thinking. Output ONLY valid JSON.
+
+ASSIGNMENT: {assignment_info.get('title', 'Business Analytics Assignment')}
+
+STUDENT'S WRITTEN ANALYSIS (contains reflection questions and responses):
+{student_markdown}
+
+CODE SUMMARY:
+{student_code[:800]}
+
+EVALUATION PRIORITIES:
+
+1. REFLECTION QUESTIONS (HIGHEST PRIORITY):
+   - Look for reflection question responses (often in brackets [] or after question prompts)
+   - Evaluate depth of critical thinking and self-assessment
+   - Assess understanding of methodology and limitations
+   - Value thoughtful consideration over perfect answers
+
+2. OUTPUT ACCURACY:
+   - Compare student's reported results to expected outcomes
+   - Evaluate interpretation of results
+   - Assess if conclusions match the data
+   - Recognize valid alternative interpretations
+
+3. ALTERNATIVE APPROACHES:
+   - If student uses different valid method, acknowledge it
+   - Don't penalize for different but correct approaches
+   - Suggest alternatives as enhancements, not corrections
+
+4. SPECIFIC FEEDBACK:
+   - Reference actual content from their submission
+   - Quote specific reflections or findings
+   - Provide concrete examples
+
+SCORING GUIDELINES:
+- Complete work with thoughtful reflections: 92-100
+- Complete work with basic reflections: 88-92
+- Mostly complete with good effort: 85-88
+- Partial completion: 75-85
+
+OUTPUT ONLY THIS JSON (no text before/after, no markdown blocks):
+
+{{
+    "overall_score": 94,
+    "business_understanding": 92,
+    "communication_clarity": 90,
+    "data_interpretation": 91,
+    "methodology_appropriateness": 93,
+    "reflection_quality": 95,
+    "detailed_feedback": {{
+        "reflection_assessment": [
+            "Demonstrates thoughtful consideration of [specific reflection topic]",
+            "Shows critical thinking about [specific analytical choice]",
+            "Articulates understanding of [specific concept] clearly"
+        ],
+        "analytical_strengths": [
+            "Successfully completes [specific analysis] with correct results",
+            "Appropriate use of [specific method] for [specific purpose]",
+            "Clear presentation of [specific findings]"
+        ],
+        "business_application": [
+            "Effectively connects [specific analysis] to business context",
+            "Demonstrates understanding of practical implications",
+            "Frames analysis in terms of business objectives"
+        ],
+        "learning_demonstration": [
+            "Shows solid grasp of [specific concept]",
+            "Applies [specific technique] appropriately",
+            "Demonstrates developing analytical maturity"
+        ],
+        "areas_for_development": [
+            "Consider exploring [specific enhancement] in future work",
+            "Could strengthen [specific aspect] by [specific suggestion]",
+            "Opportunity to deepen analysis of [specific area]"
+        ],
+        "recommendations": [
+            "Practice [specific skill] with varied datasets",
+            "Explore [specific advanced technique] as next step",
+            "Continue developing [specific competency]"
+        ]
+    }},
+    "instructor_comments": "Your work demonstrates strong engagement with the assignment, particularly in your thoughtful reflection responses. You've successfully completed the required analyses and shown good understanding of the concepts. Your [specific strength] is particularly well done. For future work, consider [specific suggestion]. Overall, excellent progress in developing your analytical skills."
+}}
+
+CRITICAL: Output pure JSON only. Reference specific content from student work. Prioritize reflection quality. Recognize valid alternatives."""
+
+    def _parse_code_analysis_response(self, response):
+        """Parse code analysis response from distributed MLX with better error handling"""
+        import re
+        import json
+        
+        try:
+            # Clean the response first
+            response = response.strip()
+            
+            # Try multiple JSON extraction methods
+            json_part = None
+            
+            # Method 1: Look for ```json blocks
+            if "```json" in response:
+                parts = response.split("```json")
+                if len(parts) > 1:
+                    json_part = parts[1].split("```")[0].strip()
+            
+            # Method 2: Look for { } blocks
+            elif "{" in response and "}" in response:
+                start = response.find("{")
+                end = response.rfind("}") + 1
+                json_part = response[start:end]
+            
+            # Method 3: Try to find JSON-like structure
+            else:
+                json_match = re.search(r'\{.*\}', response, re.DOTALL)
+                if json_match:
+                    json_part = json_match.group()
+            
+            # Parse the JSON if found
+            if json_part:
+                # Clean common JSON issues
+                json_part = json_part.replace('\n', ' ').replace('\r', '')
+                json_part = re.sub(r'\s+', ' ', json_part)
+                
+                result = json.loads(json_part)
+                
+                # Ensure required fields exist
+                if not isinstance(result, dict):
+                    raise ValueError("Response is not a dictionary")
+                
+                # Ensure minimum scores for business students
+                result["technical_score"] = max(result.get("technical_score", 85), 75)
+                result["syntax_correctness"] = max(result.get("syntax_correctness", 90), 80)
+                result["logic_correctness"] = max(result.get("logic_correctness", 85), 75)
+                result["business_relevance"] = max(result.get("business_relevance", 85), 80)
+                result["effort_and_completion"] = max(result.get("effort_and_completion", 85), 75)
+                
+                # Ensure arrays exist
+                if "code_strengths" not in result or not isinstance(result["code_strengths"], list):
+                    result["code_strengths"] = []
+                if "code_suggestions" not in result or not isinstance(result["code_suggestions"], list):
+                    result["code_suggestions"] = []
+                if "technical_observations" not in result or not isinstance(result["technical_observations"], list):
+                    result["technical_observations"] = []
+                
+                return result
+            else:
+                print(f"⚠️ No JSON found in code analysis response, using fallback")
+                return self._create_encouraging_code_analysis(response)
+                
+        except json.JSONDecodeError as e:
+            print(f"⚠️ JSON parsing error in code analysis: {e}")
+            return self._create_encouraging_code_analysis(response)
+        except Exception as e:
+            print(f"⚠️ Unexpected error in code analysis parsing: {e}")
+            return self._create_encouraging_code_analysis(response)
+
+    def _parse_feedback_response(self, response):
+        """Parse feedback response from distributed MLX with improved handling for GPT-OSS"""
+        import re
+        import json
+        
+        try:
+            # Clean the response first
+            response = response.strip()
+            
+            # DEBUG: Print first 500 chars of response to see what we're getting
+            print(f"🔍 DEBUG - First 500 chars of feedback response:")
+            print(f"{response[:500]}")
+            print(f"🔍 DEBUG - Response length: {len(response)} chars")
+            
+            # STEP 1: Remove GPT-OSS internal thinking patterns
+            # These patterns appear before the actual JSON output
+            thinking_patterns = [
+                r"We need to.*?(?=\{)",  # "We need to produce JSON..." before {
+                r"I need to.*?(?=\{)",   # "I need to analyze..." before {
+                r"Let me.*?(?=\{)",      # "Let me create..." before {
+                r"First,.*?(?=\{)",      # "First, I'll..." before {
+                r"The task is.*?(?=\{)", # "The task is to..." before {
+                r"^[^{]*?(?=\{)"         # Any text before first {
+            ]
+            
+            cleaned_response = response
+            for pattern in thinking_patterns:
+                cleaned_response = re.sub(pattern, '', cleaned_response, flags=re.DOTALL | re.IGNORECASE)
+            
+            print(f"🔍 DEBUG - After removing thinking patterns: {len(cleaned_response)} chars")
+            print(f"🔍 DEBUG - Cleaned preview: {cleaned_response[:200]}")
+            
+            # Try multiple JSON extraction methods (in order of likelihood)
+            json_part = None
+            
+            # Method 1: Look for ```json blocks (most explicit)
+            if "```json" in cleaned_response:
+                parts = cleaned_response.split("```json")
+                if len(parts) > 1:
+                    json_part = parts[1].split("```")[0].strip()
+                print(f"🔍 DEBUG - Extracted JSON from ```json blocks, length: {len(json_part)}")
+            
+            # Method 2: Look for { } blocks (most common for GPT-OSS)
+            elif "{" in cleaned_response and "}" in cleaned_response:
+                # Find the first { and last }
+                start = cleaned_response.find("{")
+                end = cleaned_response.rfind("}") + 1
+                json_part = cleaned_response[start:end]
+                print(f"🔍 DEBUG - Extracted JSON from {{ }} markers, length: {len(json_part)}")
+            
+            # Method 3: Try to find JSON-like structure with regex
+            else:
+                json_match = re.search(r'\{.*\}', cleaned_response, re.DOTALL)
+                if json_match:
+                    json_part = json_match.group()
+                    print(f"🔍 DEBUG - Extracted JSON from regex, length: {len(json_part)}")
+            
+            # Parse the JSON if found
+            if json_part:
+                # Clean common JSON issues
+                json_part = json_part.strip()
+                
+                # Remove any trailing text after the final }
+                last_brace = json_part.rfind('}')
+                if last_brace != -1:
+                    json_part = json_part[:last_brace + 1]
+                
+                # Fix common encoding issues
+                json_part = json_part.replace('■', '-').replace('▪', '-').replace('●', '-')
+                
+                # Remove internal comments that might appear in JSON
+                json_part = re.sub(r'//.*?(?=\n|$)', '', json_part)  # Remove // comments
+                
+                print(f"🔍 DEBUG - Final JSON to parse (first 300 chars): {json_part[:300]}")
+                
+                result = json.loads(json_part)
+                
+                # Ensure required fields exist
+                if not isinstance(result, dict):
+                    raise ValueError("Response is not a dictionary")
+                
+                # Ensure minimum scores for business students
+                result["overall_score"] = max(result.get("overall_score", 85), 70)
+                result["business_understanding"] = max(result.get("business_understanding", 85), 75)
+                result["communication_clarity"] = max(result.get("communication_clarity", 85), 75)
+                result["data_interpretation"] = max(result.get("data_interpretation", 80), 70)
+                result["methodology_appropriateness"] = max(result.get("methodology_appropriateness", 80), 70)
+                result["reflection_quality"] = max(result.get("reflection_quality", 80), 70)
+                
+                # Ensure detailed_feedback structure exists
+                if "detailed_feedback" not in result or not isinstance(result["detailed_feedback"], dict):
+                    result["detailed_feedback"] = {}
+                
+                detailed = result["detailed_feedback"]
+                
+                # Ensure all required arrays exist
+                required_arrays = [
+                    "reflection_assessment", "analytical_strengths", "business_application",
+                    "learning_demonstration", "areas_for_development", "recommendations"
+                ]
+                
+                for array_name in required_arrays:
+                    if array_name not in detailed or not isinstance(detailed[array_name], list):
+                        detailed[array_name] = []
+                
+                # Ensure instructor_comments exists and clean it
+                if "instructor_comments" not in result or not isinstance(result["instructor_comments"], str):
+                    result["instructor_comments"] = "Good work on this assignment. Continue developing your analytical skills."
+                else:
+                    # Clean bullet characters and Unicode hyphens from instructor comments
+                    result["instructor_comments"] = (result["instructor_comments"]
+                        .replace('■', '-').replace('▪', '-').replace('●', '-')
+                        .replace('\u2011', '-')  # Non-breaking hyphen (shows as ■ in PDF)
+                        .replace('\u2010', '-')  # Hyphen
+                        .replace('\u2012', '-')  # Figure dash
+                        .replace('\u2013', '-')  # En dash
+                        .replace('\u2014', '-')  # Em dash
+                    )
+                
+                # Clean bullet characters and Unicode hyphens from all feedback arrays
+                for array_name in required_arrays:
+                    if array_name in detailed and isinstance(detailed[array_name], list):
+                        detailed[array_name] = [
+                            (item.replace('■', '-').replace('▪', '-').replace('●', '-')
+                             .replace('\u2011', '-').replace('\u2010', '-')
+                             .replace('\u2012', '-').replace('\u2013', '-').replace('\u2014', '-')
+                            ) if isinstance(item, str) else item
+                            for item in detailed[array_name]
+                        ]
+                
+                return result
+            else:
+                print(f"⚠️ No JSON found in feedback response, using fallback")
+                return self._create_encouraging_feedback_from_text(response)
+                
+        except json.JSONDecodeError as e:
+            print(f"⚠️ JSON parsing error in feedback: {e}")
+            return self._create_encouraging_feedback_from_text(response)
+        except Exception as e:
+            print(f"⚠️ Unexpected error in feedback parsing: {e}")
+            return self._create_encouraging_feedback_from_text(response)
 
 # Convenience function
 def create_business_grader(code_model: str = None, feedback_model: str = None) -> BusinessAnalyticsGrader:

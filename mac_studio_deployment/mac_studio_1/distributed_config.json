@@ -1,0 +1,23 @@
+{
+  "distributed_mode": true,
+  "mac_studio_1": {
+    "ip": "10.55.0.1",
+    "port": 5001,
+    "model": "mlx-community/gemma-3-27b-it-bf16",
+    "purpose": "feedback_generation",
+    "max_tokens": 3800,
+    "temperature": 0.3
+  },
+  "mac_studio_2": {
+    "ip": "10.55.0.2",
+    "port": 5002,
+    "model": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-bf16",
+    "purpose": "code_analysis",
+    "max_tokens": 2400,
+    "temperature": 0.1
+  },
+  "urls": {
+    "qwen_server": "http://10.55.0.2:5002",
+    "gemma_server": "http://10.55.0.1:5001"
+  }
+}

@@ -20,8 +20,10 @@ import re
 from assignment_manager import create_assignment_page, upload_submissions_page
 from assignment_editor import assignment_management_page, get_assignment_rubric
 from training_interface import TrainingInterface
+from enhanced_training_page import enhanced_training_page
 from connect_web_interface import grade_submissions_page
 from grading_interface import view_results_page
+from prompt_manager import render_prompt_manager_ui
 from model_status_display import show_two_model_status
 
 # Configure page
@@ -69,7 +71,6 @@ class HomeworkGrader:
                 description TEXT,
                 total_points INTEGER,
                 rubric TEXT,
-                template_notebook TEXT,
                 solution_notebook TEXT,
                 created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -152,13 +153,39 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.selectbox(
         "Choose a page:",
-        ["Dashboard", "Assignment Management", "Upload Submissions", "Grade Submissions", "View Results", "AI Training"]
+        ["Dashboard", "Assignment Management", "Upload Submissions", "Grade Submissions", "Quick View", "Review & Grade", "Prompt Manager"]
     )
+    
+    # Demo Mode Toggle (global for all pages)
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("⚙️ Settings")
+    if 'demo_mode' not in st.session_state:
+        st.session_state.demo_mode = False
+    
+    demo_mode = st.sidebar.checkbox(
+        "🎭 Demo Mode", 
+        value=st.session_state.demo_mode,
+        help="Hide student names for privacy (demos/videos/screenshots)"
+    )
+    if demo_mode != st.session_state.demo_mode:
+        st.session_state.demo_mode = demo_mode
+        st.rerun()
+    
+    if st.session_state.demo_mode:
+        st.sidebar.info("🎭 Demo Mode: Student names are anonymized")
+    
+    st.sidebar.markdown("---")
     
     # Show two-model system status in sidebar
     try:
-        from model_status_display import show_two_model_status
-        show_two_model_status()
+        # Check for distributed system first
+        import os
+        if os.path.exists('distributed_config.json'):
+            from models.distributed_mlx_client import show_distributed_status
+            show_distributed_status()
+        else:
+            from model_status_display import show_two_model_status
+            show_two_model_status()
     except Exception as e:
         st.sidebar.markdown("---")
         st.sidebar.subheader("🤖 Two-Model AI System")
@@ -173,11 +200,13 @@ def main():
         upload_submissions_page(grader)
     elif page == "Grade Submissions":
         grade_submissions_page(grader)
-    elif page == "View Results":
+    elif page == "Review & Grade":
+        # Enhanced training page with split screen and all features
+        enhanced_training_page()
+    elif page == "Quick View":
         view_results_page(grader)
-    elif page == "AI Training":
-        training_interface = TrainingInterface(grader)
-        training_interface.show_training_dashboard()
+    elif page == "Prompt Manager":
+        render_prompt_manager_ui()
 
 def show_dashboard(grader):
     st.header("📊 Dashboard")

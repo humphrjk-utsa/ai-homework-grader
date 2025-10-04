@@ -14,69 +14,113 @@ def show_two_model_status():
     st.sidebar.markdown("---")
     st.sidebar.subheader("🤖 AI Model Status")
     
-    # Check Ollama connection
+    # Check MLX models first (preferred for Apple Silicon)
+    mlx_available = False
     try:
-        response = requests.get("http://localhost:11434/api/tags", timeout=3)
-        if response.status_code == 200:
-            models_data = response.json()
-            available_models = [model['name'] for model in models_data.get('models', [])]
+        from models.mlx_ai_client import MLXAIClient
+        import os
+        import glob
+        
+        # Check for MLX models in HuggingFace cache
+        hf_cache = os.path.expanduser("~/.cache/huggingface/hub/")
+        available_mlx_models = []
+        
+        if os.path.exists(hf_cache):
+            model_dirs = glob.glob(os.path.join(hf_cache, "models--*mlx*"))
+            model_dirs.extend(glob.glob(os.path.join(hf_cache, "models--*MLX*")))
+            model_dirs.extend(glob.glob(os.path.join(hf_cache, "models--lmstudio-community--*")))
+            model_dirs.extend(glob.glob(os.path.join(hf_cache, "models--mlx-community--*")))
             
-            # Check our two models
-            code_model = "hopephoto/qwen3-coder-30b-a3b-instruct_q8:latest"
-            feedback_model = "gemma3:27b-it-q8_0"
-            
-            # Code analyzer status
-            if code_model in available_models:
-                st.sidebar.success("✅ Qwen 3.0 Coder (Code Analysis)")
-            else:
-                st.sidebar.error("❌ Qwen 3.0 Coder - Not Available")
-            
-            # Feedback generator status
-            if feedback_model in available_models:
-                st.sidebar.success("✅ Gemma 3.0 (Feedback Generation)")
-            else:
-                st.sidebar.error("❌ Gemma 3.0 - Not Available")
-            
-            # Show parallel processing info
-            if code_model in available_models and feedback_model in available_models:
-                st.sidebar.info("⚡ **Parallel Processing Ready**")
-                
-                # Check if models are loaded in memory
-                try:
-                    ps_response = requests.get("http://localhost:11434/api/ps", timeout=2)
-                    if ps_response.status_code == 200:
-                        running_models = ps_response.json().get("models", [])
-                        loaded_models = [model.get("name") for model in running_models]
-                        
-                        if code_model in loaded_models:
-                            st.sidebar.success("🔥 Code Analyzer: Loaded in Memory")
-                        else:
-                            st.sidebar.warning("💤 Code Analyzer: Will load on first use")
-                        
-                        if feedback_model in loaded_models:
-                            st.sidebar.success("🔥 Feedback Generator: Loaded in Memory")
-                        else:
-                            st.sidebar.warning("💤 Feedback Generator: Will load on first use")
-                except:
-                    st.sidebar.info("📊 Memory status check unavailable")
-            else:
-                st.sidebar.warning("⚠️ Two-model system incomplete")
-            
-            # Show total available models
-            st.sidebar.caption(f"📚 Total models available: {len(available_models)}")
-            
+            for model_dir in model_dirs:
+                dir_name = os.path.basename(model_dir)
+                if dir_name.startswith("models--"):
+                    parts = dir_name[8:].split("--")
+                    if len(parts) >= 2:
+                        model_name = "/".join(parts)
+                        available_mlx_models.append(model_name)
+        
+        # Check for our specific models
+        qwen_model = "mlx-community/Qwen3-Coder-30B-A3B-Instruct-bf16"
+        gemma_model = "mlx-community/gemma-3-27b-it-bf16"
+        
+        qwen_available = qwen_model in available_mlx_models
+        gemma_available = gemma_model in available_mlx_models
+        
+        # Display status
+        if qwen_available:
+            st.sidebar.success("✅ Qwen 3.0 Coder (MLX bf16)")
         else:
-            st.sidebar.error("❌ Ollama server error")
-    
-    except requests.exceptions.ConnectionError:
-        st.sidebar.error("❌ Ollama not running")
-        st.sidebar.info("💡 Start Ollama to enable AI grading")
-    
-    except requests.exceptions.Timeout:
-        st.sidebar.warning("⏰ Ollama connection timeout")
-    
+            st.sidebar.error("❌ Qwen 3.0 Coder - Not Available")
+        
+        if gemma_available:
+            st.sidebar.success("✅ Gemma 3.0 (MLX bf16)")
+        else:
+            st.sidebar.error("❌ Gemma 3.0 - Not Available")
+        
+        if qwen_available and gemma_available:
+            st.sidebar.info("⚡ **MLX Two-Model System Ready**")
+            st.sidebar.success("🍎 Apple Silicon Optimized")
+            mlx_available = True
+        elif qwen_available or gemma_available:
+            st.sidebar.warning("⚠️ Partial MLX setup - some models missing")
+        else:
+            st.sidebar.warning("⚠️ MLX models not found")
+        
+        # Show total MLX models
+        if available_mlx_models:
+            st.sidebar.caption(f"📚 MLX models available: {len(available_mlx_models)}")
+        
+    except ImportError:
+        st.sidebar.error("❌ MLX not installed")
+        st.sidebar.info("💡 Run: pip install mlx-lm")
     except Exception as e:
-        st.sidebar.error(f"❌ Model check failed: {str(e)[:30]}...")
+        st.sidebar.error(f"❌ MLX check failed: {str(e)[:30]}...")
+    
+    # Fallback to Ollama if MLX not available
+    if not mlx_available:
+        try:
+            response = requests.get("http://localhost:11434/api/tags", timeout=3)
+            if response.status_code == 200:
+                models_data = response.json()
+                available_models = [model['name'] for model in models_data.get('models', [])]
+                
+                # Check our two models
+                code_model = "hopephoto/qwen3-coder-30b-a3b-instruct_q8:latest"
+                feedback_model = "gemma3:27b-it-q8_0"
+                
+                # Code analyzer status
+                if code_model in available_models:
+                    st.sidebar.success("✅ Qwen 3.0 Coder (Ollama)")
+                else:
+                    st.sidebar.error("❌ Qwen 3.0 Coder - Not Available")
+                
+                # Feedback generator status
+                if feedback_model in available_models:
+                    st.sidebar.success("✅ Gemma 3.0 (Ollama)")
+                else:
+                    st.sidebar.error("❌ Gemma 3.0 - Not Available")
+                
+                # Show parallel processing info
+                if code_model in available_models and feedback_model in available_models:
+                    st.sidebar.info("⚡ **Ollama Two-Model System Ready**")
+                else:
+                    st.sidebar.warning("⚠️ Two-model system incomplete")
+                
+                # Show total available models
+                st.sidebar.caption(f"📚 Ollama models available: {len(available_models)}")
+                
+            else:
+                st.sidebar.error("❌ Ollama server error")
+        
+        except requests.exceptions.ConnectionError:
+            st.sidebar.error("❌ Ollama not running")
+            st.sidebar.info("💡 Install MLX or start Ollama")
+        
+        except requests.exceptions.Timeout:
+            st.sidebar.warning("⏰ Ollama connection timeout")
+        
+        except Exception as e:
+            st.sidebar.error(f"❌ Model check failed: {str(e)[:30]}...")
 
 def show_grading_performance_stats(grading_stats):
     """Show performance statistics from two-model grading"""

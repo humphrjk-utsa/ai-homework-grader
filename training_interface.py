@@ -59,13 +59,14 @@ class TrainingInterface:
         conn = sqlite3.connect(self.grader.db_path)
         
         # Get training data counts from submissions table
+        # Use ABS() to ensure scores are always positive
         stats = pd.read_sql_query("""
             SELECT 
                 COUNT(CASE WHEN ai_score IS NOT NULL THEN 1 END) as total_samples,
                 COUNT(CASE WHEN human_score IS NOT NULL THEN 1 END) as corrected_samples,
                 COUNT(CASE WHEN human_feedback IS NOT NULL THEN 1 END) as feedback_samples,
-                AVG(CASE WHEN human_score IS NOT NULL THEN human_score END) as avg_human_score,
-                AVG(CASE WHEN ai_score IS NOT NULL THEN ai_score END) as avg_ai_score
+                AVG(CASE WHEN human_score IS NOT NULL THEN ABS(human_score) END) as avg_human_score,
+                AVG(CASE WHEN ai_score IS NOT NULL THEN ABS(ai_score) END) as avg_ai_score
             FROM submissions
         """, conn)
         
@@ -108,11 +109,55 @@ class TrainingInterface:
                     )
     
     def show_correction_interface(self):
-        """Interface for reviewing and correcting AI grades"""
+        """Interface for reviewing and correcting AI grades - SPLIT SCREEN VERSION"""
         st.subheader("Review AI Grades")
         
-        # Filter options and management
-        col1, col2, col3 = st.columns([2, 2, 1])
+        # Add CSS for fixed height scrollable panels
+        st.markdown("""
+            <style>
+            /* Make the main content area use full viewport height */
+            .main .block-container {
+                max-height: 100vh;
+                padding-top: 2rem;
+                padding-bottom: 1rem;
+            }
+            
+            /* Fixed height scrollable columns */
+            div[data-testid="column"] {
+                height: calc(100vh - 250px);
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding-right: 10px;
+            }
+            
+            /* Custom scrollbar */
+            div[data-testid="column"]::-webkit-scrollbar {
+                width: 8px;
+            }
+            
+            div[data-testid="column"]::-webkit-scrollbar-track {
+                background: #262730;
+                border-radius: 4px;
+            }
+            
+            div[data-testid="column"]::-webkit-scrollbar-thumb {
+                background: #4a4a5e;
+                border-radius: 4px;
+            }
+            
+            div[data-testid="column"]::-webkit-scrollbar-thumb:hover {
+                background: #5a5a6e;
+            }
+            
+            /* Prevent horizontal scrolling on main container */
+            .main {
+                overflow-x: hidden;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        # Filter options and bulk actions at the top
+        col1, col2, col3, col4 = st.columns([2, 2, 1, 1])
         
         with col1:
             # Assignment filter
@@ -134,6 +179,10 @@ class TrainingInterface:
             if st.button("🗑️ Clear List", help="Clear training data to manage list size"):
                 self._show_clear_options(selected_assignment)
         
+        with col4:
+            st.write("")  # Spacing
+            # Bulk report generation will be added below after we get submissions
+        
         # Get submissions to review
         submissions = self.get_submissions_for_review(selected_assignment, status_filter)
         
@@ -141,38 +190,260 @@ class TrainingInterface:
             st.info("No submissions found matching your criteria.")
             return
         
-        # Pagination
-        items_per_page = 5
-        total_pages = len(submissions) // items_per_page + (1 if len(submissions) % items_per_page > 0 else 0)
+        # Bulk report generation buttons
+        st.markdown("---")
+        col_a, col_b, col_c = st.columns([1, 1, 2])
         
-        if total_pages > 1:
-            page = st.selectbox("Page", range(1, total_pages + 1)) - 1
-            start_idx = page * items_per_page
-            end_idx = start_idx + items_per_page
-            page_submissions = submissions.iloc[start_idx:end_idx]
+        with col_a:
+            if st.button("📄 Generate All PDFs", use_container_width=True, help="Generate individual PDF reports for all submissions"):
+                self._generate_bulk_pdf_reports(submissions)
+        
+        with col_b:
+            if st.button("📊 Export to CSV", use_container_width=True, help="Export all grades and feedback to CSV"):
+                self._export_to_csv(submissions)
+        
+        st.markdown("---")
+        
+        # SPLIT SCREEN LAYOUT with fixed heights
+        left_panel, right_panel = st.columns([1, 2])
+        
+        # LEFT PANEL: Submission List (Scrollable)
+        with left_panel:
+            st.markdown("### 📋 Submissions")
+            st.caption(f"Showing {len(submissions)} submissions")
+            
+            # Initialize selected submission in session state
+            if 'selected_submission_idx' not in st.session_state:
+                st.session_state.selected_submission_idx = 0
+            
+            # Create scrollable container for submission list
+            with st.container():
+                # Render submission list
+                for idx, submission in submissions.iterrows():
+                    self._render_submission_button(submission, idx)
+        
+        # RIGHT PANEL: Selected Submission Details (Scrollable)
+        with right_panel:
+            # Create scrollable container for details
+            with st.container():
+                if len(submissions) > 0:
+                    selected_idx = st.session_state.selected_submission_idx
+                    if selected_idx < len(submissions):
+                        selected_submission = submissions.iloc[selected_idx]
+                        self._render_submission_details(selected_submission)
+                    else:
+                        st.info("Select a submission from the list")
+                else:
+                    st.info("No submissions to display")
+    
+    def _render_submission_button(self, submission, idx):
+        """Render a clickable submission button in the list"""
+        # Get score in points (ensure positive)
+        score_points = abs(submission.get('final_score') or submission.get('ai_score') or 0)
+        
+        # Get max score from assignment (default to 100 if not set)
+        max_score = submission.get('max_score', 100)
+        
+        # Calculate percentage
+        score_percentage = (score_points / max_score) * 100 if max_score > 0 else 0
+        
+        # Determine rating based on percentage
+        if score_percentage >= 90:
+            score_emoji = "🟢"
+            score_label = "Excellent"
+        elif score_percentage >= 80:
+            score_emoji = "🟡"
+            score_label = "Good"
+        elif score_percentage >= 70:
+            score_emoji = "🟠"
+            score_label = "Fair"
         else:
-            page_submissions = submissions
+            score_emoji = "🔴"
+            score_label = "Poor"
         
-        # Review each submission
-        for idx, submission in page_submissions.iterrows():
-            self.show_submission_review(submission)
+        # Check if this is the selected submission
+        is_selected = st.session_state.selected_submission_idx == idx
+        button_type = "primary" if is_selected else "secondary"
+        
+        # Create button
+        if st.button(
+            f"{score_emoji} {submission.get('student_name', 'Unknown')}",
+            key=f"sub_btn_{submission['id']}",
+            use_container_width=True,
+            type=button_type
+        ):
+            st.session_state.selected_submission_idx = idx
+            st.rerun()
+        
+        # Show score and status below button
+        col1, col2 = st.columns(2)
+        with col1:
+            st.caption(f"{score_points:.1f}/{max_score} ({score_percentage:.0f}%)")
+        with col2:
+            if submission.get('human_score') is not None:
+                st.caption("✅ Reviewed")
+            else:
+                st.caption("🤖 AI only")
+        
+        st.divider()
+    
+    def _render_submission_details(self, submission):
+        """Render detailed view of selected submission in right panel"""
+        st.markdown(f"### 📝 {submission.get('student_name', 'Unknown')}")
+        st.caption(f"Assignment: {submission['assignment_name']}")
+        
+        # Individual report button
+        if st.button("📄 Generate PDF Report", key=f"pdf_{submission['id']}", use_container_width=True):
+            self._generate_individual_pdf_report(submission)
+        
+        st.markdown("---")
+        
+        # Tabs for different views
+        tab1, tab2, tab3 = st.tabs(["📊 AI Feedback", "📓 Notebook", "✍️ Your Review"])
+        
+        with tab1:
+            self._render_ai_feedback_tab(submission)
+        
+        with tab2:
+            self._render_notebook_tab(submission)
+        
+        with tab3:
+            self._render_review_form_tab(submission)
+    
+    def _render_ai_feedback_tab(self, submission):
+        """Render AI feedback in a tab"""
+        st.markdown("**AI Assessment:**")
+        st.metric("AI Score", f"{abs(submission['ai_score']):.1f}/37.5")
+        
+        if submission['ai_feedback']:
+            try:
+                feedback_data = json.loads(submission['ai_feedback'])
+                
+                if isinstance(feedback_data, dict) and 'comprehensive_feedback' in feedback_data:
+                    comp_feedback = feedback_data['comprehensive_feedback']
+                    
+                    # Show instructor comments
+                    if 'instructor_comments' in comp_feedback:
+                        st.markdown("**Overall Assessment:**")
+                        st.info(comp_feedback['instructor_comments'])
+                    
+                    # Show detailed feedback sections
+                    if 'detailed_feedback' in comp_feedback:
+                        detailed = comp_feedback['detailed_feedback']
+                        
+                        for section_name in ['reflection_assessment', 'analytical_strengths', 'areas_for_development']:
+                            if section_name in detailed and detailed[section_name]:
+                                section_title = section_name.replace('_', ' ').title()
+                                with st.expander(f"**{section_title}**"):
+                                    for item in detailed[section_name]:
+                                        st.write(f"• {item}")
+                
+                elif isinstance(feedback_data, list):
+                    for item in feedback_data:
+                        st.write(f"• {item}")
+                else:
+                    st.write(str(feedback_data))
+                    
+            except:
+                st.write(str(submission['ai_feedback']))
+    
+    def _render_notebook_tab(self, submission):
+        """Render notebook content in a tab"""
+        if submission['cell_content'] and os.path.exists(submission['cell_content']):
+            if st.button("📖 Load Notebook Content", key=f"load_nb_{submission['id']}"):
+                self.show_notebook_content(submission['cell_content'])
+        else:
+            st.warning("Notebook file not found")
+    
+    def _render_review_form_tab(self, submission):
+        """Render the review form in a tab"""
+        st.markdown("**Your Assessment:**")
+        
+        # Show smart suggestions
+        if submission['cell_content'] and os.path.exists(submission['cell_content']):
+            try:
+                with open(submission['cell_content'], 'r') as f:
+                    content = f.read()
+                suggestions = CorrectionHelpers.suggest_score_adjustment(
+                    submission['ai_score'], content, {}
+                )
+                if suggestions:
+                    st.markdown("**💡 Suggestions:**")
+                    for suggestion in suggestions:
+                        st.info(suggestion)
+            except:
+                pass
+        
+        # Correction form
+        with st.form(f"correction_{submission['id']}"):
+            corrected_score = st.number_input(
+                "Corrected Score (out of 37.5)",
+                min_value=0.0,
+                max_value=37.5,
+                value=float(abs(submission['human_score'])) if submission['human_score'] else float(abs(submission['ai_score'])),
+                step=0.5,
+                key=f"score_{submission['id']}"
+            )
+            
+            # Show feedback template suggestion
+            if not submission['human_feedback']:
+                template = CorrectionHelpers.generate_feedback_template(corrected_score)
+                st.markdown("**💬 Suggested feedback:**")
+                st.caption(template)
+            
+            corrected_feedback = st.text_area(
+                "Corrected Feedback",
+                value=submission['human_feedback'] if submission['human_feedback'] else "",
+                height=150,
+                key=f"feedback_{submission['id']}"
+            )
+            
+            # Show feedback improvement suggestions
+            if corrected_score != submission['ai_score']:
+                adjustment = corrected_score - submission['ai_score']
+                feedback_suggestions = CorrectionHelpers.smart_feedback_suggestions(
+                    "", submission['ai_feedback'], adjustment
+                )
+                if feedback_suggestions:
+                    st.markdown("**📝 Feedback tips:**")
+                    for tip in feedback_suggestions:
+                        st.caption(tip)
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                save_correction = st.form_submit_button("💾 Save Correction", use_container_width=True)
+            with col_b:
+                approve_ai = st.form_submit_button("✅ Approve AI Grade", use_container_width=True)
+            
+            if save_correction:
+                self.save_correction(submission['id'], corrected_score, corrected_feedback)
+                st.success("Correction saved!")
+                st.rerun()
+            
+            if approve_ai:
+                self.save_correction(submission['id'], submission['ai_score'], submission['ai_feedback'])
+                st.success("AI grade approved!")
+                st.rerun()
     
     def get_submissions_for_review(self, assignment_filter, status_filter):
         """Get submissions that need review based on filters"""
         conn = sqlite3.connect(self.grader.db_path)
         
         # Updated query to use submissions table (where Business Analytics Grader stores data)
+        # Use ABS() to ensure scores are always positive
         query = """
             SELECT 
                 s.id,
                 s.assignment_id,
                 s.notebook_path as cell_content,
-                s.ai_score,
+                ABS(s.ai_score) as ai_score,
                 s.ai_feedback,
-                s.human_score,
+                ABS(s.human_score) as human_score,
                 s.human_feedback,
+                ABS(COALESCE(s.final_score, s.ai_score)) as final_score,
                 s.submission_date as created_date,
                 a.name as assignment_name,
+                a.total_points as max_score,
                 COALESCE(st.name, 'Unknown') as student_name,
                 COALESCE(st.student_id, 'Unknown') as student_id
             FROM submissions s
@@ -208,7 +479,7 @@ class TrainingInterface:
             
             with col1:
                 st.markdown("**AI Assessment:**")
-                st.write(f"Score: {submission['ai_score']}/37.5")
+                st.write(f"Score: {abs(submission['ai_score'])}/37.5")
                 if submission['ai_feedback']:
                     st.write("Feedback:")
                     try:
@@ -739,3 +1010,138 @@ class TrainingInterface:
             st.error(f"Error clearing data: {e}")
         finally:
             conn.close()
+    
+
+    def _generate_individual_pdf_report(self, submission):
+        """Generate PDF report for individual submission"""
+        try:
+            from report_generator import PDFReportGenerator
+            
+            # Prepare analysis result
+            analysis_result = {
+                'student_name': submission.get('student_name', 'Unknown'),
+                'assignment_name': submission['assignment_name'],
+                'final_score': abs(submission.get('final_score', submission.get('ai_score', 0))),
+                'max_score': submission.get('max_score', 37.5),
+                'submission_date': submission.get('created_date', ''),
+                'comprehensive_feedback': json.loads(submission['ai_feedback']) if submission.get('ai_feedback') else {}
+            }
+            
+            # Generate report
+            generator = PDFReportGenerator()
+            report_path = generator.generate_report(
+                student_name=analysis_result['student_name'],
+                assignment_id=analysis_result['assignment_name'],
+                analysis_result=analysis_result
+            )
+            
+            st.success(f"✅ Report generated: {report_path}")
+            
+            # Offer download
+            with open(report_path, 'rb') as f:
+                st.download_button(
+                    label="⬇️ Download PDF",
+                    data=f,
+                    file_name=os.path.basename(report_path),
+                    mime="application/pdf",
+                    key=f"download_{submission['id']}"
+                )
+                
+        except Exception as e:
+            st.error(f"Error generating report: {e}")
+    
+    def _generate_bulk_pdf_reports(self, submissions):
+        """Generate PDF reports for all submissions"""
+        try:
+            from report_generator import PDFReportGenerator
+            
+            generator = PDFReportGenerator()
+            success_count = 0
+            
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            for idx, submission in submissions.iterrows():
+                status_text.text(f"Generating report {idx+1}/{len(submissions)}: {submission.get('student_name', 'Unknown')}")
+                
+                try:
+                    # Prepare analysis result
+                    analysis_result = {
+                        'student_name': submission.get('student_name', 'Unknown'),
+                        'assignment_name': submission['assignment_name'],
+                        'final_score': abs(submission.get('final_score', submission.get('ai_score', 0))),
+                        'max_score': submission.get('max_score', 37.5),
+                        'submission_date': submission.get('created_date', ''),
+                        'comprehensive_feedback': json.loads(submission['ai_feedback']) if submission.get('ai_feedback') else {}
+                    }
+                    
+                    # Generate report
+                    generator.generate_report(
+                        student_name=analysis_result['student_name'],
+                        assignment_id=analysis_result['assignment_name'],
+                        analysis_result=analysis_result
+                    )
+                    
+                    success_count += 1
+                    
+                except Exception as e:
+                    st.warning(f"Failed to generate report for {submission.get('student_name', 'Unknown')}: {e}")
+                
+                progress_bar.progress((idx + 1) / len(submissions))
+            
+            status_text.empty()
+            progress_bar.empty()
+            
+            st.success(f"✅ Generated {success_count}/{len(submissions)} PDF reports")
+            
+        except Exception as e:
+            st.error(f"Error in bulk report generation: {e}")
+    
+    def _export_to_csv(self, submissions):
+        """Export submissions to CSV"""
+        try:
+            import csv
+            from io import StringIO
+            
+            # Prepare data for CSV
+            csv_data = []
+            
+            for idx, submission in submissions.iterrows():
+                score = abs(submission.get('final_score', submission.get('ai_score', 0)))
+                max_score = submission.get('max_score', 37.5)
+                percentage = (score / max_score * 100) if max_score > 0 else 0
+                
+                csv_data.append({
+                    'Student Name': submission.get('student_name', 'Unknown'),
+                    'Student ID': submission.get('student_id', 'Unknown'),
+                    'Assignment': submission['assignment_name'],
+                    'AI Score': abs(submission.get('ai_score', 0)),
+                    'Human Score': abs(submission.get('human_score', 0)) if submission.get('human_score') else '',
+                    'Final Score': score,
+                    'Max Score': max_score,
+                    'Percentage': f"{percentage:.1f}%",
+                    'Status': 'Human Reviewed' if submission.get('human_score') else 'AI Only',
+                    'Submission Date': submission.get('created_date', '')
+                })
+            
+            # Convert to DataFrame
+            df = pd.DataFrame(csv_data)
+            
+            # Convert to CSV
+            csv_buffer = StringIO()
+            df.to_csv(csv_buffer, index=False)
+            csv_string = csv_buffer.getvalue()
+            
+            # Offer download
+            st.download_button(
+                label="⬇️ Download CSV",
+                data=csv_string,
+                file_name=f"grades_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                key="csv_download"
+            )
+            
+            st.success(f"✅ Exported {len(csv_data)} submissions to CSV")
+            
+        except Exception as e:
+            st.error(f"Error exporting to CSV: {e}")
