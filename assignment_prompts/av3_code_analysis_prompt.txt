@@ -1,0 +1,187 @@
+ASSIGNMENT-SPECIFIC INSTRUCTIONS FOR ASSIGNMENT 3 (av3):
+Data Transformation with dplyr - Part 1
+
+HOW TO VERIFY COMPLETION - Check student code for these SPECIFIC elements:
+
+1. DATA IMPORT (Required):
+   ✓ Must have: read_csv("retail_transactions.csv") or read.csv()
+   ✓ Must create: transactions variable
+   ✓ Must show: "Data imported successfully!" message
+   VERIFICATION: Search for "transactions <-" and "read_csv"
+
+2. INITIAL EXPLORATION (Required):
+   ✓ Must have: head(transactions) showing first 10 rows
+   ✓ Must have: str(transactions) showing structure
+   ✓ Must have: names(transactions) showing column names
+   ✓ Must show: actual output from these commands
+   VERIFICATION: Look for function calls AND visible output
+
+3. BASIC SELECTION (Required):
+   ✓ Must create: basic_info with select(TransactionID, CustomerID, ProductName, TotalAmount)
+   ✓ Must use: %>% pipe operator
+   ✓ Must show: head() output of result
+   VERIFICATION: Search for "basic_info <-" and "select("
+
+4. RANGE SELECTION (Required):
+   ✓ Must create: customer_details using select(CustomerID:CustomerCity)
+   ✓ Must use: colon operator for range
+   ✓ Must show: output
+   VERIFICATION: Look for ":" in select statement
+
+5. PATTERN SELECTION (Required):
+   ✓ Must create: date_columns using starts_with() or contains()
+   ✓ Must create: amount_columns using contains("Amount")
+   ✓ Must show: column names output
+   VERIFICATION: Search for "starts_with" or "contains"
+
+6. EXCLUSION SELECTION (Required):
+   ✓ Must create: no_ids using select(-TransactionID, -CustomerID)
+   ✓ Must use: minus sign for exclusion
+   ✓ Must show: remaining column count
+   VERIFICATION: Look for "-" in select statement
+
+7. SINGLE CONDITION FILTER (Required):
+   ✓ Must create: high_value_transactions with filter(TotalAmount > 100)
+   ✓ Must create: electronics_transactions with filter(ProductCategory == "Electronics")
+   ✓ Must show: row counts
+   VERIFICATION: Search for "filter(" and comparison operators
+
+8. MULTIPLE AND CONDITIONS (Required):
+   ✓ Must create: ny_bulk_purchases with filter(TotalAmount > 50 & Quantity > 1 & CustomerCity == "New York")
+   ✓ Must use: & operator for AND
+   ✓ Must show: filtered results
+   VERIFICATION: Look for "&" in filter statement
+
+9. MULTIPLE OR CONDITIONS (Required):
+   ✓ Must create: entertainment_transactions with %in% c("Books", "Music", "Movies")
+   ✓ Must use: %in% or | operator
+   ✓ Must show: row count
+   VERIFICATION: Search for "%in%" or "|"
+
+10. DATE FILTERING (Required):
+    ✓ Must filter: march_transactions for March 2024
+    ✓ May use: month() and year() functions or date comparison
+    ✓ Must show: filtered count
+    VERIFICATION: Look for date-related functions
+
+11. ADVANCED CHALLENGE (Required):
+    ✓ Must find: customers in both Electronics AND Clothing
+    ✓ Must use: intersect() or similar logic
+    ✓ Must show: customer count
+    VERIFICATION: Look for "intersect" or complex filtering logic
+
+12. SINGLE COLUMN SORT (Required):
+    ✓ Must create: transactions_by_amount_asc with arrange(TotalAmount)
+    ✓ Must create: transactions_by_amount_desc with arrange(desc(TotalAmount))
+    ✓ Must show: top 5 of each
+    VERIFICATION: Search for "arrange(" and "desc("
+
+13. MULTIPLE COLUMN SORT (Required):
+    ✓ Must create: transactions_by_city_amount with arrange(CustomerCity, desc(TotalAmount))
+    ✓ Must sort by: city first, then amount
+    ✓ Must show: sorted output
+    VERIFICATION: Look for multiple arguments in arrange()
+
+14. DATE-BASED SORT (Required):
+    ✓ Must create: transactions_chronological with arrange(TransactionDate)
+    ✓ Must show: earliest transactions
+    VERIFICATION: Search for "arrange" with date column
+
+15. SIMPLE CHAIN (Required):
+    ✓ Must create: premium_purchases with filter + select + arrange
+    ✓ Must use: %>% to chain operations
+    ✓ Must show: top 10 results
+    VERIFICATION: Count number of %>% operators (should be 3+)
+
+16. COMPLEX CHAIN (Required):
+    ✓ Must create: recent_tech_purchases with multiple operations
+    ✓ Must filter: Electronics or Computers
+    ✓ Must use: head(20) to limit results
+    VERIFICATION: Look for chained operations with %>%
+
+17. BUSINESS INTELLIGENCE CHAIN (Required):
+    ✓ Must create: high_value_customers with TotalAmount > 200
+    ✓ Must chain: filter + select + arrange
+    ✓ Must show: top 15 results
+    VERIFICATION: Check for business-relevant filtering
+
+18. TRANSACTION COUNTS (Required):
+    ✓ Must display: nrow() counts for all filtered datasets
+    ✓ Must show: at least 8 different counts
+    VERIFICATION: Look for multiple nrow() calls with output
+
+19. TOP CUSTOMERS (Required):
+    ✓ Must analyze: customer_frequency in high_value_customers
+    ✓ May use: count(), group_by(), or table()
+    ✓ Must show: most frequent customer
+    VERIFICATION: Look for aggregation functions
+
+20. PRODUCT ANALYSIS (Required):
+    ✓ Must find: top 5 most expensive entertainment transactions
+    ✓ Must use: arrange(desc()) and head(5)
+    ✓ Must show: results
+    VERIFICATION: Check for sorting and limiting
+
+21. GEOGRAPHIC ANALYSIS (Required):
+    ✓ Must find: city with highest single transaction
+    ✓ Must use: arrange and head(1) or max()
+    ✓ Must show: city name and amount
+    VERIFICATION: Look for geographic filtering/sorting
+
+REFLECTION QUESTIONS (4 required):
+
+22. PIPE OPERATOR BENEFITS (Required):
+    ✓ Must discuss: readability improvements
+    ✓ Must provide: specific example from homework
+    ✓ Minimum: 50 words
+    VERIFICATION: Look in markdown cells for %>% discussion
+
+23. FILTERING STRATEGY (Required):
+    ✓ Must discuss: trade-offs of specific vs general filtering
+    ✓ Must mention: impact on insights
+    ✓ Minimum: 50 words
+    VERIFICATION: Look for discussion of filtering approaches
+
+24. SORTING IMPORTANCE (Required):
+    ✓ Must provide: 3 business scenarios
+    ✓ Must explain: why sorting is crucial
+    ✓ Minimum: 75 words (3 scenarios)
+    VERIFICATION: Count number of scenarios listed
+
+25. REAL-WORLD APPLICATION (Required):
+    ✓ Must describe: business scenario using select + filter + arrange
+    ✓ Must explain: insights to gain
+    ✓ Minimum: 75 words
+    VERIFICATION: Look for combined operations discussion
+
+CRITICAL SCORING RULES:
+- Each code section (1-21) = 1 point (21 total)
+- Each reflection question (22-25) = 1 point (4 total)
+- Total: 25 sections
+- FINAL SCORE: (completed sections / 25) × 100
+
+PIPE OPERATOR REQUIREMENT:
+- Student MUST use %>% in at least 15 sections
+- Not using pipes = 20% deduction
+- Check for: transactions %>% filter() %>% select() %>% arrange()
+
+COMMON MISTAKES TO CATCH:
+❌ Student only has template comments, no actual code
+❌ Student has code but no output (didn't run notebook)
+❌ Student uses = instead of == in filter()
+❌ Student forgets desc() for descending sort
+❌ Student doesn't load tidyverse library
+❌ Reflection answers are too short (<50 words)
+❌ Reflection answers are generic ("it depends", "it's useful")
+
+TEMPLATE COMPARISON:
+- Compare student code length to template code length
+- If student code < 120% of template length = likely minimal work
+- Check for specific function names: filter, select, arrange, %>%
+- Don't just count lines - verify actual implementation
+
+INCOMPLETE SECTION COUNTING:
+- Count each missing required section as incomplete
+- Use this count to calculate: incomplete_sections_count
+- Sections with only template code = incomplete
+- Sections without output = incomplete

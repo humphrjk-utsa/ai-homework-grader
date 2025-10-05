@@ -1,47 +1,96 @@
 ASSIGNMENT-SPECIFIC INSTRUCTIONS FOR ASSIGNMENT 2V1:
 
-OPTIONAL SECTIONS IN THIS ASSIGNMENT:
-- Part 2.2: Missing Value Treatment - Option A (Removal) - OPTIONAL
-- Part 2.3: Missing Value Treatment - Option B (Imputation) - OPTIONAL
-- Students must complete AT LEAST ONE of these options, not both
-- Part 3.3: Outlier Treatment - Option A (Removal) - OPTIONAL
-- Part 3.4: Outlier Treatment - Option B (Capping) - OPTIONAL
-- Students must complete AT LEAST ONE of these options, not both
+HOW TO VERIFY COMPLETION - Check student code for these SPECIFIC elements:
 
-REQUIRED SECTIONS:
-- Part 1: Data Import and Initial Assessment (ALL required)
-- Part 2.1: Missing Value Identification (required)
-- Part 2.4: Compare Missing Value Strategies (required if they did 2.2 or 2.3)
-- Part 3.1: Outlier Detection Using IQR Method (required)
-- Part 3.2: Outlier Visualization (required)
-- Part 4: Final Data Quality Assessment (required)
-- Part 5: Reflection Questions (ALL required)
+1. DATA IMPORT (Required):
+   ✓ Must have: read_csv("messy_sales_data.csv")
+   ✓ Must create: messy_sales variable
+   ✓ Must show: print() or head() output
+   VERIFICATION: Search for "messy_sales" and "read_csv" in code
 
-SCORING GUIDANCE:
-- If student completed Option A but not Option B: Give FULL credit (100%)
-- If student completed Option B but not Option A: Give FULL credit (100%)
-- If student completed BOTH options: Give bonus consideration
-- Do NOT penalize for choosing one option over another
+2. INITIAL ASSESSMENT (Required):
+   ✓ Must have: head(messy_sales) or similar
+   ✓ Must have: str(messy_sales) or glimpse()
+   ✓ Must have: summary(messy_sales)
+   ✓ Must show: actual output from these commands
+   VERIFICATION: Check for function calls AND visible output
 
-COMMON PATTERNS TO ACCEPT:
-- Student may leave "# YOUR CODE HERE" comments but have working code below them
-- Student may implement imputation differently (mean vs median vs mode) - all valid
-- Student may use different outlier thresholds (1.5 IQR vs 3 IQR) - both valid
-- Student may create different visualizations (boxplot vs histogram) - both valid
+3. MISSING VALUE IDENTIFICATION (Required):
+   ✓ Must calculate: sum(is.na(messy_sales))
+   ✓ Must calculate: colSums(is.na(messy_sales))
+   ✓ Must show: numeric results (not just code)
+   VERIFICATION: Look for "is.na" and numeric output
 
-COMPLETION CHECK:
-Count these as the required sections (total: ~12 sections):
-1. Data import ✓
-2. Initial assessment ✓
-3. Missing value identification ✓
-4. Missing value treatment (Option A OR B) ✓
-5. Compare strategies ✓
-6. Outlier detection (IQR) ✓
-7. Outlier visualization ✓
-8. Outlier treatment (Option A OR B) ✓
-9. Final dataset selection ✓
-10. Comparison summary ✓
-11. Reflection question 1 ✓
-12. Reflection question 2 ✓
+4. MISSING VALUE TREATMENT (Required - ONE option):
+   Option A: ✓ Must create: sales_removed_na with complete.cases()
+   Option B: ✓ Must create: sales_imputed_na with mean/median imputation
+   SCORING: If EITHER option completed = FULL CREDIT
+   VERIFICATION: Search for "sales_removed_na" OR "sales_imputed_na"
 
-Calculate: (completed sections / 12) × 100 = base score
+5. COMPARE STRATEGIES (Required):
+   ✓ Must compare: nrow() of original vs cleaned datasets
+   ✓ Must show: actual row counts in output
+   VERIFICATION: Look for nrow() comparisons with output
+
+6. OUTLIER DETECTION IQR (Required):
+   ✓ Must calculate: Q1, Q3, IQR for numeric columns
+   ✓ Must calculate: lower_bound and upper_bound
+   ✓ Must identify: which values are outliers
+   VERIFICATION: Search for "IQR", "Q1", "Q3", "quantile"
+
+7. OUTLIER BOXPLOT (Required):
+   ✓ Must create: boxplot or ggplot boxplot
+   ✓ Must show: visual output (not just code)
+   VERIFICATION: Look for "boxplot" or "geom_boxplot" with plot output
+
+8. OUTLIER TREATMENT (Required - ONE option):
+   Option A: ✓ Must create: sales_removed_outliers by filtering
+   Option B: ✓ Must create: sales_capped_outliers with min/max capping
+   SCORING: If EITHER option completed = FULL CREDIT
+   VERIFICATION: Search for "sales_removed_outliers" OR "sales_capped_outliers"
+
+9. FINAL DATASET SELECTION (Required):
+   ✓ Must create: final_sales variable
+   ✓ Must assign: one of the cleaned datasets to it
+   VERIFICATION: Search for "final_sales <-" or "final_sales ="
+
+10. COMPARISON SUMMARY (Required):
+    ✓ Must compare: dimensions of all datasets (original, removed, imputed/capped, final)
+    ✓ Must show: actual numbers in output
+    VERIFICATION: Look for dim() or nrow()/ncol() comparisons
+
+11. REFLECTION Q1 (Required):
+    ✓ Must answer: "When would you prefer removing rows vs imputation?"
+    ✓ Must provide: substantive answer (not just "it depends")
+    VERIFICATION: Look in markdown cells for discussion of removal vs imputation
+
+12. REFLECTION Q2 (Required):
+    ✓ Must answer: "What do outliers represent? Should they be removed?"
+    ✓ Must provide: substantive answer with reasoning
+    VERIFICATION: Look in markdown cells for discussion of outliers
+
+CRITICAL SCORING RULES:
+- Each section = 1 point (12 total)
+- For optional sections (4 and 8): completing ONE option = full point
+- Missing code = 0 points for that section
+- Code without output = 0 points (notebook must be executed)
+- Template code unchanged = 0 points
+- FINAL SCORE: (completed sections / 12) × 100
+
+COMMON MISTAKES TO CATCH:
+❌ Student only has template comments, no actual code
+❌ Student has code but no output (didn't run notebook)
+❌ Student copied code but didn't change variable names
+❌ Student skipped reflection questions
+❌ Student did neither Option A nor Option B
+
+TEMPLATE COMPARISON:
+- Compare student code length to template code length
+- If student code < 110% of template length = likely minimal work
+- Check for specific variable names that indicate actual work
+- Don't just count lines - verify actual implementation
+
+INCOMPLETE SECTION COUNTING:
+- Count each missing required section as incomplete
+- For optional sections: only count as incomplete if NEITHER option done
+- Use this count to calculate: incomplete_sections_count

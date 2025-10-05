@@ -95,51 +95,99 @@ def upload_submissions_page(grader):
         upload_single_submission(grader, assignment_id)
 
 def upload_single_submission(grader, assignment_id):
-    with st.form("single_upload"):
-        student_id = st.text_input("Student ID", placeholder="e.g., student123")
-        student_name = st.text_input("Student Name (optional)")
-        student_email = st.text_input("Student Email (optional)")
-        notebook_file = st.file_uploader("Upload Notebook", type=['ipynb'])
+    st.info("📄 **Single File Upload** - Auto-extracts Canvas ID from filename")
+    
+    notebook_file = st.file_uploader("Upload Notebook (.ipynb)", type=['ipynb'], key="single_upload")
+    
+    if notebook_file:
+        # Auto-extract Canvas ID and name from filename
+        filename = notebook_file.name.replace('.ipynb', '')
+        parsed_info = parse_github_classroom_filename(filename)
         
-        submitted = st.form_submit_button("Upload Submission")
+        # Show extracted info
+        col1, col2 = st.columns(2)
+        with col1:
+            st.info(f"**Canvas ID:** {parsed_info['id']}")
+        with col2:
+            st.info(f"**Name:** {parsed_info['name']}")
         
-        if submitted and notebook_file and student_id:
+        # Allow manual override
+        with st.expander("✏️ Override extracted info (optional)"):
+            override_id = st.text_input("Canvas ID", value=parsed_info['id'])
+            override_name = st.text_input("Student Name", value=parsed_info['name'])
+        
+        # Use the values (either from expander or defaults)
+        if 'override_id' not in locals():
+            override_id = parsed_info['id']
+            override_name = parsed_info['name']
+        
+        if st.button("📤 Upload This Submission", type="primary"):
             try:
+                import nbformat
+                
+                # Read notebook to check for duplicates
+                notebook_content = notebook_file.getvalue()
+                nb = nbformat.reads(notebook_content.decode('utf-8'), as_version=4)
+                
                 # Save notebook
                 submission_dir = os.path.join(grader.submissions_dir, str(assignment_id))
                 os.makedirs(submission_dir, exist_ok=True)
                 
-                notebook_path = os.path.join(submission_dir, f"{student_id}.ipynb")
+                safe_name = override_name.replace(' ', '_')
+                notebook_path = os.path.join(submission_dir, f"{safe_name}_{override_id}.ipynb")
+                
                 with open(notebook_path, "wb") as f:
-                    f.write(notebook_file.getbuffer())
+                    f.write(notebook_content)
                 
                 # Save to database
                 conn = sqlite3.connect(grader.db_path)
                 cursor = conn.cursor()
                 
-                # Add student if not exists (always add to ensure consistency)
-                cursor.execute('''
-                    INSERT OR REPLACE INTO students (student_id, name, email)
-                    VALUES (?, ?, ?)
-                ''', (student_id, student_name or 'Unknown', student_email or ''))
+                # Check if student exists
+                cursor.execute('SELECT id FROM students WHERE student_id = ?', (override_id,))
+                existing = cursor.fetchone()
                 
-                # Get the student's database ID
-                cursor.execute('SELECT id FROM students WHERE student_id = ?', (student_id,))
-                student_db_id = cursor.fetchone()[0]
+                if existing:
+                    student_db_id = existing[0]
+                    st.info(f"🔗 Linked to existing student: {override_name}")
+                else:
+                    # Create new student
+                    cursor.execute('''
+                        INSERT INTO students (student_id, name, email)
+                        VALUES (?, ?, ?)
+                    ''', (override_id, override_name, f"{override_id}@university.edu"))
+                    student_db_id = cursor.lastrowid
+                    st.success(f"👤 Created new student: {override_name}")
                 
-                # Add submission (using the student's database ID)
+                # Check for duplicate submission
                 cursor.execute('''
-                    INSERT INTO submissions (assignment_id, student_id, notebook_path)
-                    VALUES (?, ?, ?)
-                ''', (assignment_id, student_db_id, notebook_path))
+                    SELECT id FROM submissions 
+                    WHERE student_id = ? AND assignment_id = ?
+                ''', (student_db_id, assignment_id))
+                
+                if cursor.fetchone():
+                    st.warning(f"⚠️ {override_name} already has a submission for this assignment. Updating...")
+                    cursor.execute('''
+                        UPDATE submissions 
+                        SET notebook_path = ?, submission_date = CURRENT_TIMESTAMP
+                        WHERE student_id = ? AND assignment_id = ?
+                    ''', (notebook_path, student_db_id, assignment_id))
+                else:
+                    # Add new submission
+                    cursor.execute('''
+                        INSERT INTO submissions (assignment_id, student_id, notebook_path)
+                        VALUES (?, ?, ?)
+                    ''', (assignment_id, student_db_id, notebook_path))
                 
                 conn.commit()
                 conn.close()
                 
-                st.success(f"Submission uploaded for student {student_id}")
+                st.success(f"✅ Submission uploaded for {override_name} (Canvas ID: {override_id})")
                 
             except Exception as e:
-                st.error(f"Error uploading submission: {str(e)}")
+                st.error(f"❌ Error uploading submission: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
 
 def upload_batch_submissions(grader, assignment_id):
     st.info("📁 **Bulk Upload Instructions:**")
@@ -202,25 +250,30 @@ def upload_batch_submissions(grader, assignment_id):
                             student_info = extract_student_info_from_notebook(nb)
                             student_name = student_info.get('name', 'Unknown')
                             
-                            # Parse GitHub Classroom filename format
+                            # Parse Canvas filename format - FIRST part is Canvas ID (primary identifier)
                             filename_id = file_path.stem
                             parsed_info = parse_github_classroom_filename(filename_id)
                             
-                            # Use parsed name if student name not found in notebook
-                            if student_name == 'Unknown' and parsed_info and parsed_info['name']:
-                                student_name = parsed_info['name']
-                            
-                            # Use parsed student ID if not found in notebook
-                            if student_info.get('id') == 'Unknown' and parsed_info and parsed_info['id']:
+                            # PRIORITY 1: Use Canvas ID from filename (most reliable)
+                            if parsed_info and parsed_info['id']:
                                 student_id = parsed_info['id']
+                                # Use parsed name if available, otherwise use name from notebook
+                                if parsed_info['name']:
+                                    student_name = parsed_info['name']
+                                elif student_name == 'Unknown':
+                                    student_name = parsed_info['name']
+                            # PRIORITY 2: Use info from notebook
+                            elif student_info.get('id') != 'Unknown':
+                                student_id = student_info.get('id')
+                            # FALLBACK: Use filename
                             else:
-                                student_id = student_info.get('id', filename_id)
+                                student_id = filename_id
                             
                             # Check for duplicates and match to existing students
                             content_hash = hash_notebook_content(nb)
-                            clean_student_id = student_id if student_id != 'Unknown' else student_name.lower().replace(' ', '_')
+                            clean_student_id = student_id
                             
-                            # First, try to find existing student by student_id
+                            # First, try to find existing student by Canvas ID (student_id)
                             cursor.execute('SELECT id, name, student_id FROM students WHERE student_id = ?', (clean_student_id,))
                             existing_student = cursor.fetchone()
                             
@@ -348,6 +401,22 @@ def upload_batch_submissions(grader, assignment_id):
                     status_text.text("✅ Batch upload completed!")
                     st.success(f"📊 **Upload Results:** {uploaded_count} submissions processed successfully!")
                     
+                    # Show detailed summary
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("✅ Uploaded", uploaded_count)
+                    with col2:
+                        st.metric("🔗 Linked", linked_count)
+                    with col3:
+                        st.metric("👤 New Students", new_student_count)
+                    with col4:
+                        st.metric("⚠️ Skipped", skipped_count)
+                    
+                    if errors:
+                        with st.expander(f"❌ Errors ({len(errors)})", expanded=True):
+                            for error in errors:
+                                st.write(error)
+                    
                     # Student management summary
                     col1, col2, col3 = st.columns(3)
                     with col1:
@@ -429,35 +498,50 @@ def extract_student_info_from_notebook(nb):
     return student_info
 
 def parse_github_classroom_filename(filename):
-    """Parse Canvas/GitHub Classroom filename to extract student name and Canvas user ID"""
+    """Parse Canvas/GitHub Classroom filename to extract student name and Canvas user ID
+    
+    Canvas filename formats:
+    - guadarramafrancisco_178108_11544892_Guadarrama_Francisco_homework_lesson_2
+    - 152822_aguirrejulissa_11544283_homework_lesson_1
+    
+    CRITICAL: The FIRST part before the first underscore is the Canvas ID (primary identifier)
+    """
     import re
     
     try:
-        # Canvas filename format examples:
-        # 152822_aguirrejulissa_11544283_homework_lesson_1  (Canvas user ID is FIRST)
-        # 9711_alexandermichaelgregory_11548355_homework_lesson_1_Michael_Alexander
-        # 21869_balfourloganscott_11533679_Balfour_Logan_homework_lesson_1
-        
         # Split by underscores
         parts = filename.split('_')
         
         if len(parts) >= 3:
-            # Canvas user ID is the FIRST part (numeric)
-            canvas_user_id = parts[0] if parts[0].isdigit() else None
+            # CRITICAL: First part is ALWAYS the Canvas ID (username or numeric)
+            # This is the primary identifier for matching students
+            canvas_id = parts[0]
             
-            # If first part is not numeric, try old GitHub Classroom format
-            if not canvas_user_id:
-                username = parts[0]  # First part is username
-                # Look for numeric ID in second position or anywhere
-                student_id = parts[1] if parts[1].isdigit() else None
-                if not student_id:
-                    # Find first numeric ID in the filename
-                    numeric_ids = [part for part in parts if part.isdigit() and len(part) > 3]
-                    student_id = numeric_ids[0] if numeric_ids else 'unknown'
+            # Try to extract a readable name from later parts
+            # Look for capitalized name parts (e.g., "Guadarrama_Francisco")
+            name_parts = []
+            for part in parts[1:]:
+                # Stop at common keywords
+                if part.lower() in ['homework', 'lesson', 'assignment', 'late']:
+                    break
+                # Skip numeric IDs
+                if part.isdigit():
+                    continue
+                # Add capitalized parts that look like names
+                if part and part[0].isupper():
+                    name_parts.append(part)
+            
+            # If we found name parts, use them; otherwise use canvas_id
+            if name_parts:
+                student_name = ' '.join(name_parts)
             else:
-                # Canvas format: user_id_username_submission_id_...
-                student_id = canvas_user_id
-                username = parts[1] if len(parts) > 1 else 'unknown'
+                # Convert canvas_id to readable name (e.g., "guadarramafrancisco" -> "Guadarrama Francisco")
+                student_name = canvas_id.replace('_', ' ').title()
+            
+            return {
+                'id': canvas_id,  # Primary identifier
+                'name': student_name
+            }
             
             # Handle Canvas LATE submissions
             if 'LATE' in parts:

@@ -1,12 +1,78 @@
-ASSIGNMENT-SPECIFIC INSTRUCTIONS FOR ASSIGNMENT 2V1:
+ASSIGNMENT-SPECIFIC INSTRUCTIONS FOR ASSIGNMENT 2V1 FEEDBACK:
 
-REFLECTION QUESTIONS IN THIS ASSIGNMENT:
-1. Question 1: Missing Value Strategy - When to remove vs impute
-2. Question 2: Outlier Interpretation - Business context of outliers
+REFLECTION QUESTIONS EVALUATION:
 
-SCORING REFLECTION QUESTIONS:
-- Each question is worth 50% of reflection score
-- Question 1: Look for discussion of scenarios, trade-offs, business impact
-- Question 2: Look for business interpretation (e.g., large sales, data errors, fraud)
-- Accept brief but thoughtful answers (2-3 sentences minimum)
-- Penalize
+Question 1: "When would you prefer removing rows with missing values vs imputation?"
+✓ EXCELLENT (90-100%): Discusses dataset size, missing data percentage, data type, analysis goals
+✓ GOOD (75-89%): Mentions 2-3 factors with some reasoning
+✓ ADEQUATE (60-74%): Mentions 1-2 factors but limited reasoning
+✓ POOR (40-59%): Generic answer like "it depends" without specifics
+✓ FAIL (0-39%): No answer or completely off-topic
+
+Question 2: "What do outliers represent in business data? Should they always be removed?"
+✓ EXCELLENT (90-100%): Discusses legitimate vs errors, business context, investigation needed
+✓ GOOD (75-89%): Mentions multiple perspectives with reasoning
+✓ ADEQUATE (60-74%): Basic understanding but limited depth
+✓ POOR (40-59%): Oversimplified (e.g., "always remove" or "never remove")
+✓ FAIL (0-39%): No answer or completely off-topic
+
+METHODOLOGY EVALUATION:
+
+Missing Value Treatment:
+- Option A (removal) = valid if dataset is large enough
+- Option B (imputation) = valid if justified with appropriate method
+- BOTH options = extra credit for thoroughness
+- NEITHER option = major deduction
+
+Outlier Treatment:
+- Option A (removal) = valid if outliers are errors
+- Option B (capping) = valid if outliers are legitimate extreme values
+- BOTH options = extra credit for thoroughness
+- NEITHER option = major deduction
+
+CODE QUALITY ASSESSMENT:
+✓ All code cells executed with visible output = full credit
+✓ Code present but not executed = 50% deduction
+✓ Only template code, no student additions = 80% deduction
+✓ Incorrect variable names or broken code = deduction per error
+
+REFLECTION QUALITY SCORING:
+- Both questions answered excellently = 90-100%
+- Both questions answered well = 75-89%
+- Both questions answered adequately = 60-74%
+- One question missing or poor = 40-59%
+- Both questions missing or poor = 0-39%
+
+FEEDBACK STRUCTURE:
+
+reflection_assessment:
+- Evaluate depth of understanding shown in reflection answers
+- Comment on whether student demonstrates critical thinking
+- Note if answers are generic vs specific to their analysis
+
+analytical_strengths:
+- Highlight correct implementations of missing value/outlier detection
+- Praise appropriate choice of treatment method
+- Note good data quality assessment practices
+
+business_application:
+- Comment on understanding of real-world implications
+- Evaluate discussion of when to use different approaches
+- Assess awareness of business context in data cleaning decisions
+
+learning_demonstration:
+- Note mastery of R functions (is.na, complete.cases, IQR, etc.)
+- Comment on proper use of tidyverse for data manipulation
+- Evaluate understanding of statistical concepts (quartiles, outliers)
+
+areas_for_development:
+- Point out missing required sections
+- Identify incomplete implementations
+- Note where reflection answers lack depth
+- Highlight where code wasn't executed
+
+recommendations:
+- Suggest specific improvements for incomplete sections
+- Recommend resources for concepts they struggled with
+- Provide guidance on reflection question depth
+- Suggest best practices for data cleaning workflows

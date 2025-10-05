@@ -81,7 +81,7 @@ def enhanced_training_page():
     # Display assignment statistics
     stats = training.get_training_stats(selected_assignment_id)
     
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric("Total Submissions", stats['total_submissions'])
     with col2:
@@ -90,6 +90,46 @@ def enhanced_training_page():
         st.metric("Avg AI Score", f"{stats['avg_ai_score']}/37.5")
     with col4:
         st.metric("AI Accuracy", f"{stats['ai_accuracy_percentage']}%")
+    with col5:
+        # Show correction analysis
+        from correction_analyzer import CorrectionAnalyzer
+        analyzer = CorrectionAnalyzer()
+        adjustment = analyzer.get_correction_adjustment(selected_assignment_id)
+        if adjustment != 0:
+            st.metric("AI Bias", f"{adjustment:+.1f} pts", 
+                     delta="Over-scoring" if adjustment < 0 else "Under-scoring",
+                     delta_color="inverse" if adjustment < 0 else "normal")
+        else:
+            st.metric("AI Bias", "None detected")
+    
+    # Show correction patterns if available
+    if stats['human_reviewed'] >= 5:
+        with st.expander("📊 Correction Pattern Analysis", expanded=False):
+            from correction_analyzer import CorrectionAnalyzer
+            analyzer = CorrectionAnalyzer()
+            analysis = analyzer.analyze_patterns(selected_assignment_id)
+            
+            if analysis['total_corrections'] > 0:
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Avg Correction", f"{analysis['avg_score_diff']:+.1f} pts")
+                with col2:
+                    st.metric("Over-scored", f"{analysis['over_score_percentage']:.0f}%")
+                with col3:
+                    st.metric("Under-scored", f"{analysis['under_score_percentage']:.0f}%")
+                
+                # Show patterns
+                if analysis.get('patterns'):
+                    st.markdown("**Identified Patterns:**")
+                    for pattern in analysis['patterns']:
+                        severity_emoji = "🔴" if pattern['severity'] == 'high' else "🟡"
+                        st.write(f"{severity_emoji} {pattern['description']}")
+                
+                # Show recommendations
+                if analysis.get('recommendations'):
+                    st.markdown("**Recommendations:**")
+                    for rec in analysis['recommendations']:
+                        st.info(rec)
     
     # Initialize demo mode in session state
     if 'demo_mode' not in st.session_state:
@@ -339,8 +379,9 @@ def enhanced_training_page():
             tab1, tab2, tab3 = st.tabs(["📊 AI Feedback", "📓 Notebook", "✏️ Human Review"])
         
         with tab1:
-            # AI Feedback tab
-            st.subheader("AI-Generated Feedback")
+            # AI Feedback tab - REPORT-READY VIEW
+            st.subheader("📄 Report Preview & Edit")
+            st.caption("This is what will appear on the PDF report. Edit directly below.")
             
             # Score metrics
             col1, col2, col3 = st.columns(3)
@@ -351,79 +392,181 @@ def enhanced_training_page():
             with col3:
                 st.metric("Method", selected_submission['grading_method'] or "Unknown")
             
-            # Scrollable container for feedback - same approach as notebook
-            with st.container():
-                st.markdown('<div style="max-height: 2000px; overflow-y: auto;">', unsafe_allow_html=True)
+            # Get feedback data
+            feedback_data = {}
+            if selected_submission['ai_feedback']:
+                try:
+                    feedback_data = json.loads(selected_submission['ai_feedback'])
+                    # Check for comprehensive_feedback wrapper
+                    if isinstance(feedback_data, dict) and 'comprehensive_feedback' in feedback_data:
+                        feedback_data = feedback_data['comprehensive_feedback']
+                except:
+                    pass
+            
+            # Extract report-ready text (what actually goes on PDF)
+            instructor_comments = feedback_data.get('instructor_comments', 'No overall assessment provided.')
+            
+            # Convert detailed feedback to report format (paragraph style, not bullets)
+            detailed = feedback_data.get('detailed_feedback', {})
+            
+            # Build report-ready sections
+            report_sections = []
+            
+            if detailed.get('reflection_assessment'):
+                items = detailed['reflection_assessment'] if isinstance(detailed['reflection_assessment'], list) else [detailed['reflection_assessment']]
+                report_sections.append(("Reflection Assessment", "\n".join(f"- {item}" for item in items)))
+            
+            if detailed.get('analytical_strengths'):
+                items = detailed['analytical_strengths'] if isinstance(detailed['analytical_strengths'], list) else [detailed['analytical_strengths']]
+                report_sections.append(("Analytical Strengths", "\n".join(f"- {item}" for item in items)))
+            
+            if detailed.get('business_application'):
+                items = detailed['business_application'] if isinstance(detailed['business_application'], list) else [detailed['business_application']]
+                report_sections.append(("Business Application", "\n".join(f"- {item}" for item in items)))
+            
+            if detailed.get('areas_for_development'):
+                items = detailed['areas_for_development'] if isinstance(detailed['areas_for_development'], list) else [detailed['areas_for_development']]
+                report_sections.append(("Areas for Development", "\n".join(f"- {item}" for item in items)))
+            
+            if detailed.get('recommendations'):
+                items = detailed['recommendations'] if isinstance(detailed['recommendations'], list) else [detailed['recommendations']]
+                report_sections.append(("Recommendations", "\n".join(f"- {item}" for item in items)))
+            
+            # Get technical analysis data (if available)
+            technical_analysis = {}
+            if selected_submission['ai_feedback']:
+                try:
+                    full_feedback = json.loads(selected_submission['ai_feedback'])
+                    technical_analysis = full_feedback.get('technical_analysis', {})
+                except:
+                    pass
+            
+            # Add technical analysis sections to editable sections
+            if technical_analysis.get('code_strengths'):
+                items = technical_analysis['code_strengths'] if isinstance(technical_analysis['code_strengths'], list) else [technical_analysis['code_strengths']]
+                report_sections.append(("Code Strengths", "\n".join(item for item in items)))
+            
+            if technical_analysis.get('code_suggestions'):
+                items = technical_analysis['code_suggestions'] if isinstance(technical_analysis['code_suggestions'], list) else [technical_analysis['code_suggestions']]
+                report_sections.append(("Code Improvement Suggestions", "\n".join(item for item in items)))
+            
+            if technical_analysis.get('technical_observations'):
+                items = technical_analysis['technical_observations'] if isinstance(technical_analysis['technical_observations'], list) else [technical_analysis['technical_observations']]
+                report_sections.append(("Technical Observations", "\n".join(item for item in items)))
+            
+            # Editable form for report content
+            with st.form(f"edit_feedback_{selected_submission['id']}"):
+                st.markdown("### Instructor Assessment")
+                st.caption("This is the main feedback that appears at the top of the report")
+                edited_comments = st.text_area(
+                    "Overall Assessment",
+                    value=instructor_comments,
+                    height=200,
+                    key=f"comments_{selected_submission['id']}",
+                    label_visibility="collapsed"
+                )
                 
-                # Display comprehensive feedback
-                if selected_submission['ai_feedback']:
-                    try:
-                        feedback_data = json.loads(selected_submission['ai_feedback'])
-                        
-                        # Check for comprehensive_feedback wrapper (from grading system)
-                        if isinstance(feedback_data, dict) and 'comprehensive_feedback' in feedback_data:
-                            feedback_data = feedback_data['comprehensive_feedback']
-                        
-                        # Display instructor comments first if available
-                        if isinstance(feedback_data, dict) and 'instructor_comments' in feedback_data:
-                            st.markdown("**Overall Assessment:**")
-                            st.info(feedback_data['instructor_comments'])
-                            st.markdown("---")
-                        
-                        # Display structured feedback
-                        if isinstance(feedback_data, dict) and 'detailed_feedback' in feedback_data:
-                            detailed = feedback_data['detailed_feedback']
-                            
-                            feedback_sections = [
-                                ('🤔 Reflection Assessment', 'reflection_assessment'),
-                                ('💪 Analytical Strengths', 'analytical_strengths'),
-                                ('🏢 Business Application', 'business_application'),
-                                ('📈 Learning Demonstration', 'learning_demonstration'),
-                                ('🔧 Areas for Development', 'areas_for_development'),
-                                ('💡 Recommendations', 'recommendations')
-                            ]
-                            
-                            for title, key in feedback_sections:
-                                if key in detailed and detailed[key]:
-                                    with st.expander(title, expanded=(key == 'reflection_assessment')):
-                                        if isinstance(detailed[key], list):
-                                            for item in detailed[key]:
-                                                st.write(f"• {item}")
-                                        else:
-                                            st.write(detailed[key])
-                        
-                        # If it's a simple dict without structure, display all key-value pairs
-                        elif isinstance(feedback_data, dict):
-                            for key, value in feedback_data.items():
-                                if key != 'instructor_comments':  # Already displayed above
-                                    st.markdown(f"**{key.replace('_', ' ').title()}:**")
-                                    if isinstance(value, list):
-                                        for item in value:
-                                            st.write(f"• {item}")
-                                    else:
-                                        st.write(value)
-                                    st.markdown("---")
-                        
-                        # If it's a list, display items
-                        elif isinstance(feedback_data, list):
-                            for item in feedback_data:
-                                st.write(f"• {item}")
-                        
-                        # Otherwise show as text
-                        else:
-                            st.write(str(feedback_data))
+                st.markdown("---")
+                
+                # Editable sections - convert bullets to paragraphs for better readability
+                edited_sections = {}
+                for section_title, section_content in report_sections:
+                    st.markdown(f"### {section_title}")
+                    # Convert bullet points to paragraph format for editing
+                    paragraph_content = section_content.replace("- ", "").replace("\n\n", "\n")
+                    edited_sections[section_title] = st.text_area(
+                        f"{section_title}",
+                        value=paragraph_content,
+                        height=150,
+                        key=f"{section_title}_{selected_submission['id']}",
+                        label_visibility="collapsed",
+                        help="Each line will be a separate point on the report"
+                    )
+                
+                st.markdown("---")
+                st.markdown("### 📋 Report Preview")
+                st.caption("This is how the feedback will appear on the PDF report:")
+                
+                # Show formatted preview
+                with st.expander("👁️ View Formatted Report Preview", expanded=False):
+                    st.markdown("#### Instructor Assessment")
+                    st.write(edited_comments)
+                    st.markdown("---")
                     
-                    except json.JSONDecodeError:
-                        # Not JSON, display as plain text
-                        st.markdown("**AI Feedback:**")
-                        st.text_area("", selected_submission['ai_feedback'], height=400, disabled=True, label_visibility="collapsed")
-                    except Exception as e:
-                        st.error(f"Error displaying feedback: {e}")
-                        st.text_area("Raw Feedback", selected_submission['ai_feedback'], height=200, disabled=True)
-                else:
-                    st.info("No AI feedback available for this submission")
+                    for section_title in edited_sections.keys():
+                        st.markdown(f"#### {section_title}")
+                        # Show as formatted paragraphs
+                        lines = [line.strip() for line in edited_sections[section_title].split('\n') if line.strip()]
+                        for line in lines:
+                            st.write(f"• {line}")
+                        st.write("")
                 
-                st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown("---")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    save_feedback = st.form_submit_button("💾 Save Edited Feedback", type="primary", use_container_width=True)
+                with col2:
+                    preview_pdf = st.form_submit_button("👁️ Preview PDF", use_container_width=True)
+                
+                if save_feedback:
+                    # Rebuild feedback_data with edited content
+                    feedback_data['instructor_comments'] = edited_comments
+                    
+                    # Rebuild detailed_feedback from edited sections
+                    new_detailed = {}
+                    new_technical = {}
+                    
+                    section_key_map = {
+                        "Reflection Assessment": ("detailed", "reflection_assessment"),
+                        "Analytical Strengths": ("detailed", "analytical_strengths"),
+                        "Business Application": ("detailed", "business_application"),
+                        "Areas for Development": ("detailed", "areas_for_development"),
+                        "Recommendations": ("detailed", "recommendations"),
+                        "Code Strengths": ("technical", "code_strengths"),
+                        "Code Improvement Suggestions": ("technical", "code_suggestions"),
+                        "Technical Observations": ("technical", "technical_observations")
+                    }
+                    
+                    for section_title, edited_content in edited_sections.items():
+                        mapping = section_key_map.get(section_title)
+                        if mapping:
+                            section_type, key = mapping
+                            # Convert back to list format - each line becomes a bullet point
+                            lines = [line.strip('- ').strip() for line in edited_content.split('\n') if line.strip()]
+                            
+                            if section_type == "detailed":
+                                new_detailed[key] = lines if lines else []
+                            elif section_type == "technical":
+                                new_technical[key] = lines if lines else []
+                    
+                    feedback_data['detailed_feedback'] = new_detailed
+                    
+                    # Save to database
+                    import sqlite3
+                    conn = sqlite3.connect(training.db_path)
+                    cursor = conn.cursor()
+                    
+                    # Wrap back in comprehensive_feedback and include technical_analysis
+                    save_data = {
+                        'comprehensive_feedback': feedback_data,
+                        'technical_analysis': new_technical
+                    }
+                    
+                    cursor.execute("""
+                        UPDATE submissions 
+                        SET ai_feedback = ?, human_feedback = ?
+                        WHERE id = ?
+                    """, (json.dumps(save_data), edited_comments, selected_submission['id']))
+                    
+                    conn.commit()
+                    conn.close()
+                    
+                    st.success("✅ Feedback saved! This will appear on the PDF report.")
+                    st.rerun()
+                
+                if preview_pdf:
+                    st.info("PDF preview feature coming soon!")
         
         with tab2:
             # Notebook tab - same display as review page

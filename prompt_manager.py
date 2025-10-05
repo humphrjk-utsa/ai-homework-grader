@@ -60,7 +60,7 @@ class PromptManager:
             f.write(content)
     
     def get_combined_prompt(self, assignment_name: str, prompt_type: str, **kwargs) -> str:
-        """Get combined prompt (general + assignment-specific)"""
+        """Get combined prompt (general + assignment-specific + correction learning)"""
         # Load general prompt
         general_prompt = self.load_general_prompt(prompt_type)
         
@@ -72,11 +72,26 @@ class PromptManager:
         else:
             kwargs['assignment_specific_instructions'] = ""
         
+        # Add correction learning from previous assignments
+        from correction_analyzer import CorrectionAnalyzer
+        analyzer = CorrectionAnalyzer()
+        
+        # Get assignment_id if available
+        assignment_id = kwargs.get('assignment_id')
+        correction_summary = analyzer.get_correction_summary_for_prompt(assignment_id, limit=5)
+        
+        if correction_summary:
+            kwargs['correction_learning'] = f"\n{correction_summary}\n"
+        else:
+            kwargs['correction_learning'] = ""
+        
         # Format the prompt with provided variables
         try:
             return general_prompt.format(**kwargs)
         except KeyError as e:
-            st.error(f"Missing required variable in prompt: {e}")
+            # If correction_learning or other new variables aren't in the template, that's ok
+            if str(e) not in ["'correction_learning'"]:
+                st.error(f"Missing required variable in prompt: {e}")
             return general_prompt
     
     def generate_rubric_with_ai(self, assignment_description: str, total_points: float, 

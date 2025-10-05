@@ -11,6 +11,8 @@ CRITICAL INSTRUCTIONS:
 ASSIGNMENT: {assignment_title}
 STUDENT LEVEL: First-year business analytics (introductory R programming)
 
+{correction_learning}
+
 TEMPLATE CODE (What the student received - DO NOT PRAISE THIS):
 ```r
 {template_code}
@@ -120,22 +122,27 @@ OUTPUT FORMAT - PURE JSON ONLY (no markdown, no thinking, no extra text):
     "business_relevance": <HONEST score - only high if truly relevant>,
     "effort_and_completion": <HONEST score - proportional to actual completion>,
     "code_strengths": [
+        "CRITICAL: List ONLY sections that the student ACTUALLY COMPLETED with working code and output",
         "If 0 sections completed: ['This submission contains only the template code with no student work']",
         "If 1-2 sections completed: ['You completed only [section name]. This is insufficient.']",
-        "If 3+ sections completed: List ONLY sections with correct outputs",
+        "If 3+ sections completed: List each completed section with specific details",
+        "DO NOT list a section here if you will list it as incomplete in code_suggestions",
         "DO NOT praise template code or basic setup - only actual analytical work"
     ],
     "code_suggestions": [
-        "If 0-2 sections completed: 'You must complete the assignment. Currently 0 out of Y sections have working code.'",
-        "List ALL incomplete sections by name",
-        "Provide specific guidance for each missing section",
-        "State clearly: 'This submission does not demonstrate the required skills and cannot receive a passing grade.'"
+        "CRITICAL: List ONLY sections that the student DID NOT COMPLETE or completed incorrectly",
+        "DO NOT list a section here if you already listed it in code_strengths",
+        "Format: 'You did not complete the section for [specific task name]'",
+        "If 0-2 sections completed: 'You must complete the assignment. Currently X out of Y sections have working code.'",
+        "List ALL incomplete sections by name with specific guidance",
+        "If below 50%: 'This submission does not demonstrate the required skills and cannot receive a passing grade.'"
     ],
     "technical_observations": [
         "FIRST LINE MUST BE: 'Completion: X out of Y sections (Z%). Calculated score: Z%.'",
-        "List which sections were completed: 'Completed: [section names]'",
-        "List which sections are missing: 'Incomplete: [section names]'",
-        "If below 50%: 'This submission does not meet minimum requirements (50% completion needed for passing).'"
+        "SECOND LINE: 'Completed: [list ONLY completed section names]'",
+        "THIRD LINE: 'Incomplete: [list ONLY incomplete section names]' OR 'Incomplete: None' if all done",
+        "If below 50%: 'This submission does not meet minimum requirements (50% completion needed for passing).'",
+        "If 100%: 'This submission demonstrates strong analytical skills and completes all required sections with correct outputs.'"
     ]
 }}
 
