@@ -28,6 +28,19 @@ class DistributedMLXClient:
         self.gemma_server_url = gemma_server_url
         self.last_response_times = {}
         
+        # Initialize server manager for auto-restart
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from server_manager import ServerManager
+            self.server_manager = ServerManager()
+            self.auto_restart_enabled = True
+        except Exception as e:
+            print(f"⚠️ Server manager not available: {e}")
+            self.server_manager = None
+            self.auto_restart_enabled = False
+        
     def check_server_status(self, server_url: str, model_name: str) -> bool:
         """Check if a model server is available"""
         try:
@@ -44,6 +57,23 @@ class DistributedMLXClient:
                 return response.status_code == 200
             except:
                 return False
+    
+    def auto_restart_server(self, server_name: str) -> bool:
+        """Auto-restart a server if it's down"""
+        if not self.auto_restart_enabled or not self.server_manager:
+            return False
+        
+        print(f"🔄 Auto-restarting {server_name}...")
+        try:
+            success = self.server_manager.auto_restart_if_needed(server_name)
+            if success:
+                print(f"✅ {server_name} restarted successfully")
+            else:
+                print(f"❌ Failed to restart {server_name}")
+            return success
+        except Exception as e:
+            print(f"❌ Auto-restart failed: {e}")
+            return False
     
     def generate_code_analysis(self, prompt: str, max_tokens: int = 800) -> Optional[str]:
         """Generate code analysis using Qwen on Mac Studio 1"""

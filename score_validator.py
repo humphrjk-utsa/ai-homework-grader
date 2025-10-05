@@ -84,4 +84,37 @@ def validate_and_adjust_scores(code_analysis: dict, feedback: dict, student_code
         feedback['communication_clarity'] = min(feedback.get('communication_clarity', 0), max_score)
         feedback['methodology_appropriateness'] = min(feedback.get('methodology_appropriateness', 0), max_score)
     
+    # NEW: Check for UNDERGRADING (AI being too harsh)
+    # If student has substantial code and outputs, but AI gave low score, boost it
+    student_code_lines = len([l for l in student_code.split('\n') if l.strip() and not l.strip().startswith('#')])
+    has_outputs = '# OUTPUT:' in student_code or 'output_type' in student_code.lower()
+    
+    # If student has lots of code (>100 lines) and outputs, they did substantial work
+    if student_code_lines > 100 and has_outputs:
+        # More aggressive boost - if AI can't parse but outputs exist, assume good work
+        min_technical_score = 85  # Increased from 75 to 85
+        min_overall_score = 85    # Increased from 75 to 85
+        
+        if code_analysis.get('technical_score', 0) < min_technical_score:
+            old_score = code_analysis.get('technical_score', 0)
+            print(f"⚠️ VALIDATOR: UNDERGRADING DETECTED!")
+            print(f"   Student has {student_code_lines} lines of code with outputs")
+            print(f"   Boosting technical_score from {old_score} to {min_technical_score}")
+            code_analysis['technical_score'] = min_technical_score
+            code_analysis['syntax_correctness'] = max(code_analysis.get('syntax_correctness', 0), min_technical_score)
+            code_analysis['logic_correctness'] = max(code_analysis.get('logic_correctness', 0), min_technical_score)
+            code_analysis['effort_and_completion'] = max(code_analysis.get('effort_and_completion', 0), min_technical_score)
+            
+            if 'technical_observations' not in code_analysis:
+                code_analysis['technical_observations'] = []
+            code_analysis['technical_observations'].insert(0,
+                f"✅ VALIDATOR ADJUSTMENT: Score boosted to {min_technical_score}% - substantial work with outputs detected")
+        
+        if feedback.get('overall_score', 0) < min_overall_score:
+            old_score = feedback.get('overall_score', 0)
+            print(f"   Boosting overall_score from {old_score} to {min_overall_score}")
+            feedback['overall_score'] = min_overall_score
+            feedback['business_understanding'] = max(feedback.get('business_understanding', 0), min_overall_score)
+            feedback['communication_clarity'] = max(feedback.get('communication_clarity', 0), min_overall_score)
+    
     return code_analysis, feedback

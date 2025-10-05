@@ -14,9 +14,10 @@
     "port": 5002,
     "model": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-bf16",
     "purpose": "code_analysis",
-    "max_tokens": 2400,
+    "max_tokens": 1800,
     "temperature": 0.1,
-    "specs": "M4 Max 128GB"
+    "specs": "M4 Max 128GB",
+    "note": "Reduced max_tokens from 2400 to 1800 for faster inference. Consider switching to 4-bit quantized model for 3x speed boost."
   },
   "urls": {
     "qwen_server": "http://10.55.0.2:5002",

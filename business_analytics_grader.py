@@ -163,12 +163,17 @@ class BusinessAnalyticsGrader:
                         solution_code: str = "",
                         assignment_info: Dict = None,
                         rubric_elements: Dict = None,
-                        notebook_path: str = None) -> Dict[str, Any]:
+                        notebook_path: str = None,
+                        preprocessing_info: Dict = None) -> Dict[str, Any]:
         """Grade submission with business analytics context"""
         
         start_time = time.time()
         
         print("🎓 Starting Business Analytics Grading...")
+        
+        # Track preprocessing if provided
+        if preprocessing_info:
+            print(f"📋 Preprocessing applied: {len(preprocessing_info.get('fixes_applied', []))} fixes")
         
         # Validate notebook first if path provided
         validation_results = None
@@ -185,6 +190,14 @@ class BusinessAnalyticsGrader:
                 print(f"⚠️ Validation issues found: {validation_penalty}% penalty")
                 for issue in validation_results['issues']:
                     print(f"   - {issue}")
+            
+            # Add output verification to prevent AI hallucination
+            print("🔍 Verifying outputs exist...")
+            from output_verifier import OutputVerifier
+            output_verifier = OutputVerifier(notebook_path)
+            with_outputs, total_cells = output_verifier.count_cells_with_outputs()
+            completion_pct = output_verifier.get_completion_percentage()
+            print(f"📊 Output Check: {with_outputs}/{total_cells} cells have outputs ({completion_pct:.0f}%)")
         
         # Check prerequisites
         if self.use_distributed_mlx:
@@ -288,7 +301,13 @@ class BusinessAnalyticsGrader:
         print(f"🔍 After validation: technical_score={code_analysis.get('technical_score', 0)}, overall_score={comprehensive_feedback.get('overall_score', 0)}")
         
         # Merge results with business context and apply validation penalty
-        final_result = self._merge_business_results(code_analysis, comprehensive_feedback, assignment_info, validation_penalty)
+        final_result = self._merge_business_results(code_analysis, comprehensive_feedback, assignment_info, validation_penalty, preprocessing_info)
+        
+        # FIX AI HALLUCINATION: Verify outputs exist and override if AI is wrong
+        if notebook_path:
+            print("🔧 Fixing AI hallucinations with output verification...")
+            from output_verifier import verify_and_fix_grading
+            final_result = verify_and_fix_grading(notebook_path, final_result)
         
         # Add validation info to result
         if validation_results:
@@ -304,6 +323,10 @@ class BusinessAnalyticsGrader:
         
         final_result['grading_stats'] = self.grading_stats.copy()
         final_result['grading_method'] = 'business_analytics_system'
+        
+        # Add preprocessing info if provided
+        if preprocessing_info:
+            final_result['preprocessing'] = preprocessing_info
         
         # Add detailed performance diagnostics if using distributed MLX
         if self.use_distributed_mlx and self.distributed_client:
@@ -540,7 +563,8 @@ class BusinessAnalyticsGrader:
         }
     
     def _merge_business_results(self, code_analysis: Dict, feedback: Dict, 
-                               assignment_info: Dict, validation_penalty: float = 0) -> Dict[str, Any]:
+                               assignment_info: Dict, validation_penalty: float = 0,
+                               preprocessing_info: Dict = None) -> Dict[str, Any]:
         """Merge results with business-friendly weighting for 37.5 point scale"""
         
         # Extract individual component scores (no defaults - use actual scores)
@@ -562,6 +586,14 @@ class BusinessAnalyticsGrader:
         if validation_penalty > 0:
             penalty_points = (validation_penalty / 100) * final_score_37_5
             final_score_37_5 = final_score_37_5 - penalty_points
+        
+        # Apply preprocessing penalty (syntax errors that were auto-fixed)
+        preprocessing_penalty = 0.0
+        if preprocessing_info:
+            preprocessing_penalty = preprocessing_info.get('penalty_points', 0.0)
+            if preprocessing_penalty > 0:
+                final_score_37_5 = final_score_37_5 - preprocessing_penalty
+                print(f"⚠️ Preprocessing penalty applied: -{preprocessing_penalty:.1f} points")
         
         # Cap final score at 37.5 points maximum and 0 minimum
         final_score_37_5 = max(0, min(37.5, final_score_37_5))

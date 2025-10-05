@@ -16,6 +16,7 @@ from report_generator import PDFReportGenerator
 from ai_grader import filter_ai_feedback_for_storage
 from anonymization_utils import anonymize_name
 from notebook_executor import NotebookExecutor
+from submission_preprocessor import SubmissionPreprocessor
 
 def grade_submissions_page(grader):
     """Enhanced grade submissions page using our business analytics grader"""
@@ -671,31 +672,17 @@ def grade_submission_internal(business_grader, submission, assignment_id, grader
         notebook_to_use = notebook_path
         exec_info = {'needed_execution': False, 'message': 'Execution skipped due to error'}
     
-    with open(notebook_to_use, 'r', encoding='utf-8') as f:
-        nb = nbformat.read(f, as_version=4)
+    # 🔧 PREPROCESSING: Clean and normalize submission before AI grading
+    print("🔧 Preprocessing submission...")
+    preprocessor = SubmissionPreprocessor()
+    student_code, student_markdown, fixes_applied = preprocessor.preprocess_notebook(notebook_to_use)
     
-    # Extract code and markdown (including outputs)
-    student_code = ""
-    student_markdown = ""
-    
-    for cell in nb.cells:
-        if cell.cell_type == 'code':
-            student_code += cell.source + "\n\n"
-            
-            # Include outputs
-            if hasattr(cell, 'outputs') and cell.outputs:
-                student_code += "# OUTPUT:\n"
-                for output in cell.outputs:
-                    if output.output_type == 'stream':
-                        student_code += output.text + "\n"
-                    elif output.output_type == 'execute_result' and 'text/plain' in output.data:
-                        student_code += output.data['text/plain'] + "\n"
-                    elif output.output_type == 'display_data' and 'text/plain' in output.data:
-                        student_code += output.data['text/plain'] + "\n"
-                student_code += "\n"
-                
-        elif cell.cell_type == 'markdown':
-            student_markdown += cell.source + "\n\n"
+    if fixes_applied:
+        print(f"✅ Applied {len(fixes_applied)} preprocessing fixes:")
+        for fix in fixes_applied:
+            print(f"   • {fix}")
+    else:
+        print("✅ No preprocessing needed - submission was clean")
     
     # Get assignment info from database (including template and solution notebooks)
     conn = sqlite3.connect(grader.db_path)
@@ -765,7 +752,15 @@ def grade_submission_internal(business_grader, submission, assignment_id, grader
         print("⚠️ Batch grading: No solution notebook found for this assignment")
         solution_code = "# Solution notebook not available\n# Grading based on general criteria"
     
-    # Grade the submission (now includes template_code for validation)
+    # Prepare preprocessing info with penalty
+    preprocessing_info = {
+        'fixes_applied': fixes_applied,
+        'needs_manual_review': len(fixes_applied) > 5,
+        'penalty_points': preprocessor.calculate_penalty(),
+        'penalty_explanation': preprocessor.get_penalty_explanation()
+    }
+    
+    # Grade the submission (now includes template_code for validation and preprocessing info)
     return business_grader.grade_submission(
         student_code=student_code,
         student_markdown=student_markdown,
@@ -773,7 +768,8 @@ def grade_submission_internal(business_grader, submission, assignment_id, grader
         solution_code=solution_code,
         assignment_info=assignment_info,
         rubric_elements=rubric_elements,
-        notebook_path=notebook_to_use
+        notebook_path=notebook_to_use,
+        preprocessing_info=preprocessing_info
     )
 
 def save_grading_result(grader, submission_id, result):
@@ -789,7 +785,8 @@ def save_grading_result(grader, submission_id, result):
         'component_percentages': result['component_percentages'],
         'technical_analysis': result.get('technical_analysis', {}),
         'comprehensive_feedback': result.get('comprehensive_feedback', {}),
-        'grading_stats': result.get('grading_stats', {})
+        'grading_stats': result.get('grading_stats', {}),
+        'preprocessing': result.get('preprocessing', {})  # Include preprocessing info
     }
     
     # Filter AI feedback to remove internal monologue before storing

@@ -1,0 +1,28 @@
+{
+  "mac_studio_1": {
+    "name": "Mac Studio 1 - GPT-OSS",
+    "ip": "10.55.0.1",
+    "port": 5001,
+    "username": "humphrjk",
+    "server_path": "~/homework_grader/servers/gpt_oss_server_working.py",
+    "model": "lmstudio-community/gpt-oss-120b-MLX-8bit",
+    "purpose": "feedback_generation",
+    "specs": "M3 Ultra 512GB"
+  },
+  "mac_studio_2": {
+    "name": "Mac Studio 2 - Qwen",
+    "ip": "10.55.0.2",
+    "port": 5002,
+    "username": "jamiehumphries",
+    "server_path": "~/homework_grader/servers/qwen_server.py",
+    "model": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-bf16",
+    "purpose": "code_analysis",
+    "specs": "M4 Max 128GB"
+  },
+  "auto_restart": {
+    "enabled": true,
+    "max_retries": 3,
+    "retry_delay_seconds": 10,
+    "health_check_interval_seconds": 30
+  }
+}

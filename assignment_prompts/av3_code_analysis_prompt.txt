@@ -114,19 +114,23 @@ HOW TO VERIFY COMPLETION - Check student code for these SPECIFIC elements:
     ✓ Must analyze: customer_frequency in high_value_customers
     ✓ May use: count(), group_by(), or table()
     ✓ Must show: most frequent customer
-    VERIFICATION: Look for aggregation functions
+    VERIFICATION: Look for aggregation functions AND output
+    IMPORTANT: If output shows customer counts, section is COMPLETE
 
 20. PRODUCT ANALYSIS (Required):
     ✓ Must find: top 5 most expensive entertainment transactions
     ✓ Must use: arrange(desc()) and head(5)
     ✓ Must show: results
-    VERIFICATION: Check for sorting and limiting
+    VERIFICATION: Check for sorting and limiting AND output
+    IMPORTANT: If output shows top 5 transactions, section is COMPLETE
 
 21. GEOGRAPHIC ANALYSIS (Required):
     ✓ Must find: city with highest single transaction
     ✓ Must use: arrange and head(1) or max()
     ✓ Must show: city name and amount
-    VERIFICATION: Look for geographic filtering/sorting
+    VERIFICATION: Look for geographic filtering/sorting AND output
+    IMPORTANT: If output shows city and amount, section is COMPLETE
+    EXAMPLE: "Customer 18, Chicago, iPhone 14, $1487.43" = COMPLETE
 
 REFLECTION QUESTIONS (4 required):
 
@@ -159,6 +163,32 @@ CRITICAL SCORING RULES:
 - Each reflection question (22-25) = 1 point (4 total)
 - Total: 25 sections
 - FINAL SCORE: (completed sections / 25) × 100
+
+🚨 CRITICAL VERIFICATION RULES - PREVENT HALLUCINATION 🚨
+
+BEFORE marking ANY section as incomplete, YOU MUST:
+1. Look for OUTPUT text below the code
+2. If OUTPUT exists, the section is COMPLETE - DO NOT mark as incomplete
+3. If you see a tibble, data.frame, or printed result = COMPLETE
+4. If you see "# A tibble: X × Y" = COMPLETE
+5. If you see printed numbers or text after code = COMPLETE
+
+EXAMPLES OF COMPLETE SECTIONS:
+✅ Code: customer_frequency <- data %>% slice(1)
+   Output: "# A tibble: 1 × 4" with data = COMPLETE
+
+✅ Code: top_entertainment <- data %>% head(5)
+   Output: Shows 5 rows of data = COMPLETE
+
+✅ Code: highest_transaction <- data %>% slice(1)
+   Output: Shows 1 row with city and amount = COMPLETE
+
+ONLY mark incomplete if:
+❌ NO code at all
+❌ Only template comments like "# Your code here:"
+❌ Code exists but NO output visible
+
+IF YOU SEE OUTPUT, DO NOT SAY "you did not complete"!
 
 PIPE OPERATOR REQUIREMENT:
 - Student MUST use %>% in at least 15 sections

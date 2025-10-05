@@ -259,6 +259,10 @@ class PDFReportGenerator:
         if 'comprehensive_feedback' in analysis_result:
             self._add_comprehensive_feedback(story, analysis_result['comprehensive_feedback'])
         
+        # Add preprocessing info if available
+        if 'preprocessing' in analysis_result:
+            self._add_preprocessing_info(story, analysis_result['preprocessing'])
+        
         # Add technical analysis (filtered for instructor content only)
         if 'technical_analysis' in analysis_result:
             self._add_technical_analysis(story, analysis_result['technical_analysis'])
@@ -845,6 +849,79 @@ class PDFReportGenerator:
                     story.append(Paragraph("Continue practicing with diverse datasets and advanced analytical techniques to build on this foundation.", self.styles['Normal']))
                 
                 story.append(Spacer(1, 20))
+    
+    def _add_preprocessing_info(self, story, preprocessing: Dict[str, Any]):
+        """Add preprocessing information if fixes were applied"""
+        
+        fixes_applied = preprocessing.get('fixes_applied', [])
+        penalty_points = preprocessing.get('penalty_points', 0.0)
+        
+        # Only show preprocessing section if there are actual fixes with penalties
+        if not fixes_applied or penalty_points == 0:
+            return  # No relevant preprocessing to report
+        
+        story.append(Paragraph("Submission Preprocessing", self.styles['CustomHeading']))
+        
+        # Get penalty info
+        penalty_points = preprocessing.get('penalty_points', 0.0)
+        penalty_explanation = preprocessing.get('penalty_explanation', '')
+        
+        # Info box style
+        if penalty_points > 0:
+            info_text = f"Your submission was automatically normalized before grading to fix {len(fixes_applied)} syntax error(s). A penalty of {penalty_points:.1f} points was applied for these errors."
+        else:
+            info_text = f"Your submission was automatically normalized before grading to fix {len(fixes_applied)} style issue(s). No penalty was applied as these were formatting preferences, not syntax errors."
+        
+        story.append(Paragraph(info_text, self.styles['Normal']))
+        story.append(Spacer(1, 8))
+        
+        # List fixes
+        story.append(Paragraph("Fixes Applied:", self.styles['Heading2']))
+        for fix in fixes_applied:
+            clean_fix = self._clean_text(fix)
+            story.append(Paragraph(f"• {clean_fix}", self.styles['CustomBullet']))
+        
+        story.append(Spacer(1, 12))
+        
+        # Show penalty breakdown if applicable
+        if penalty_points > 0:
+            penalty_style = ParagraphStyle(
+                name='PenaltyStyle',
+                parent=self.styles['Normal'],
+                fontSize=9,
+                textColor=colors.HexColor('#721c24'),
+                backgroundColor=colors.HexColor('#f8d7da'),
+                borderWidth=1,
+                borderColor=colors.HexColor('#f5c6cb'),
+                leftIndent=10,
+                rightIndent=10,
+                spaceAfter=12
+            )
+            story.append(Paragraph(
+                self._clean_text(penalty_explanation),
+                penalty_style
+            ))
+        
+        # Add note if manual review flagged
+        if preprocessing.get('needs_manual_review'):
+            note_style = ParagraphStyle(
+                name='NoteStyle',
+                parent=self.styles['Normal'],
+                fontSize=9,
+                textColor=colors.HexColor('#856404'),
+                backgroundColor=colors.HexColor('#fff3cd'),
+                borderWidth=1,
+                borderColor=colors.HexColor('#ffc107'),
+                leftIndent=10,
+                rightIndent=10,
+                spaceAfter=12
+            )
+            story.append(Paragraph(
+                "Note: Multiple preprocessing fixes were needed. Your instructor may review this submission manually to ensure accuracy.",
+                note_style
+            ))
+        
+        story.append(Spacer(1, 20))
     
     def _add_technical_analysis(self, story, technical_analysis: Dict[str, Any]):
         """Add technical analysis from Business Analytics Grader with code examples"""
