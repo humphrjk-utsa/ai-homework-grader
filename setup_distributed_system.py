@@ -29,7 +29,7 @@ def create_config():
         "mac_studio_1": {
             "ip": mac1_ip,
             "port": 5001,
-            "model": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-bf16",
+            "model": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-8bit",
             "purpose": "code_analysis",
             "max_tokens": 2400,
             "temperature": 0.1

@@ -1,285 +1,230 @@
 #!/usr/bin/env python3
 """
 Output Comparator
-Compares student outputs to solution outputs with flexibility
+Programmatically compares student notebook outputs to solution outputs
 """
 
-import re
+import nbformat
 from typing import Dict, List, Tuple, Any
+import re
 from difflib import SequenceMatcher
 
-
 class OutputComparator:
-    """Compare student outputs to solution outputs with smart flexibility"""
+    """Compares notebook cell outputs between student and solution"""
     
-    # Tolerance for numeric comparisons
-    NUMERIC_TOLERANCE = 0.01  # 1% difference allowed
+    def __init__(self, student_notebook_path: str, solution_notebook_path: str):
+        self.student_path = student_notebook_path
+        self.solution_path = solution_notebook_path
+        
+        with open(student_notebook_path, 'r', encoding='utf-8') as f:
+            self.student_nb = nbformat.read(f, as_version=4)
+        
+        with open(solution_notebook_path, 'r', encoding='utf-8') as f:
+            self.solution_nb = nbformat.read(f, as_version=4)
     
-    # Similarity threshold for text comparison
-    TEXT_SIMILARITY_THRESHOLD = 0.50  # 50% similar is acceptable (focus on numbers)
+    def extract_code_cells(self, notebook) -> List[Dict]:
+        """Extract code cells with their outputs"""
+        cells = []
+        for cell in notebook.cells:
+            if cell.cell_type == 'code':
+                cell_data = {
+                    'source': cell.get('source', ''),
+                    'outputs': self._extract_outputs(cell),
+                    'execution_count': cell.get('execution_count')
+                }
+                cells.append(cell_data)
+        return cells
     
-    def __init__(self):
-        self.comparisons = []
-        self.mismatches = []
-    
-    def compare_outputs(self, student_output: str, solution_output: str, 
-                       question_context: str = "") -> Dict[str, Any]:
-        """
-        Compare student output to solution output
-        
-        Args:
-            student_output: The student's output
-            solution_output: The expected solution output
-            question_context: Context about what the question asks for
-            
-        Returns:
-            Dict with comparison results
-        """
-        # Normalize outputs
-        student_norm = self._normalize_output(student_output)
-        solution_norm = self._normalize_output(solution_output)
-        
-        # Extract numbers from both
-        student_numbers = self._extract_numbers(student_norm)
-        solution_numbers = self._extract_numbers(solution_norm)
-        
-        # Compare numbers with tolerance
-        numbers_match = self._compare_numbers(student_numbers, solution_numbers)
-        
-        # Compare text structure
-        text_similarity = self._calculate_similarity(student_norm, solution_norm)
-        
-        # Determine if outputs are equivalent
-        is_equivalent = numbers_match and text_similarity >= self.TEXT_SIMILARITY_THRESHOLD
-        
-        result = {
-            'is_equivalent': is_equivalent,
-            'numbers_match': numbers_match,
-            'text_similarity': text_similarity,
-            'student_output': student_output,
-            'solution_output': solution_output,
-            'explanation': self._generate_explanation(
-                is_equivalent, numbers_match, text_similarity
-            )
-        }
-        
-        self.comparisons.append(result)
-        if not is_equivalent:
-            self.mismatches.append(result)
-        
-        return result
-    
-    def _normalize_output(self, output: str) -> str:
-        """Normalize output for comparison"""
-        # Remove extra whitespace
-        normalized = re.sub(r'\s+', ' ', output.strip())
-        
-        # Normalize common variations
-        normalized = normalized.lower()
-        
-        # Remove formatting characters
-        normalized = re.sub(r'[_*`]', '', normalized)
-        
-        return normalized
-    
-    def _extract_numbers(self, text: str) -> List[float]:
-        """Extract all numbers from text"""
-        # Match integers and floats
-        pattern = r'-?\d+\.?\d*'
-        matches = re.findall(pattern, text)
-        
-        numbers = []
-        for match in matches:
-            try:
-                numbers.append(float(match))
-            except ValueError:
-                continue
-        
-        return numbers
-    
-    def _compare_numbers(self, student_nums: List[float], 
-                        solution_nums: List[float]) -> bool:
-        """Compare numbers with tolerance"""
-        if len(student_nums) != len(solution_nums):
-            return False
-        
-        for s_num, sol_num in zip(student_nums, solution_nums):
-            # Check if within tolerance
-            if sol_num == 0:
-                # Absolute difference for zero
-                if abs(s_num - sol_num) > 0.01:
-                    return False
-            else:
-                # Relative difference
-                rel_diff = abs(s_num - sol_num) / abs(sol_num)
-                if rel_diff > self.NUMERIC_TOLERANCE:
-                    return False
-        
-        return True
-    
-    def _calculate_similarity(self, text1: str, text2: str) -> float:
-        """Calculate text similarity ratio"""
-        return SequenceMatcher(None, text1, text2).ratio()
-    
-    def _generate_explanation(self, is_equivalent: bool, 
-                            numbers_match: bool, 
-                            text_similarity: float) -> str:
-        """Generate human-readable explanation"""
-        if is_equivalent:
-            return "Output matches solution (within acceptable tolerance)"
-        
-        issues = []
-        if not numbers_match:
-            issues.append("numeric values differ from expected")
-        if text_similarity < self.TEXT_SIMILARITY_THRESHOLD:
-            issues.append(f"output format differs (similarity: {text_similarity:.0%})")
-        
-        return "Output differs: " + ", ".join(issues)
-    
-    def get_summary(self) -> Dict[str, Any]:
-        """Get summary of all comparisons"""
-        total = len(self.comparisons)
-        matches = total - len(self.mismatches)
-        
-        return {
-            'total_comparisons': total,
-            'matches': matches,
-            'mismatches': len(self.mismatches),
-            'match_rate': (matches / total * 100) if total > 0 else 100,
-            'mismatch_details': self.mismatches
-        }
-    
-    def compare_cell_outputs(self, student_cells: List[Dict], 
-                            solution_cells: List[Dict]) -> Dict[str, Any]:
-        """
-        Compare outputs from notebook cells
-        
-        Args:
-            student_cells: List of student code cells with outputs
-            solution_cells: List of solution code cells with outputs
-            
-        Returns:
-            Comparison summary
-        """
-        # Match cells by code similarity (in case order differs)
-        cell_matches = self._match_cells(student_cells, solution_cells)
-        
-        for student_cell, solution_cell in cell_matches:
-            student_out = self._extract_cell_output(student_cell)
-            solution_out = self._extract_cell_output(solution_cell)
-            
-            if student_out and solution_out:
-                self.compare_outputs(student_out, solution_out)
-        
-        return self.get_summary()
-    
-    def _match_cells(self, student_cells: List[Dict], 
-                    solution_cells: List[Dict]) -> List[Tuple[Dict, Dict]]:
-        """Match student cells to solution cells by code similarity"""
-        matches = []
-        
-        for s_cell in student_cells:
-            best_match = None
-            best_similarity = 0
-            
-            s_code = s_cell.get('source', '')
-            
-            for sol_cell in solution_cells:
-                sol_code = sol_cell.get('source', '')
-                similarity = self._calculate_similarity(
-                    self._normalize_output(s_code),
-                    self._normalize_output(sol_code)
-                )
-                
-                if similarity > best_similarity and similarity > 0.5:
-                    best_similarity = similarity
-                    best_match = sol_cell
-            
-            if best_match:
-                matches.append((s_cell, best_match))
-        
-        return matches
-    
-    def _extract_cell_output(self, cell: Dict) -> str:
-        """Extract output text from a notebook cell"""
-        outputs = cell.get('outputs', [])
-        output_text = ""
-        
-        for output in outputs:
+    def _extract_outputs(self, cell) -> List[str]:
+        """Extract text outputs from a cell"""
+        outputs = []
+        for output in cell.get('outputs', []):
             if output.get('output_type') == 'stream':
-                output_text += output.get('text', '')
+                outputs.append(output.get('text', ''))
             elif output.get('output_type') == 'execute_result':
                 data = output.get('data', {})
-                output_text += data.get('text/plain', '')
+                if 'text/plain' in data:
+                    outputs.append(data['text/plain'])
             elif output.get('output_type') == 'display_data':
                 data = output.get('data', {})
-                output_text += data.get('text/plain', '')
+                if 'text/plain' in data:
+                    outputs.append(data['text/plain'])
+        return outputs
+
+    def calculate_similarity(self, text1: str, text2: str) -> float:
+        """Calculate similarity between two text outputs (0-1)"""
+        if not text1 and not text2:
+            return 1.0
+        if not text1 or not text2:
+            return 0.0
         
-        return output_text
-
-
-def compare_notebook_outputs(student_notebook_path: str, 
-                            solution_notebook_path: str) -> Dict[str, Any]:
-    """
-    Convenience function to compare notebook outputs
-    
-    Args:
-        student_notebook_path: Path to student notebook
-        solution_notebook_path: Path to solution notebook
+        # Normalize whitespace
+        text1 = ' '.join(text1.split())
+        text2 = ' '.join(text2.split())
         
-    Returns:
-        Comparison summary with match rate and details
-    """
-    import nbformat
+        # Use SequenceMatcher for fuzzy matching
+        return SequenceMatcher(None, text1, text2).ratio()
     
-    # Read notebooks
-    with open(student_notebook_path, 'r') as f:
-        student_nb = nbformat.read(f, as_version=4)
+    def compare_outputs(self) -> Dict[str, Any]:
+        """Compare all outputs between student and solution"""
+        student_cells = self.extract_code_cells(self.student_nb)
+        solution_cells = self.extract_code_cells(self.solution_nb)
+        
+        comparisons = []
+        total_similarity = 0
+        matching_count = 0
+        
+        # Compare cell by cell
+        max_cells = max(len(student_cells), len(solution_cells))
+        
+        for i in range(max_cells):
+            student_cell = student_cells[i] if i < len(student_cells) else None
+            solution_cell = solution_cells[i] if i < len(solution_cells) else None
+            
+            if not student_cell:
+                # Student missing this cell
+                comparisons.append({
+                    'cell_index': i,
+                    'status': 'missing',
+                    'match': False,
+                    'similarity': 0.0,
+                    'solution_code': solution_cell['source'] if solution_cell else '',
+                    'solution_output': solution_cell['outputs'] if solution_cell else [],
+                    'student_output': []
+                })
+                continue
+            
+            if not solution_cell:
+                # Extra student cell (no solution to compare)
+                comparisons.append({
+                    'cell_index': i,
+                    'status': 'extra',
+                    'match': True,  # Don't penalize extra work
+                    'similarity': 1.0,
+                    'student_output': student_cell['outputs']
+                })
+                total_similarity += 1.0
+                matching_count += 1
+                continue
+
+            # Compare outputs
+            student_out = '\n'.join(student_cell['outputs'])
+            solution_out = '\n'.join(solution_cell['outputs'])
+            
+            similarity = self.calculate_similarity(student_out, solution_out)
+            is_match = similarity >= 0.80  # 80% similarity threshold
+            
+            comparison = {
+                'cell_index': i,
+                'status': 'match' if is_match else 'mismatch',
+                'match': is_match,
+                'similarity': similarity,
+                'student_code': student_cell['source'],
+                'student_output': student_cell['outputs'],
+                'solution_code': solution_cell['source'],
+                'solution_output': solution_cell['outputs']
+            }
+            
+            comparisons.append(comparison)
+            total_similarity += similarity
+            if is_match:
+                matching_count += 1
+        
+        # Calculate overall metrics
+        accuracy = (total_similarity / max_cells * 100) if max_cells > 0 else 0
+        match_rate = (matching_count / max_cells * 100) if max_cells > 0 else 0
+        
+        return {
+            'total_cells': max_cells,
+            'student_cells': len(student_cells),
+            'solution_cells': len(solution_cells),
+            'matching_cells': matching_count,
+            'match_rate': match_rate,
+            'accuracy_score': accuracy,
+            'comparisons': comparisons
+        }
+
+    def generate_comparison_report(self) -> str:
+        """Generate human-readable comparison report"""
+        results = self.compare_outputs()
+        
+        report = f"""
+📊 OUTPUT COMPARISON REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total Cells: {results['total_cells']}
+Matching Outputs: {results['matching_cells']}/{results['total_cells']} ({results['match_rate']:.1f}%)
+Overall Accuracy: {results['accuracy_score']:.1f}%
+
+"""
+        
+        # List mismatches
+        mismatches = [c for c in results['comparisons'] if not c['match']]
+        if mismatches:
+            report += "❌ MISMATCHED CELLS:\n"
+            for comp in mismatches:
+                report += f"\nCell {comp['cell_index']}:\n"
+                if comp['status'] == 'missing':
+                    report += "  Status: Student did not complete this cell\n"
+                    report += f"  Expected output: {comp['solution_output'][:100]}...\n"
+                else:
+                    report += f"  Similarity: {comp['similarity']*100:.1f}%\n"
+                    report += f"  Student output: {comp['student_output'][:100] if comp['student_output'] else 'No output'}...\n"
+                    report += f"  Expected output: {comp['solution_output'][:100]}...\n"
+        
+        return report
     
-    with open(solution_notebook_path, 'r') as f:
-        solution_nb = nbformat.read(f, as_version=4)
-    
-    # Extract code cells
-    student_cells = [cell for cell in student_nb.cells if cell.cell_type == 'code']
-    solution_cells = [cell for cell in solution_nb.cells if cell.cell_type == 'code']
-    
-    # Compare
-    comparator = OutputComparator()
-    summary = comparator.compare_cell_outputs(student_cells, solution_cells)
-    
-    return summary
+    def generate_ai_prompt_section(self) -> str:
+        """Generate section for AI grading prompt with comparison results"""
+        results = self.compare_outputs()
+        
+        prompt = f"""
+OUTPUT COMPARISON ANALYSIS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Programmatic comparison of student outputs vs solution outputs:
+- Total cells compared: {results['total_cells']}
+- Matching outputs: {results['matching_cells']}/{results['total_cells']} ({results['match_rate']:.1f}%)
+- Overall accuracy: {results['accuracy_score']:.1f}%
+
+"""
+
+        # Add details for mismatched cells
+        mismatches = [c for c in results['comparisons'] if not c['match']]
+        if mismatches:
+            prompt += "CELLS WITH INCORRECT OUTPUTS:\n\n"
+            for comp in mismatches[:5]:  # Limit to first 5 mismatches
+                prompt += f"Cell {comp['cell_index']} - {comp['status'].upper()}:\n"
+                
+                if comp['status'] == 'missing':
+                    prompt += f"  ❌ Student did not complete this cell\n"
+                    prompt += f"  ✅ Expected code:\n```r\n{comp['solution_code'][:200]}\n```\n"
+                    prompt += f"  ✅ Expected output: {comp['solution_output']}\n\n"
+                else:
+                    prompt += f"  Similarity: {comp['similarity']*100:.1f}%\n"
+                    prompt += f"  ❌ Student output: {comp['student_output']}\n"
+                    prompt += f"  ✅ Expected output: {comp['solution_output']}\n"
+                    prompt += f"  💡 Solution code:\n```r\n{comp['solution_code'][:200]}\n```\n\n"
+        
+        prompt += """
+GRADING INSTRUCTION:
+- Use this programmatic comparison as PRIMARY evidence
+- If match_rate >= 90%: Student has correct outputs (score 90-100)
+- If match_rate 75-89%: Student has mostly correct outputs (score 80-90)
+- If match_rate 60-74%: Student has some correct outputs (score 70-80)
+- If match_rate < 60%: Student has incorrect outputs (score 50-70)
+- For mismatched cells: Include the expected solution in feedback
+"""
+        
+        return prompt
 
 
-if __name__ == "__main__":
-    # Test the comparator
-    comparator = OutputComparator()
+def compare_and_generate_prompt(student_nb_path: str, solution_nb_path: str) -> Dict[str, Any]:
+    """Convenience function to compare notebooks and generate AI prompt section"""
+    comparator = OutputComparator(student_nb_path, solution_nb_path)
+    results = comparator.compare_outputs()
+    ai_prompt = comparator.generate_ai_prompt_section()
     
-    # Test 1: Exact match
-    result1 = comparator.compare_outputs(
-        "Total: 500 rows",
-        "Total: 500 rows"
-    )
-    print(f"Test 1 (exact match): {result1['is_equivalent']} - {result1['explanation']}")
-    
-    # Test 2: Numeric tolerance
-    result2 = comparator.compare_outputs(
-        "Mean: 123.45",
-        "Mean: 123.46"
-    )
-    print(f"Test 2 (within tolerance): {result2['is_equivalent']} - {result2['explanation']}")
-    
-    # Test 3: Different format, same numbers
-    result3 = comparator.compare_outputs(
-        "Count: 100 items",
-        "Total count is 100"
-    )
-    print(f"Test 3 (different format): {result3['is_equivalent']} - {result3['explanation']}")
-    
-    # Test 4: Wrong numbers
-    result4 = comparator.compare_outputs(
-        "Total: 500",
-        "Total: 600"
-    )
-    print(f"Test 4 (wrong numbers): {result4['is_equivalent']} - {result4['explanation']}")
-    
-    print(f"\nSummary: {comparator.get_summary()}")
+    return {
+        'results': results,
+        'ai_prompt_section': ai_prompt,
+        'report': comparator.generate_comparison_report()
+    }

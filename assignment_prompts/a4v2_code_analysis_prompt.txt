@@ -1,0 +1,198 @@
+ASSIGNMENT-SPECIFIC INSTRUCTIONS FOR ASSIGNMENT 4 (a4v2):
+Data Transformation with dplyr - Part 2 (Mutate, Summarize, Group_by, Count)
+
+HOW TO VERIFY COMPLETION - Check student code for these SPECIFIC elements:
+
+1. DATA IMPORT AND SETUP (Required - 1.0 points):
+   ✓ Must have: library(tidyverse)
+   ✓ Must have: read_csv("company_sales_data.csv") or read.csv()
+   ✓ Must create: company_data variable
+   ✓ Must show: str(), head(), summary() outputs
+   ✓ Must display: nrow() and ncol() counts
+   VERIFICATION: Search for "company_data <-" and "read_csv"
+
+2. FINANCIAL METRICS WITH MUTATE (Required - 2.5 points):
+   ✓ Must create 6 calculated fields:
+     - Profit = Revenue - Cost
+     - Profit_Margin = (Profit / Revenue) * 100
+     - Cost_Ratio = (Cost / Revenue) * 100
+     - Revenue_Per_Unit = Revenue / Units_Sold
+     - Cost_Per_Unit = Cost / Units_Sold
+     - ROI = (Profit / Cost) * 100
+   ✓ Must use: mutate() function with %>% pipe
+   ✓ Must show: output displaying new columns
+   VERIFICATION: Search for "mutate(" and all 6 variable names
+   CRITICAL: All 6 metrics must be created for full credit
+
+3. CATEGORICAL VARIABLES (Required - 2.0 points):
+   ✓ Must create 5 categorical variables:
+     - Performance_Category (High/Medium/Low based on Profit_Margin)
+     - Revenue_Size (Large/Medium/Small based on Revenue)
+     - Deal_Size (Bulk/Standard/Small based on Units_Sold)
+     - High_Value_Customer (Yes/No for Revenue > 25000)
+     - Profitable_Deal (Yes/No for Profit_Margin > 40)
+   ✓ Must use: case_when() for multi-level categories
+   ✓ Must use: ifelse() for binary flags
+   ✓ Must show: table() output for distributions
+   VERIFICATION: Search for "case_when(", "Performance_Category", "Revenue_Size"
+   CRITICAL: All 5 categories must be created for full credit
+
+4. SUMMARY STATISTICS (Required - 2.0 points):
+   ✓ Must create: business_summary with summarize()
+   ✓ Must calculate:
+     - total_revenue (sum)
+     - total_profit (sum)
+     - avg_profit_margin (mean)
+     - avg_roi (mean)
+     - total_units (sum)
+     - transaction_count (n())
+     - avg_revenue_per_transaction (mean)
+   ✓ Must show: summary output
+   ✓ Must create: revenue_statistics with min, max, mean, median, sd
+   VERIFICATION: Search for "summarize(" and "n()"
+   CRITICAL: Must show calculated summary statistics
+
+5. GROUPED ANALYSIS - REGIONAL (Required - 1.2 points):
+   ✓ Must create: regional_performance
+   ✓ Must use: group_by(Region) %>% summarize()
+   ✓ Must calculate: total_revenue, total_profit, avg_profit_margin, transaction_count, total_units
+   ✓ Must add: revenue_share calculation
+   ✓ Must use: arrange(desc(total_revenue))
+   ✓ Must show: sorted regional summary
+   VERIFICATION: Search for "group_by(Region)" and "revenue_share"
+
+6. GROUPED ANALYSIS - PRODUCT CATEGORY (Required - 1.2 points):
+   ✓ Must create: category_performance
+   ✓ Must use: group_by(Product_Category) %>% summarize()
+   ✓ Must calculate: same metrics as regional
+   ✓ Must add: revenue_share
+   ✓ Must use: arrange(desc())
+   ✓ Must show: sorted category summary
+   VERIFICATION: Search for "group_by(Product_Category)"
+
+7. GROUPED ANALYSIS - PERFORMANCE CATEGORY (Required - 1.1 points):
+   ✓ Must create: performance_analysis
+   ✓ Must use: group_by(Performance_Category) %>% summarize()
+   ✓ Must calculate: business metrics
+   ✓ Must add: revenue_share
+   ✓ Must show: High/Medium/Low comparison
+   VERIFICATION: Search for "group_by(Performance_Category)"
+
+8. MULTI-DIMENSIONAL GROUPING (Required - 2.0 points):
+   ✓ Must create: region_category_analysis
+   ✓ Must use: group_by(Region, Product_Category)
+   ✓ Must show: top 10 combinations
+   ✓ Must use: count() for frequency analysis
+   ✓ Must create: performance_counts, revenue_size_counts, deal_size_counts
+   ✓ Must create: cross-tabulation using count() or table()
+   VERIFICATION: Search for "group_by(.*,.*)" and "count("
+   CRITICAL: Must show multi-dimensional analysis
+
+9. BUSINESS INTELLIGENCE DASHBOARD (Required - 1.5 points):
+   ✓ Must create: formatted dashboard output
+   ✓ Must use: cat() for formatted printing
+   ✓ Must calculate: KPIs (total_revenue, total_profit, profit_margin, etc.)
+   ✓ Must identify: top performers (region, category)
+   ✓ Must show: performance distribution
+   ✓ Must format: output with headers and separators
+   VERIFICATION: Search for "cat(", "KPI", "DASHBOARD"
+   CRITICAL: Dashboard must be formatted and comprehensive
+
+10. DATA VALIDATION (Required - 0.5 points):
+    ✓ Must validate: Profit calculation using all.equal()
+    ✓ Must validate: Profit_Margin calculation
+    ✓ Must validate: ROI calculation
+    ✓ Must check: for extreme values and outliers
+    ✓ Must check: for missing values using is.na()
+    ✓ Must show: validation results
+    VERIFICATION: Search for "all.equal(", "is.na("
+    CRITICAL: Must show validation checks
+
+CRITICAL SCORING RULES:
+- Part 1 (Import): 1.0 points
+- Part 2 (Financial Mutate): 2.5 points
+- Part 3 (Categorical): 2.0 points
+- Part 4 (Summarize): 2.0 points
+- Part 5-7 (Group_by): 3.5 points total
+- Part 8 (Advanced): 2.0 points
+- Part 9 (Dashboard): 1.5 points
+- Part 10 (Validation): 0.5 points
+- TOTAL DATA ANALYSIS: 15.0 points
+
+🚨 CRITICAL VERIFICATION RULES - PREVENT HALLUCINATION 🚨
+
+BEFORE marking ANY section as incomplete, YOU MUST:
+1. Look for OUTPUT text below the code
+2. If OUTPUT exists, the section is COMPLETE - DO NOT mark as incomplete
+3. If you see a tibble, data.frame, or printed result = COMPLETE
+4. If you see "# A tibble: X × Y" = COMPLETE
+5. If you see summary statistics or tables = COMPLETE
+
+EXAMPLES OF COMPLETE SECTIONS:
+✅ Code: company_data %>% mutate(Profit = Revenue - Cost)
+   Output: Shows data with new Profit column = COMPLETE
+
+✅ Code: summarize(total_revenue = sum(Revenue))
+   Output: Shows summary statistics = COMPLETE
+
+✅ Code: group_by(Region) %>% summarize(...)
+   Output: Shows grouped summary table = COMPLETE
+
+✅ Code: cat("Total Revenue:", total_revenue)
+   Output: Shows formatted text = COMPLETE
+
+ONLY mark incomplete if:
+❌ NO code at all
+❌ Only template comments like "# TODO:"
+❌ Code exists but NO output visible
+
+IF YOU SEE OUTPUT, DO NOT SAY "you did not complete"!
+
+MUTATE REQUIREMENT:
+- Student MUST create at least 10 new variables (6 financial + 5 categorical)
+- Missing variables = proportional deduction
+- Check for: Profit, Profit_Margin, Cost_Ratio, Revenue_Per_Unit, Cost_Per_Unit, ROI
+- Check for: Performance_Category, Revenue_Size, Deal_Size, High_Value_Customer, Profitable_Deal
+
+GROUP_BY REQUIREMENT:
+- Student MUST perform at least 3 group_by analyses
+- Required: Region, Product_Category, Performance_Category
+- Missing groupings = proportional deduction
+- Must include revenue_share calculation
+
+COMMON MISTAKES TO CATCH:
+❌ Profit_Margin without * 100 (should be percentage)
+❌ ROI without * 100 (should be percentage)
+❌ case_when() logic reversed (High should be > 50, not < 50)
+❌ Missing .groups = 'drop' after summarize (warning but acceptable)
+❌ Not using %>% pipe operator
+❌ No arrange(desc()) for sorting
+❌ Missing count() operations
+❌ No dashboard output
+❌ No validation checks
+
+TEMPLATE COMPARISON:
+- Compare student code length to template code length
+- If student code < 130% of template length = likely minimal work
+- Check for specific function names: mutate, summarize, group_by, count, case_when
+- Verify actual implementation, not just function calls
+
+CALCULATION VERIFICATION:
+- Profit = Revenue - Cost (simple subtraction)
+- Profit_Margin = (Profit / Revenue) * 100 (must multiply by 100)
+- ROI = (Profit / Cost) * 100 (must multiply by 100)
+- Revenue_Per_Unit = Revenue / Units_Sold (division)
+- Cost_Per_Unit = Cost / Units_Sold (division)
+
+CATEGORICAL LOGIC VERIFICATION:
+- Performance_Category: High (>50%), Medium (30-50%), Low (<30%)
+- Revenue_Size: Large (>30000), Medium (15000-30000), Small (<15000)
+- Deal_Size: Bulk (>50), Standard (20-50), Small (<20)
+- High_Value_Customer: Yes if Revenue > 25000
+- Profitable_Deal: Yes if Profit_Margin > 40
+
+INCOMPLETE SECTION COUNTING:
+- Count each missing required section as incomplete
+- Sections with only template code = incomplete
+- Sections without output = incomplete
+- Use this to calculate final score

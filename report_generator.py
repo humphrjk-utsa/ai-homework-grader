@@ -921,6 +921,44 @@ class PDFReportGenerator:
                 note_style
             ))
         
+        # Add output comparison results if available
+        output_comparison = preprocessing.get('output_comparison')
+        if output_comparison and output_comparison.get('total_comparisons', 0) > 0:
+            story.append(Spacer(1, 12))
+            story.append(Paragraph("Output Verification:", self.styles['Heading2']))
+            
+            match_rate = output_comparison.get('match_rate', 0)
+            matches = output_comparison.get('matches', 0)
+            total = output_comparison.get('total_comparisons', 0)
+            
+            if match_rate >= 90:
+                icon = "✅"
+                color = colors.HexColor('#155724')
+            elif match_rate >= 75:
+                icon = "⚠️"
+                color = colors.HexColor('#856404')
+            else:
+                icon = "❌"
+                color = colors.HexColor('#721c24')
+            
+            comparison_style = ParagraphStyle(
+                name='ComparisonStyle',
+                parent=self.styles['Normal'],
+                fontSize=10,
+                textColor=color,
+                spaceAfter=6
+            )
+            
+            story.append(Paragraph(
+                f"{icon} {matches}/{total} outputs match solution ({match_rate:.1f}%)",
+                comparison_style
+            ))
+            
+            # Show mismatches if any
+            mismatches = output_comparison.get('mismatch_details', [])
+            if mismatches:
+                story.append(Paragraph(f"Output differences detected in {len(mismatches)} section(s)", self.styles['Normal']))
+        
         story.append(Spacer(1, 20))
     
     def _add_technical_analysis(self, story, technical_analysis: Dict[str, Any]):

@@ -1,0 +1,2 @@
+timestamp,mac1_name,mac1_cpu_user,mac1_cpu_system,mac1_cpu_idle,mac1_mem_used,mac1_mem_free,mac1_server_status,mac1_tokens_per_sec,mac1_active_requests,mac2_name,mac2_cpu_user,mac2_cpu_system,mac2_cpu_idle,mac2_mem_used,mac2_mem_free,mac2_server_status,mac2_tokens_per_sec,mac2_active_requests,event,notes
+2025-10-05 16:07:12,Mac Studio 1 (GPT-OSS),2.91%,4.52%,92.56%,183G,3376K,✅,0,0,Mac Studio 2 (Qwen),2.58%,6.3%,91.37%,75G,35M,✅,0,0,System check,Testing logger

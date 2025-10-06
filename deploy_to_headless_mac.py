@@ -89,7 +89,7 @@ python3 -c "
 from mlx_lm import load
 try:
     print('Loading Qwen model...')
-    model, tokenizer = load('mlx-community/Qwen3-Coder-30B-A3B-Instruct-bf16')
+    model, tokenizer = load('mlx-community/Qwen3-Coder-30B-A3B-Instruct-8bit')
     print('✅ Qwen model ready!')
 except Exception as e:
     print(f'❌ Model loading failed: {e}')

@@ -88,19 +88,39 @@ class OutputVerifier:
         # If 90%+ of cells have outputs, override AI's incomplete count
         if completion_pct >= 90:
             print(f"🔍 Output Verifier: {with_outputs}/{total} cells have outputs ({completion_pct:.0f}%)")
-            print(f"🔧 Overriding AI's incomplete count - student completed the work!")
+            print(f"🔧 Student attempted all work - checking correctness...")
             
             # Fix the incomplete sections count
             ai_result['incomplete_sections_count'] = max(0, total - with_outputs)
             
-            # Recalculate technical score if needed - MORE AGGRESSIVE
+            # IMPORTANT: Only boost scores if AI gave reasonable scores
+            # If AI gave low score despite completion, it likely found incorrect results
+            current_tech_score = ai_result.get('technical_score', 0)
+            
             if 'technical_score' in ai_result:
-                # If 100% complete, give 90% score minimum
-                if completion_pct >= 100:
-                    ai_result['technical_score'] = max(ai_result.get('technical_score', 0), 90)
+                # If AI already gave 85+, boost to reward completion
+                if current_tech_score >= 85:
+                    if completion_pct >= 100:
+                        ai_result['technical_score'] = max(current_tech_score, 95)
+                        print(f"🎯 100% completion with good work - boosting to minimum 95%")
+                    elif completion_pct >= 95:
+                        ai_result['technical_score'] = max(current_tech_score, 92)
+                # If AI gave 70-84, student completed but has errors - modest boost
+                elif current_tech_score >= 70:
+                    ai_result['technical_score'] = max(current_tech_score, 80)
+                    print(f"⚠️ 100% completion but AI found issues - modest boost to 80%")
+                # If AI gave <70, student has serious errors - minimal boost
                 else:
-                    # If 90-99% complete, give 85% minimum
-                    ai_result['technical_score'] = max(ai_result.get('technical_score', 0), 85)
+                    ai_result['technical_score'] = max(current_tech_score, 70)
+                    print(f"❌ 100% completion but AI found major issues - minimal boost to 70%")
+            
+            # Also boost total score proportionally
+            if 'total_score' in ai_result and 'max_score' in ai_result:
+                current_pct = (ai_result['total_score'] / ai_result['max_score']) * 100
+                # Only boost if current score is reasonable (>75%)
+                if completion_pct >= 100 and current_pct >= 75 and current_pct < 90:
+                    ai_result['total_score'] = max(ai_result['total_score'], ai_result['max_score'] * 0.90)
+                    print(f"🎯 Boosting total score to {ai_result['total_score']:.1f}/{ai_result['max_score']}")
         
         # If 80-89% have outputs, be more lenient
         elif completion_pct >= 80:
@@ -112,6 +132,10 @@ class OutputVerifier:
                 ai_result.get('incomplete_sections_count', 5),
                 max(2, total - with_outputs)
             )
+            
+            # Boost technical score for 80%+ completion
+            if 'technical_score' in ai_result:
+                ai_result['technical_score'] = max(ai_result.get('technical_score', 0), 85)
         
         return ai_result
     
@@ -178,27 +202,48 @@ def verify_and_fix_grading(notebook_path: str, ai_result: Dict) -> Dict:
         if 'technical_analysis' in fixed_result:
             tech = fixed_result['technical_analysis']
             
-            # Remove false "incomplete" claims from observations
+            # Remove ONLY false "incomplete" claims (not "incorrect" claims)
             if 'technical_observations' in tech:
-                tech['technical_observations'] = [
-                    obs for obs in tech['technical_observations']
-                    if not any(phrase in obs.lower() for phrase in [
-                        'incomplete', 'did not complete', 'missing section',
-                        'not complete', 'unfinished'
-                    ]) or 'validator' in obs.lower() or 'verifier' in obs.lower()
-                ]
+                # Filter out any line that mentions "Incomplete:" or lists incomplete sections
+                filtered_obs = []
+                skip_next = False
+                for obs in tech['technical_observations']:
+                    obs_lower = obs.lower()
+                    # Skip lines that claim incompleteness
+                    if any(phrase in obs_lower for phrase in [
+                        'incomplete:', 'did not complete', 'missing section',
+                        'not complete', 'unfinished', 'incomplete submission',
+                        'completion:', 'completed:'
+                    ]) and 'validator' not in obs_lower and 'verifier' not in obs_lower:
+                        continue
+                    filtered_obs.append(obs)
                 
-                # Add correction note
+                tech['technical_observations'] = filtered_obs
+                
+                # Add correction note about completion (not correctness)
                 tech['technical_observations'].insert(0,
-                    f"✅ OUTPUT VERIFIER: {with_outputs}/{total} cells have outputs ({completion_pct:.0f}%) - work is substantially complete"
+                    f"✅ OUTPUT VERIFIER: {with_outputs}/{total} cells have outputs ({completion_pct:.0f}%) - all work attempted"
                 )
             
-            # Fix code suggestions that claim incompleteness
+            # Fix code suggestions that claim incompleteness (but keep correctness feedback)
             if 'code_suggestions' in tech:
                 tech['code_suggestions'] = [
                     sug for sug in tech['code_suggestions']
-                    if not any(phrase in sug.lower() for phrase in ['did not complete', 'incomplete', 'missing section'])
+                    if not any(phrase in sug.lower() for phrase in [
+                        'did not complete', 'missing section', 'incomplete submission',
+                        'could not be completed automatically', 'please review submission manually',
+                        'code analysis could not', 'manual review'
+                    ])
+                    # Keep suggestions about incorrect results, wrong approach, etc.
                 ]
+                
+                # If we removed all suggestions, add helpful ones
+                if not tech['code_suggestions']:
+                    tech['code_suggestions'] = [
+                        "Consider adding more detailed comments to explain your analytical approach",
+                        "Explore additional dplyr functions like mutate() and summarize()",
+                        "Practice combining multiple operations in longer pipe chains"
+                    ]
             
             # Fix code strengths - remove "unable to parse" if outputs exist
             if 'code_strengths' in tech:
@@ -214,6 +259,34 @@ def verify_and_fix_grading(notebook_path: str, ai_result: Dict) -> Dict:
                         "Demonstrated ability to execute R code successfully",
                         "Produced verifiable results for analysis tasks"
                     ]
+        
+        # Fix comprehensive feedback instructor comments
+        if 'comprehensive_feedback' in fixed_result:
+            comp_feed = fixed_result['comprehensive_feedback']
+            
+            if 'instructor_comments' in comp_feed and isinstance(comp_feed['instructor_comments'], str):
+                comments = comp_feed['instructor_comments']
+                
+                # Remove false claims about incomplete work (not incorrect work)
+                false_claims = [
+                    'the notebook does not include the required dplyr operations',
+                    'does not include the required',
+                    'the current notebook only shows data import',
+                    'only shows data import',
+                    'complete the remaining assignment tasks',
+                    'finish the missing',
+                    'did not complete'
+                ]
+                
+                for claim in false_claims:
+                    if claim in comments.lower():
+                        # Replace with accurate statement about completion
+                        comments = comments.replace(
+                            claim,
+                            f"you attempted {with_outputs}/{total} code sections"
+                        )
+                
+                comp_feed['instructor_comments'] = comments
     
     return fixed_result
 

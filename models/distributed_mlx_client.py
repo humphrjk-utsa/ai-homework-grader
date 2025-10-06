@@ -75,7 +75,7 @@ class DistributedMLXClient:
             print(f"❌ Auto-restart failed: {e}")
             return False
     
-    def generate_code_analysis(self, prompt: str, max_tokens: int = 800) -> Optional[str]:
+    def generate_code_analysis(self, prompt: str, max_tokens: int = 1800, retry_count: int = 0) -> Optional[str]:
         """Generate code analysis using Qwen on Mac Studio 1"""
         try:
             start_time = time.time()
@@ -88,7 +88,7 @@ class DistributedMLXClient:
                     "max_tokens": max_tokens,
                     "temperature": 0.1
                 },
-                timeout=120  # 2 minute timeout
+                timeout=180  # 3 minute timeout (increased for 8-bit model)
             )
             
             if response.status_code == 200:
@@ -116,13 +116,35 @@ class DistributedMLXClient:
                 
                 return response_text
             else:
+                print(f"❌ Qwen server returned status {response.status_code}")
+                # Try auto-restart if enabled and this is first attempt
+                if retry_count == 0 and self.auto_restart_enabled:
+                    print("🔄 Attempting to auto-restart Qwen server...")
+                    if self.auto_restart_server('qwen'):
+                        time.sleep(5)  # Wait for server to start
+                        return self.generate_code_analysis(prompt, max_tokens, retry_count=1)
                 return None
                 
+        except requests.exceptions.Timeout:
+            print(f"⏰ Qwen server timeout after 180 seconds")
+            st.error(f"⏰ Qwen server timeout - request took too long")
+            return None
+        except requests.exceptions.ConnectionError as e:
+            print(f"❌ Qwen server connection error: {e}")
+            # Try auto-restart if enabled and this is first attempt
+            if retry_count == 0 and self.auto_restart_enabled:
+                print("🔄 Attempting to auto-restart Qwen server...")
+                if self.auto_restart_server('qwen'):
+                    time.sleep(5)  # Wait for server to start
+                    return self.generate_code_analysis(prompt, max_tokens, retry_count=1)
+            st.error(f"❌ Qwen server connection error: {e}")
+            return None
         except Exception as e:
+            print(f"❌ Qwen server error: {e}")
             st.error(f"❌ Qwen server error: {e}")
             return None
     
-    def generate_feedback(self, prompt: str, max_tokens: int = 3800) -> Optional[str]:
+    def generate_feedback(self, prompt: str, max_tokens: int = 3000, retry_count: int = 0) -> Optional[str]:
         """Generate feedback using Gemma on Mac Studio 1"""
         try:
             start_time = time.time()
@@ -135,7 +157,7 @@ class DistributedMLXClient:
                     "max_tokens": max_tokens,
                     "temperature": 0.3
                 },
-                timeout=150  # 2.5 minute timeout
+                timeout=200  # 3.3 minute timeout (increased for larger prompts)
             )
             
             if response.status_code == 200:
@@ -168,8 +190,29 @@ class DistributedMLXClient:
                 
                 return response_text
             else:
+                print(f"❌ Gemma server returned status {response.status_code}")
+                # Try auto-restart if enabled and this is first attempt
+                if retry_count == 0 and self.auto_restart_enabled:
+                    print("🔄 Attempting to auto-restart Gemma server...")
+                    if self.auto_restart_server('gemma'):
+                        time.sleep(5)  # Wait for server to start
+                        return self.generate_feedback(prompt, max_tokens, retry_count=1)
                 return None
                 
+        except requests.exceptions.Timeout:
+            print(f"⏰ Gemma server timeout after 200 seconds")
+            st.error(f"⏰ Gemma server timeout - request took too long")
+            return None
+        except requests.exceptions.ConnectionError as e:
+            print(f"❌ Gemma server connection error: {e}")
+            # Try auto-restart if enabled and this is first attempt
+            if retry_count == 0 and self.auto_restart_enabled:
+                print("🔄 Attempting to auto-restart Gemma server...")
+                if self.auto_restart_server('gemma'):
+                    time.sleep(5)  # Wait for server to start
+                    return self.generate_feedback(prompt, max_tokens, retry_count=1)
+            st.error(f"❌ Gemma server connection error: {e}")
+            return None
         except Exception as e:
             print(f"❌ Gemma server error: {e}")
             import traceback
@@ -239,14 +282,52 @@ class DistributedMLXClient:
                 print(f"📤 Submitting Gemma task (feedback)...")
                 gemma_future = executor.submit(self.generate_feedback, feedback_prompt)
                 
-                # Get results
+                # Get results with increased timeout
                 print(f"⏳ Waiting for Qwen result...")
-                qwen_result = qwen_future.result(timeout=120)
-                print(f"✅ Qwen result received: {len(qwen_result) if qwen_result else 0} chars")
+                try:
+                    qwen_result = qwen_future.result(timeout=180)  # Increased from 120 to 180
+                    print(f"✅ Qwen result received: {len(qwen_result) if qwen_result else 0} chars")
+                    
+                    # If Qwen failed, try to restart it
+                    if not qwen_result and self.auto_restart_enabled:
+                        print("⚠️ Qwen returned None, attempting auto-restart...")
+                        if self.auto_restart_server('qwen'):
+                            print("🔄 Retrying Qwen after restart...")
+                            qwen_result = self.generate_code_analysis(code_prompt)
+                except TimeoutError:
+                    print("⏰ Qwen timed out after 180 seconds")
+                    if self.auto_restart_enabled:
+                        print("🔄 Attempting to restart Qwen after timeout...")
+                        if self.auto_restart_server('qwen'):
+                            print("🔄 Retrying Qwen after restart...")
+                            qwen_result = self.generate_code_analysis(code_prompt)
+                        else:
+                            qwen_result = None
+                    else:
+                        qwen_result = None
                 
                 print(f"⏳ Waiting for Gemma result...")
-                gemma_result = gemma_future.result(timeout=150)
-                print(f"✅ Gemma result received: {len(gemma_result) if gemma_result else 0} chars")
+                try:
+                    gemma_result = gemma_future.result(timeout=200)  # Increased from 150 to 200
+                    print(f"✅ Gemma result received: {len(gemma_result) if gemma_result else 0} chars")
+                    
+                    # If Gemma failed, try to restart it
+                    if not gemma_result and self.auto_restart_enabled:
+                        print("⚠️ Gemma returned None, attempting auto-restart...")
+                        if self.auto_restart_server('gemma'):
+                            print("🔄 Retrying Gemma after restart...")
+                            gemma_result = self.generate_feedback(feedback_prompt)
+                except TimeoutError:
+                    print("⏰ Gemma timed out after 200 seconds")
+                    if self.auto_restart_enabled:
+                        print("🔄 Attempting to restart Gemma after timeout...")
+                        if self.auto_restart_server('gemma'):
+                            print("🔄 Retrying Gemma after restart...")
+                            gemma_result = self.generate_feedback(feedback_prompt)
+                        else:
+                            gemma_result = None
+                    else:
+                        gemma_result = None
                 
                 total_time = time.time() - start_time
                 

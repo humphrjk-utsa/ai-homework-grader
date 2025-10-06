@@ -6,7 +6,7 @@ Configuration for Two-Model Grading System
 # Model configurations
 MODEL_CONFIG = {
     'code_analyzer': {
-        'model_name': 'mlx-community/Qwen3-Coder-30B-A3B-Instruct-bf16',  # Your preferred bf16 model
+        'model_name': 'mlx-community/Qwen3-Coder-30B-A3B-Instruct-8bit',  # Updated to 8-bit model
         'max_tokens': 2400,  # Optimized for speed while maintaining quality
         'temperature': 0.1,  # Low temperature for precise code analysis
         'timeout': 75,  # Optimized timeout

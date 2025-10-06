@@ -1,0 +1,58 @@
+{
+  "assignment_info": {
+    "name": "a3v1",
+    "title": "Assignment 3 - Data Transformation with dplyr - Part 1",
+    "description": "Learn to use dplyr functions (select(), filter(), arrange()) and the pipe operator (%>%) for data transformation and analysis",
+    "total_points": 37.5,
+    "due_date": "2025-09-21"
+  },
+  "rubric_elements": {
+    "technical_execution": {
+      "weight": 0.2,
+      "max_points": 7.5,
+      "description": "Code quality, syntax, execution, and proper use of dplyr functions",
+      "criteria": [
+        "All code cells executed with visible outputs",
+        "Proper use of pipe operator (%>%) throughout",
+        "Correct syntax for select(), filter(), arrange()",
+        "No errors or warnings that affect results"
+      ]
+    },
+    "data_analysis": {
+      "weight": 0.4,
+      "max_points": 15.0,
+      "description": "Correct implementation of data transformation operations - MOST IMPORTANT",
+      "criteria": [
+        "Data import and initial exploration (0.5 pts)",
+        "Column selection with select() - 4 tasks (2.0 pts)",
+        "Row filtering with filter() - 5 tasks (2.5 pts)",
+        "Data sorting with arrange() - 3 tasks (1.5 pts)",
+        "Chained operations with %>% - 3 tasks (2.25 pts)",
+        "Data analysis questions - 4 tasks (2.5 pts)"
+      ]
+    },
+    "business_thinking": {
+      "weight": 0.2,
+      "max_points": 7.5,
+      "description": "Understanding of business applications and data transformation concepts",
+      "criteria": [
+        "Question 1: Pipe operator benefits with example (1.875 pts)",
+        "Question 2: Filtering strategy trade-offs (1.875 pts)",
+        "Question 3: Sorting importance with 3 scenarios (1.875 pts)",
+        "Question 4: Real-world application scenario (1.875 pts)"
+      ]
+    },
+    "communication": {
+      "weight": 0.2,
+      "max_points": 7.5,
+      "description": "Code comments, output clarity, and overall presentation",
+      "criteria": [
+        "Code is well-commented and easy to understand",
+        "Outputs are clearly labeled and formatted",
+        "Variable names are meaningful",
+        "Results are interpreted correctly",
+        "Notebook is organized and professional"
+      ]
+    }
+  }
+}

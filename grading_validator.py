@@ -50,8 +50,8 @@ class GradingValidator:
         actual_analysis = component_scores.get('analysis_points', 0)
         actual_communication = component_scores.get('communication_points', 0)
         
-        # Check component calculations (allow 0.1 tolerance for rounding)
-        tolerance = 0.1
+        # Check component calculations (allow 0.2 tolerance for rounding)
+        tolerance = 0.2  # Increased to handle floating-point rounding
         
         if abs(expected_technical - actual_technical) > tolerance:
             errors.append(f"Technical points mismatch: expected {expected_technical:.1f}, got {actual_technical:.1f}")

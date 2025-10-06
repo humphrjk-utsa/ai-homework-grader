@@ -28,7 +28,7 @@ class LocalMLXGrader:
             from mlx_lm import load
             
             print("🔄 Loading Qwen 3.0 Coder locally...")
-            self.qwen_model, self.qwen_tokenizer = load('mlx-community/Qwen3-Coder-30B-A3B-Instruct-bf16')
+            self.qwen_model, self.qwen_tokenizer = load('mlx-community/Qwen3-Coder-30B-A3B-Instruct-8bit')
             print("✅ Qwen loaded!")
             
             print("🔄 Loading Gemma 3.0 locally...")

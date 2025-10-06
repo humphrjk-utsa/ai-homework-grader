@@ -14,6 +14,7 @@ from typing import Dict, List, Any, Optional
 from prompt_manager import PromptManager
 from notebook_validation import NotebookValidator
 from score_validator import validate_and_adjust_scores
+from output_comparator import OutputComparator, compare_and_generate_prompt
 
 class BusinessAnalyticsGrader:
     """Grader optimized for business analytics students (first-year level)"""
@@ -181,6 +182,24 @@ class BusinessAnalyticsGrader:
         validation_feedback = ""
         
         if notebook_path:
+            # Check notebook size first
+            import os
+            notebook_size_mb = os.path.getsize(notebook_path) / (1024 * 1024)
+            notebook_size_kb = os.path.getsize(notebook_path) / 1024
+            print(f"📏 Notebook size: {notebook_size_kb:.1f} KB ({notebook_size_mb:.2f} MB)")
+            
+            # Skip extremely large notebooks that will timeout
+            if notebook_size_kb > 400:  # More than 400KB (Alejandro's is 440KB)
+                print(f"⚠️ SKIPPING: Notebook too large ({notebook_size_kb:.1f} KB)")
+                print(f"   This notebook exceeds processing limits and requires manual review.")
+                raise RuntimeError(f"Notebook too large ({notebook_size_kb:.1f} KB) - requires manual review")
+            
+            if notebook_size_kb > 300:  # More than 300KB
+                print(f"⚠️ WARNING: Large notebook ({notebook_size_kb:.1f} KB) - this may take longer to process")
+            
+            if notebook_size_mb > 10.0:
+                print(f"⚠️ CRITICAL: Very large notebook ({notebook_size_mb:.2f} MB) - processing may be slow")
+            
             print("🔍 Validating notebook submission...")
             validation_results = self.validator.validate_notebook(notebook_path)
             validation_penalty = validation_results['total_penalty_percent']
@@ -198,6 +217,55 @@ class BusinessAnalyticsGrader:
             with_outputs, total_cells = output_verifier.count_cells_with_outputs()
             completion_pct = output_verifier.get_completion_percentage()
             print(f"📊 Output Check: {with_outputs}/{total_cells} cells have outputs ({completion_pct:.0f}%)")
+            
+            # NEW: Compare outputs programmatically if solution notebook exists
+            output_comparison = None
+            solution_notebook_path = notebook_path.replace('submissions', 'data/raw').replace(os.path.basename(notebook_path), 'homework_lesson_3_solution.ipynb')
+            
+            # Check notebook size before attempting comparison
+            import os
+            notebook_size_kb = os.path.getsize(notebook_path) / 1024
+            
+            # Skip output comparison for notebooks larger than 200KB to prevent hangs
+            if notebook_size_kb > 200:
+                print(f"⚠️ Notebook too large ({notebook_size_kb:.1f} KB), skipping output comparison to prevent hang")
+                output_comparison = None
+            elif os.path.exists(solution_notebook_path):
+                print("🔬 Comparing outputs to solution...")
+                try:
+                    from output_comparator import OutputComparator
+                    import signal
+                    
+                    # Set a timeout for output comparison (30 seconds max)
+                    def timeout_handler(signum, frame):
+                        raise TimeoutError("Output comparison timed out")
+                    
+                    signal.signal(signal.SIGALRM, timeout_handler)
+                    signal.alarm(30)  # 30 second timeout
+                    
+                    try:
+                        comparator = OutputComparator(notebook_path, solution_notebook_path)
+                        output_comparison = comparator.compare_outputs()
+                        print(f"📊 Output Comparison: {output_comparison['matching_cells']}/{output_comparison['total_cells']} cells match ({output_comparison['match_rate']:.1f}%)")
+                        
+                        # Store just the summary stats, not the full comparison (to keep prompt small)
+                        output_comparison = {
+                            'total_cells': output_comparison['total_cells'],
+                            'matching_cells': output_comparison['matching_cells'],
+                            'match_rate': output_comparison['match_rate'],
+                            'accuracy_score': output_comparison['accuracy_score']
+                        }
+                    finally:
+                        signal.alarm(0)  # Cancel the alarm
+                        
+                except TimeoutError:
+                    print(f"⚠️ Output comparison timed out after 30 seconds, skipping")
+                    output_comparison = None
+                except Exception as e:
+                    print(f"⚠️ Output comparison failed: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    output_comparison = None
         
         # Check prerequisites
         if self.use_distributed_mlx:
@@ -649,12 +717,33 @@ class BusinessAnalyticsGrader:
             "grading_philosophy": "Encouraging and supportive for beginning students"
         }
 
-    def _prepare_code_analysis_prompt(self, student_code, solution_code, assignment_info, rubric_elements):
+    def _prepare_code_analysis_prompt(self, student_code, solution_code, assignment_info, rubric_elements, output_comparison=None):
         """Prepare prompt for distributed MLX code analysis with deep evaluation"""
+        
+        # Add programmatic output comparison if available (SUMMARY ONLY to avoid timeout)
+        comparison_section = ""
+        if output_comparison:
+            match_rate = output_comparison.get('match_rate', 0)
+            comparison_section = f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROGRAMMATIC OUTPUT VERIFICATION:
+- Cells with matching outputs: {output_comparison['matching_cells']}/{output_comparison['total_cells']} ({match_rate:.1f}%)
+- Overall accuracy: {output_comparison.get('accuracy_score', 0):.1f}%
+
+GRADING GUIDANCE:
+- If match rate >= 90%: Student has correct outputs (score 90-100)
+- If match rate 75-89%: Mostly correct outputs (score 80-90)  
+- If match rate 60-74%: Some correct outputs (score 70-80)
+- If match rate < 60%: Incorrect or missing outputs (score 50-70)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+        
         return f"""You are a business analytics instructor evaluating first-year student R code. Analyze the ACTUAL code deeply, compare outputs to expected results, and recognize alternative valid approaches.
 
 ASSIGNMENT: {assignment_info.get('title', 'Business Analytics Assignment')}
 STUDENT LEVEL: First-year business analytics (introductory R programming)
+
+{comparison_section}
 
 STUDENT'S CODE:
 ```r
@@ -696,6 +785,15 @@ SCORING GUIDELINES:
 - Working code with minor issues: 90-95
 - Mostly working with some errors: 85-90
 - Partial implementation: 75-85
+
+CRITICAL RULES:
+- Having outputs means work is ATTEMPTED, not necessarily CORRECT
+- Compare student outputs to solution outputs for CORRECTNESS
+- If outputs don't match solution: penalize for incorrect results (70-85 range)
+- If outputs match solution: reward for correct work (90-100 range)
+- If outputs are close but different approach: evaluate validity (85-95 range)
+- Do NOT claim work is "incomplete" if outputs exist - say "incorrect" or "needs revision"
+- Focus on ACCURACY of results, not just presence of code
 
 OUTPUT ONLY THIS JSON (no explanations, no markdown blocks, just JSON):
 
@@ -765,6 +863,14 @@ SCORING GUIDELINES:
 - Complete work with basic reflections: 88-92
 - Mostly complete with good effort: 85-88
 - Partial completion: 75-85
+
+CRITICAL RULES:
+- Having outputs means work is ATTEMPTED, not necessarily CORRECT
+- Evaluate if results match expected outcomes from solution
+- If results are wrong: provide specific corrections needed
+- If results are correct: acknowledge successful completion
+- Do NOT claim work is "incomplete" if outputs exist - say "needs correction" if wrong
+- Focus on ACCURACY and QUALITY, not just completion
 
 OUTPUT ONLY THIS JSON (no text before/after, no markdown blocks):
 

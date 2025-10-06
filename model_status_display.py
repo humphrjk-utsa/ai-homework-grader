@@ -40,7 +40,7 @@ def show_two_model_status():
                         available_mlx_models.append(model_name)
         
         # Check for our specific models
-        qwen_model = "mlx-community/Qwen3-Coder-30B-A3B-Instruct-bf16"
+        qwen_model = "mlx-community/Qwen3-Coder-30B-A3B-Instruct-8bit"
         gemma_model = "mlx-community/gemma-3-27b-it-bf16"
         
         qwen_available = qwen_model in available_mlx_models

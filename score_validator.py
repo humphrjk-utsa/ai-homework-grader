@@ -116,5 +116,8 @@ def validate_and_adjust_scores(code_analysis: dict, feedback: dict, student_code
             feedback['overall_score'] = min_overall_score
             feedback['business_understanding'] = max(feedback.get('business_understanding', 0), min_overall_score)
             feedback['communication_clarity'] = max(feedback.get('communication_clarity', 0), min_overall_score)
+            feedback['data_interpretation'] = max(feedback.get('data_interpretation', 0), min_overall_score)
+            feedback['methodology_appropriateness'] = max(feedback.get('methodology_appropriateness', 0), min_overall_score)
+            feedback['reflection_quality'] = max(feedback.get('reflection_quality', 0), min_overall_score)
     
     return code_analysis, feedback

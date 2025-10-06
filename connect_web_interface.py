@@ -507,6 +507,16 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
             # Grade this submission (similar to single submission logic)
             result = grade_submission_internal(business_grader, submission, assignment_id, grader)
             
+            # Add delay between submissions to prevent server overload and thermal throttling
+            # Give servers time to cool down and free memory
+            if i < total_submissions - 1:  # Don't delay after last submission
+                # Every 10 submissions, take a longer cooling break
+                if (i + 1) % 10 == 0:
+                    status_text.text(f"🌡️ Cooling break after {i+1} submissions... (30 seconds)")
+                    time.sleep(30)  # 30 second cooling break every 10 submissions
+                else:
+                    time.sleep(2)  # 2 second delay between submissions
+            
             # Capture performance metrics from result
             submission_time = time.time() - submission_start
             batch_performance['submission_times'].append(submission_time)
@@ -752,12 +762,25 @@ def grade_submission_internal(business_grader, submission, assignment_id, grader
         print("⚠️ Batch grading: No solution notebook found for this assignment")
         solution_code = "# Solution notebook not available\n# Grading based on general criteria"
     
-    # Prepare preprocessing info with penalty
+    # Compare outputs to solution if available
+    output_comparison = None
+    if assignment_row['solution_notebook'] and os.path.exists(assignment_row['solution_notebook']):
+        try:
+            print("📊 Comparing outputs to solution...")
+            from output_comparator import compare_notebook_outputs
+            output_comparison = compare_notebook_outputs(notebook_to_use, assignment_row['solution_notebook'])
+            print(f"   Match rate: {output_comparison['match_rate']:.1f}% ({output_comparison['matches']}/{output_comparison['total_comparisons']})")
+        except Exception as e:
+            print(f"⚠️ Output comparison failed: {e}")
+            output_comparison = None
+    
+    # Prepare preprocessing info with penalty and output comparison
     preprocessing_info = {
         'fixes_applied': fixes_applied,
         'needs_manual_review': len(fixes_applied) > 5,
         'penalty_points': preprocessor.calculate_penalty(),
-        'penalty_explanation': preprocessor.get_penalty_explanation()
+        'penalty_explanation': preprocessor.get_penalty_explanation(),
+        'output_comparison': output_comparison
     }
     
     # Grade the submission (now includes template_code for validation and preprocessing info)
