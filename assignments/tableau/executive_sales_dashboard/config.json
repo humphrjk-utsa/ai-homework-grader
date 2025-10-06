@@ -1,0 +1,132 @@
+{
+  "assignment_id": "executive_sales_dashboard",
+  "assignment_name": "Executive Sales Dashboard",
+  "assignment_type": "tableau",
+  "description": "Create an executive dashboard showing sales performance metrics",
+  "created_at": "2025-10-06T11:11:58.942167",
+  "solution_path": "assignments/tableau/executive_sales_dashboard/solution.twbx",
+  "config_path": "assignments/tableau/executive_sales_dashboard/config.json",
+  "solution_analysis": {
+    "filename": "Book1Executive Sales Performance Dashboard.twbx",
+    "worksheets": [
+      {
+        "name": "Sheet 1",
+        "marks_count": 1,
+        "type": null
+      },
+      {
+        "name": "Sheet 2",
+        "marks_count": 3,
+        "type": null
+      },
+      {
+        "name": "Sheet 3",
+        "marks_count": 1,
+        "type": null
+      },
+      {
+        "name": "Sheet 4",
+        "marks_count": 1,
+        "type": null
+      },
+      {
+        "name": "Sheet 5",
+        "marks_count": 1,
+        "type": null
+      }
+    ],
+    "dashboards": [
+      {
+        "name": "Dashboard 1",
+        "zones_count": 16,
+        "worksheets": [
+          "Sheet 1",
+          "Sheet 2",
+          "Sheet 3",
+          "Sheet 4",
+          "Sheet 2",
+          "Sheet 1",
+          "Sheet 2",
+          "Sheet 3",
+          "Sheet 4",
+          "Sheet 4"
+        ]
+      }
+    ],
+    "calculated_fields": [
+      {
+        "name": "Profit Margin",
+        "formula": "[Profit]/[Sales]",
+        "datatype": "real"
+      }
+    ],
+    "data_sources": [
+      {
+        "name": "Orders (global_superstore_2016)",
+        "type": "federated",
+        "filename": ""
+      }
+    ],
+    "filters": [
+      {
+        "column": "[federated.0t2let00gkpxp41atot5j04qs3m8].[tmn:Order Date:qk]",
+        "type": "quantitative"
+      },
+      {
+        "column": "[federated.0t2let00gkpxp41atot5j04qs3m8].[sum:Sales:qk]",
+        "type": "quantitative"
+      },
+      {
+        "column": "[federated.0t2let00gkpxp41atot5j04qs3m8].[sum:Profit:qk]",
+        "type": "quantitative"
+      }
+    ],
+    "summary": {
+      "total_worksheets": 5,
+      "total_dashboards": 1,
+      "total_calculated_fields": 1,
+      "total_data_sources": 1
+    }
+  },
+  "requirements": {
+    "required_worksheets": [
+      "Sales by Region",
+      "Profit Trend",
+      "Top Products"
+    ],
+    "required_dashboards": [
+      "Executive Dashboard"
+    ],
+    "required_calculations": [
+      "Profit Margin",
+      "YoY Growth"
+    ],
+    "min_worksheets": 3,
+    "min_dashboards": 1,
+    "min_calculated_fields": 2,
+    "flexible_matching": true
+  },
+  "rubric": {
+    "total_points": 37.5,
+    "categories": {
+      "required_components": {
+        "points": 15,
+        "description": "All required components present"
+      },
+      "calculated_fields": {
+        "points": 12.5,
+        "description": "Calculations are correct and well-implemented"
+      },
+      "dashboard_design": {
+        "points": 10,
+        "description": "Dashboard is effective and professional"
+      }
+    }
+  },
+  "grading_settings": {
+    "use_qwen": true,
+    "use_gpt_oss": true,
+    "parallel_grading": true,
+    "technical_points": 37.5
+  }
+}
