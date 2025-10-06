@@ -1,0 +1,136 @@
+{
+  "filename": "Book1Executive Sales Performance Dashboard.twbx",
+  "timestamp": "2025-10-06T10:38:36.724818",
+  "technical_score": 25.0,
+  "max_technical_points": 37.5,
+  "technical_details": {
+    "required_components": "\u2705 All required components present (+15)",
+    "minimum_requirements": "\u2705 Minimum requirements met (+10)",
+    "calculated_fields": "\u26a0\ufe0f 1 calculation issues (+0.0/12.5)"
+  },
+  "workbook_analysis": {
+    "filename": "Book1Executive Sales Performance Dashboard.twbx",
+    "worksheets": [
+      {
+        "name": "Sheet 1",
+        "marks_count": 1,
+        "type": null
+      },
+      {
+        "name": "Sheet 2",
+        "marks_count": 3,
+        "type": null
+      },
+      {
+        "name": "Sheet 3",
+        "marks_count": 1,
+        "type": null
+      },
+      {
+        "name": "Sheet 4",
+        "marks_count": 1,
+        "type": null
+      },
+      {
+        "name": "Sheet 5",
+        "marks_count": 1,
+        "type": null
+      }
+    ],
+    "dashboards": [
+      {
+        "name": "Dashboard 1",
+        "zones_count": 16,
+        "worksheets": [
+          "Sheet 1",
+          "Sheet 2",
+          "Sheet 3",
+          "Sheet 4",
+          "Sheet 2",
+          "Sheet 1",
+          "Sheet 2",
+          "Sheet 3",
+          "Sheet 4",
+          "Sheet 4"
+        ]
+      }
+    ],
+    "calculated_fields": [
+      {
+        "name": "Profit Margin",
+        "formula": "[Profit]/[Sales]",
+        "datatype": "real"
+      }
+    ],
+    "data_sources": [
+      {
+        "name": "Orders (global_superstore_2016)",
+        "type": "federated",
+        "filename": ""
+      }
+    ],
+    "filters": [
+      {
+        "column": "[federated.0t2let00gkpxp41atot5j04qs3m8].[tmn:Order Date:qk]",
+        "type": "quantitative"
+      },
+      {
+        "column": "[federated.0t2let00gkpxp41atot5j04qs3m8].[sum:Sales:qk]",
+        "type": "quantitative"
+      },
+      {
+        "column": "[federated.0t2let00gkpxp41atot5j04qs3m8].[sum:Profit:qk]",
+        "type": "quantitative"
+      }
+    ],
+    "summary": {
+      "total_worksheets": 5,
+      "total_dashboards": 1,
+      "total_calculated_fields": 1,
+      "total_data_sources": 1
+    }
+  },
+  "component_check": {
+    "worksheets": {
+      "required": [],
+      "missing": [],
+      "extra": []
+    },
+    "dashboards": {
+      "required": [],
+      "missing": [],
+      "extra": []
+    },
+    "calculations": {
+      "required": [],
+      "missing": [],
+      "extra": []
+    },
+    "passed": true
+  },
+  "minimum_check": {
+    "worksheets": {
+      "required": 3,
+      "actual": 5,
+      "passed": true
+    },
+    "dashboards": {
+      "required": 1,
+      "actual": 1,
+      "passed": true
+    },
+    "passed": true
+  },
+  "calculated_field_validations": [
+    {
+      "name": "Profit Margin",
+      "formula": "[Profit]/[Sales]",
+      "issues": [
+        "Missing division by zero protection"
+      ],
+      "has_aggregation": false
+    }
+  ],
+  "ai_feedback_prompt": "You are an expert Tableau instructor grading a student's dashboard assignment.\n\nASSIGNMENT: Sales Dashboard Assignment\n\nSTUDENT WORKBOOK ANALYSIS:\n{\n  \"filename\": \"Book1Executive Sales Performance Dashboard.twbx\",\n  \"worksheets\": [\n    {\n      \"name\": \"Sheet 1\",\n      \"marks_count\": 1,\n      \"type\": null\n    },\n    {\n      \"name\": \"Sheet 2\",\n      \"marks_count\": 3,\n      \"type\": null\n    },\n    {\n      \"name\": \"Sheet 3\",\n      \"marks_count\": 1,\n      \"type\": null\n    },\n    {\n      \"name\": \"Sheet 4\",\n      \"marks_count\": 1,\n      \"type\": null\n    },\n    {\n      \"name\": \"Sheet 5\",\n      \"marks_count\": 1,\n      \"type\": null\n    }\n  ],\n  \"dashboards\": [\n    {\n      \"name\": \"Dashboard 1\",\n      \"zones_count\": 16,\n      \"worksheets\": [\n        \"Sheet 1\",\n        \"Sheet 2\",\n        \"Sheet 3\",\n        \"Sheet 4\",\n        \"Sheet 2\",\n        \"Sheet 1\",\n        \"Sheet 2\",\n        \"Sheet 3\",\n        \"Sheet 4\",\n        \"Sheet 4\"\n      ]\n    }\n  ],\n  \"calculated_fields\": [\n    {\n      \"name\": \"Profit Margin\",\n      \"formula\": \"[Profit]/[Sales]\",\n      \"datatype\": \"real\"\n    }\n  ],\n  \"data_sources\": [\n    {\n      \"name\": \"Orders (global_superstore_2016)\",\n      \"type\": \"federated\",\n      \"filename\": \"\"\n    }\n  ],\n  \"filters\": [\n    {\n      \"column\": \"[federated.0t2let00gkpxp41atot5j04qs3m8].[tmn:Order Date:qk]\",\n      \"type\": \"quantitative\"\n    },\n    {\n      \"column\": \"[federated.0t2let00gkpxp41atot5j04qs3m8].[sum:Sales:qk]\",\n      \"type\": \"quantitative\"\n    },\n    {\n      \"column\": \"[federated.0t2let00gkpxp41atot5j04qs3m8].[sum:Profit:qk]\",\n      \"type\": \"quantitative\"\n    }\n  ],\n  \"summary\": {\n    \"total_worksheets\": 5,\n    \"total_dashboards\": 1,\n    \"total_calculated_fields\": 1,\n    \"total_data_sources\": 1\n  }\n}\n\nREQUIRED COMPONENTS:\n{\n  \"assignment_name\": \"Sales Dashboard Assignment\",\n  \"min_worksheets\": 3,\n  \"min_dashboards\": 1,\n  \"technical_points\": 37.5,\n  \"points_breakdown\": {\n    \"required_components\": 15,\n    \"minimum_requirements\": 10,\n    \"calculated_fields\": 12.5\n  }\n}\n\nTECHNICAL VALIDATION:\n{\n  \"worksheets\": {\n    \"required\": [],\n    \"missing\": [],\n    \"extra\": []\n  },\n  \"dashboards\": {\n    \"required\": [],\n    \"missing\": [],\n    \"extra\": []\n  },\n  \"calculations\": {\n    \"required\": [],\n    \"missing\": [],\n    \"extra\": []\n  },\n  \"passed\": true\n}\n\nPlease provide constructive feedback on:\n1. Dashboard design and layout\n2. Appropriate use of visualizations\n3. Calculated field implementation\n4. Data storytelling effectiveness\n5. Professional presentation quality\n\nFocus on what the student did well and specific areas for improvement.\nBe encouraging and pedagogical in your tone.\n",
+  "ready_for_ai_grading": true
+}
