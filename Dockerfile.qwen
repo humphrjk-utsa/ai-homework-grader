@@ -1,0 +1,40 @@
+# Qwen Server Dockerfile
+# Note: MLX only works on Apple Silicon Macs
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install MLX (Apple Silicon only)
+RUN pip install --no-cache-dir mlx mlx-lm flask
+
+# Copy server file
+COPY qwen_8bit_server.py .
+COPY distributed_config.json .
+
+# Expose port
+EXPOSE 5002
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:5002/health || exit 1
+
+# Environment variables
+ENV MODEL_NAME=mlx-community/Qwen3-Coder-30B-A3B-Instruct-8bit
+ENV MAX_TOKENS=1200
+ENV TEMPERATURE=0.1
+ENV FLASK_ENV=production
+
+# Run server
+CMD ["python", "qwen_8bit_server.py"]

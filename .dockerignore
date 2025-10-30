@@ -1,0 +1,96 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+archive/
+
+# Logs
+*.log
+logs/
+
+# Database (will be mounted as volume)
+*.db
+*.sqlite
+*.sqlite3
+
+# Large model files (should be downloaded at runtime)
+*.bin
+*.safetensors
+models/*.bin
+models/*.safetensors
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Test files
+test_*.py
+*_test.py
+tests/
+
+# Backup files
+*.bak
+*.backup
+*.tar.gz
+
+# Mac specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Performance logs
+performance_*.json
+grading_session_*.log
+
+# Training data (will be mounted as volume)
+training_data/
+
+# Graded submissions (will be mounted as volume)
+graded_submissions/
