@@ -285,7 +285,7 @@ class DistributedMLXClient:
                 # Get results with increased timeout
                 print(f"⏳ Waiting for Qwen result...")
                 try:
-                    qwen_result = qwen_future.result(timeout=180)  # Increased from 120 to 180
+                    qwen_result = qwen_future.result(timeout=300)  # Increased to 5 minutes for 8-bit model
                     print(f"✅ Qwen result received: {len(qwen_result) if qwen_result else 0} chars")
                     
                     # If Qwen failed, try to restart it
@@ -308,7 +308,7 @@ class DistributedMLXClient:
                 
                 print(f"⏳ Waiting for Gemma result...")
                 try:
-                    gemma_result = gemma_future.result(timeout=200)  # Increased from 150 to 200
+                    gemma_result = gemma_future.result(timeout=300)  # Increased to 5 minutes
                     print(f"✅ Gemma result received: {len(gemma_result) if gemma_result else 0} chars")
                     
                     # If Gemma failed, try to restart it

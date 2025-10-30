@@ -5,19 +5,20 @@
     "port": 5001,
     "model": "lmstudio-community/gpt-oss-120b-MLX-8bit",
     "purpose": "feedback_generation",
-    "max_tokens": 1200,
+    "max_tokens": 800,
     "temperature": 0.3,
-    "specs": "M3 Ultra 512GB"
+    "specs": "M3 Ultra 512GB",
+    "note": "Reduced from 1200 to 800 tokens for faster throughput"
   },
   "mac_studio_2": {
     "ip": "10.55.0.2",
     "port": 5002,
-    "model": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-bf16",
+    "model": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-8bit",
     "purpose": "code_analysis",
-    "max_tokens": 1800,
+    "max_tokens": 1200,
     "temperature": 0.1,
     "specs": "M4 Max 128GB",
-    "note": "Reduced max_tokens from 2400 to 1800 for faster inference. Consider switching to 4-bit quantized model for 3x speed boost."
+    "note": "Reduced from 1800 to 1200 tokens. Using 8-bit model. Consider 4-bit for 3x speed boost."
   },
   "urls": {
     "qwen_server": "http://10.55.0.2:5002",

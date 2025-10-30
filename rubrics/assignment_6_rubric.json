@@ -1,0 +1,578 @@
+{
+  "assignment_info": {
+    "name": "a6v1",
+    "title": "Assignment 6 - Combining Datasets with Joins",
+    "description": "Data integration using dplyr join functions (inner_join, left_join, right_join, full_join, anti_join, semi_join) for comprehensive business analysis",
+    "total_points": 100
+  },
+  "rubric_elements": {
+    "technical_execution": {
+      "weight": 0.25,
+      "max_points": 25,
+      "description": "Code quality, syntax, execution, and proper use of dplyr join functions",
+      "criteria": [
+        "All code cells executed with visible outputs",
+        "Proper use of pipe operator (%>%) throughout",
+        "Correct syntax for all join types (inner_join, left_join, right_join, full_join, anti_join, semi_join)",
+        "No errors or warnings that affect results",
+        "Data files imported successfully with correct paths",
+        "All required variables created with exact names for autograding",
+        "Proper use of by parameter to specify join keys"
+      ],
+      "deductions": {
+        "no_outputs": "Code without outputs = 0 points for that section",
+        "no_pipes": "Not using %>% operator = 20% deduction",
+        "syntax_errors": "Each syntax error = 15% deduction",
+        "template_only": "Only template code with blanks = 0 points",
+        "missing_variables": "Each missing required variable = 10% deduction",
+        "wrong_join_type": "Using incorrect join type = 20% deduction per instance"
+      }
+    },
+
+    "join_operations": {
+      "weight": 0.45,
+      "max_points": 45,
+      "description": "Correct implementation of join operations - MOST IMPORTANT",
+      "required_sections": {
+        "part1_import": {
+          "points": 5,
+          "description": "Data import and initial exploration",
+          "verification": [
+            "library(tidyverse)",
+            "read_csv",
+            "customers <-",
+            "orders <-",
+            "order_items <-",
+            "products <-",
+            "suppliers <-",
+            "nrow()",
+            "ncol()",
+            "head("
+          ],
+          "required_datasets": 5
+        },
+        "part2_basic_joins": {
+          "points": 12,
+          "description": "Four basic join types (3 points each)",
+          "subtasks": {
+            "task_2_1_inner": {
+              "points": 3,
+              "description": "Inner join - matching records only",
+              "verification": [
+                "inner_join(",
+                "customer_orders <-",
+                "by = \"CustomerID\"",
+                "nrow(customer_orders)"
+              ]
+            },
+            "task_2_2_left": {
+              "points": 3,
+              "description": "Left join - all customers with matching orders",
+              "verification": [
+                "left_join(",
+                "customer_orders_left <-",
+                "by = \"CustomerID\"",
+                "is.na(",
+                "customers_without_orders"
+              ]
+            },
+            "task_2_3_right": {
+              "points": 3,
+              "description": "Right join - all orders with matching customers",
+              "verification": [
+                "right_join(",
+                "customer_orders_right <-",
+                "by = \"CustomerID\"",
+                "orders_invalid_customers"
+              ]
+            },
+            "task_2_4_full": {
+              "points": 3,
+              "description": "Full join - all records from both tables",
+              "verification": [
+                "full_join(",
+                "customer_orders_full <-",
+                "by = \"CustomerID\"",
+                "customers_only",
+                "orders_only"
+              ]
+            }
+          }
+        },
+        "part3_multi_table": {
+          "points": 8,
+          "description": "Multi-table joins (2 points each step)",
+          "subtasks": {
+            "step_1_orders_items": {
+              "points": 2,
+              "description": "Join orders with order_items",
+              "verification": [
+                "inner_join(",
+                "orders_items <-",
+                "by = \"OrderID\""
+              ]
+            },
+            "step_2_add_customers": {
+              "points": 2,
+              "description": "Add customer information",
+              "verification": [
+                "inner_join(",
+                "orders_customers_items <-",
+                "by = \"CustomerID\""
+              ]
+            },
+            "step_3_add_products": {
+              "points": 2,
+              "description": "Add product information",
+              "verification": [
+                "inner_join(",
+                "complete_order_data <-",
+                "by = \"ProductID\""
+              ]
+            },
+            "step_4_add_suppliers": {
+              "points": 2,
+              "description": "Add supplier information for complete supply chain",
+              "verification": [
+                "inner_join(",
+                "complete_data <-",
+                "by = \"Supplier_ID\""
+              ]
+            }
+          }
+        },
+        "part4_data_quality": {
+          "points": 8,
+          "description": "Data quality analysis with filtering joins (2 points each)",
+          "subtasks": {
+            "task_4_1_customers_no_orders": {
+              "points": 2,
+              "description": "Find customers without orders using anti_join",
+              "verification": [
+                "anti_join(",
+                "customers_no_orders <-",
+                "by = \"CustomerID\""
+              ]
+            },
+            "task_4_2_orphaned_orders": {
+              "points": 2,
+              "description": "Find orders without customers using anti_join",
+              "verification": [
+                "anti_join(",
+                "orphaned_orders <-",
+                "by = \"CustomerID\""
+              ]
+            },
+            "task_4_3_products_never_ordered": {
+              "points": 2,
+              "description": "Find products never ordered using anti_join",
+              "verification": [
+                "anti_join(",
+                "products_never_ordered <-",
+                "by = \"ProductID\""
+              ]
+            },
+            "task_4_4_active_customers": {
+              "points": 2,
+              "description": "Find active customers using semi_join",
+              "verification": [
+                "semi_join(",
+                "active_customers <-",
+                "by = \"CustomerID\""
+              ]
+            }
+          }
+        },
+        "part5_business_analysis": {
+          "points": 8,
+          "description": "Business analysis with joined data (2 points each)",
+          "subtasks": {
+            "task_5_1_customer_metrics": {
+              "points": 2,
+              "description": "Customer lifetime value analysis",
+              "verification": [
+                "customer_metrics <-",
+                "group_by(",
+                "summarise(",
+                "Total_Spent",
+                "Order_Count",
+                "Avg_Order_Value"
+              ]
+            },
+            "task_5_2_product_metrics": {
+              "points": 2,
+              "description": "Product performance analysis",
+              "verification": [
+                "product_metrics <-",
+                "group_by(",
+                "Total_Revenue",
+                "Total_Quantity",
+                "Order_Frequency"
+              ]
+            },
+            "task_5_3_supplier_metrics": {
+              "points": 2,
+              "description": "Supplier performance analysis",
+              "verification": [
+                "supplier_metrics <-",
+                "group_by(",
+                "Product_Count"
+              ]
+            },
+            "task_5_4_regional_analysis": {
+              "points": 2,
+              "description": "Regional sales analysis",
+              "verification": [
+                "regional_analysis <-",
+                "group_by(",
+                "City",
+                "Total_Sales",
+                "Customer_Count",
+                "Avg_Customer_Value"
+              ]
+            }
+          }
+        },
+        "part6_complex_questions": {
+          "points": 4,
+          "description": "Complex business scenarios (1 point each)",
+          "subtasks": {
+            "task_6_1_top_customers": {
+              "points": 1,
+              "description": "Top 10% customer segmentation using quantile",
+              "verification": [
+                "quantile(",
+                "top_customers <-",
+                "filter("
+              ]
+            },
+            "task_6_2_product_combinations": {
+              "points": 1,
+              "description": "Products bought together analysis",
+              "verification": [
+                "product_combinations <-",
+                "inner_join(",
+                "filter("
+              ]
+            },
+            "task_6_3_critical_suppliers": {
+              "points": 1,
+              "description": "Critical supplier identification",
+              "verification": [
+                "critical_suppliers <-",
+                "arrange(desc("
+              ]
+            },
+            "task_6_4_market_expansion": {
+              "points": 1,
+              "description": "Market expansion opportunities",
+              "verification": [
+                "market_expansion <-",
+                "filter(",
+                "arrange("
+              ]
+            }
+          }
+        }
+      },
+      "scoring_rules": {
+        "section_complete": "Working code + visible output + correct result = full points",
+        "section_partial": "Code without output or incorrect result = 50% of section points",
+        "section_incomplete": "No code or template only = 0 points",
+        "calculation": "(completed_points / total_section_points) × max_points"
+      }
+    },
+
+    "data_understanding": {
+      "weight": 0.15,
+      "max_points": 15,
+      "description": "Understanding of join types and data relationships",
+      "criteria": [
+        "Correct join type selection for each business scenario",
+        "Understanding of when to use inner vs outer joins",
+        "Proper use of anti_join and semi_join for filtering",
+        "Recognition of one-to-many and many-to-many relationships",
+        "Understanding of data quality issues revealed by joins",
+        "Proper handling of missing values (NA) in join results"
+      ],
+      "scoring": {
+        "excellent": "All join types used correctly with clear understanding (13-15 points)",
+        "good": "Most join types correct with good understanding (10-12 points)",
+        "adequate": "Basic join usage with some understanding (7-9 points)",
+        "poor": "Incorrect join types or minimal understanding (0-6 points)"
+      }
+    },
+
+    "analysis_insights": {
+      "weight": 0.15,
+      "max_points": 15,
+      "description": "Quality of business analysis and insights from joined data",
+      "questions": {
+        "summary_findings": {
+          "points": 5,
+          "description": "Key findings from join operations",
+          "excellent": "Clear documentation of join efficiency, data relationships, and multi-table progression with specific metrics",
+          "good": "Good documentation with most key findings identified",
+          "adequate": "Basic documentation with limited depth",
+          "poor": "Generic or missing findings",
+          "minimum_words": 150
+        },
+        "data_quality_issues": {
+          "points": 5,
+          "description": "Identification and documentation of data quality problems",
+          "excellent": "Comprehensive identification of orphaned records, missing data, and referential integrity issues with specific counts",
+          "good": "Good identification of most data quality issues",
+          "adequate": "Basic identification with limited detail",
+          "poor": "Minimal or no data quality analysis",
+          "minimum_words": 150
+        },
+        "business_insights": {
+          "points": 5,
+          "description": "Strategic recommendations based on analysis",
+          "excellent": "Actionable insights about customers, products, regions, and suppliers with specific recommendations (3+ recommendations)",
+          "good": "Good insights with reasonable recommendations (2-3 recommendations)",
+          "adequate": "Basic insights with limited recommendations (1-2 recommendations)",
+          "poor": "Generic or missing recommendations",
+          "minimum_words": 200
+        }
+      },
+      "scoring_rules": {
+        "word_count_penalty": "Answers under minimum word count = 50% deduction for that question",
+        "no_answer": "Missing answer = 0 points for that question",
+        "template_text": "Unchanged template text = 0 points"
+      }
+    }
+  },
+
+  "grading_guidelines": {
+    "grade_ranges": {
+      "A": "90-100 points - Excellent mastery of joins, complete multi-table analysis, insightful business recommendations",
+      "B": "80-89 points - Good understanding of joins, most tasks complete, adequate analysis",
+      "C": "70-79 points - Basic competency with joins, some tasks incomplete, limited insights",
+      "D": "60-69 points - Minimal understanding, many incomplete tasks",
+      "F": "0-59 points - Insufficient work or understanding"
+    },
+    "common_issues": {
+      "wrong_join_type": "Using left_join when inner_join needed = major deduction",
+      "missing_by_parameter": "Not specifying join keys = syntax error",
+      "no_multi_table": "Not completing 4-step progression = lose all Part 3 points",
+      "no_filtering_joins": "Missing anti_join or semi_join = lose Part 4 points",
+      "blank_summary": "Unfilled summary section = 0 points for analysis component",
+      "syntax_errors": "Code that doesn't run = 0 points for that section"
+    },
+    "bonus_opportunities": {
+      "exceptional_analysis": "Comprehensive business insights beyond requirements = up to 5 bonus points",
+      "advanced_joins": "Use of complex join scenarios or self-joins = up to 3 bonus points",
+      "data_visualization": "Effective visualizations of join results = up to 2 bonus points"
+    }
+  },
+
+  "autograder_checks": {
+    "required_variables": [
+      "customers",
+      "orders",
+      "order_items",
+      "products",
+      "suppliers",
+      "customer_orders",
+      "customer_orders_left",
+      "customer_orders_right",
+      "customer_orders_full",
+      "orders_items",
+      "orders_customers_items",
+      "complete_order_data",
+      "complete_data",
+      "customers_no_orders",
+      "orphaned_orders",
+      "products_never_ordered",
+      "active_customers",
+      "customer_metrics",
+      "product_metrics",
+      "supplier_metrics",
+      "regional_analysis",
+      "top_customers",
+      "product_combinations",
+      "critical_suppliers",
+      "market_expansion"
+    ],
+    "required_functions": [
+      "inner_join",
+      "left_join",
+      "right_join",
+      "full_join",
+      "anti_join",
+      "semi_join",
+      "group_by",
+      "summarise",
+      "filter",
+      "arrange",
+      "quantile",
+      "n_distinct"
+    ],
+    "validation_checks": [
+      "All 5 datasets loaded",
+      "All 4 basic join types performed",
+      "4-step multi-table join completed",
+      "All 4 filtering joins performed",
+      "All 4 business analyses completed",
+      "Summary section filled out"
+    ]
+  },
+
+  "template_detection": {
+    "enabled": true,
+    "template_file": "data/raw/homework_lesson_6_joins.ipynb",
+    "detection_rules": {
+      "code_length_threshold": 1.5,
+      "description": "Student code must be at least 150% of template length",
+      "key_indicators": [
+        "inner_join(",
+        "left_join(",
+        "right_join(",
+        "full_join(",
+        "anti_join(",
+        "semi_join(",
+        "customer_orders <-",
+        "orders_items <-",
+        "customer_metrics <-",
+        "group_by(",
+        "summarise("
+      ],
+      "minimum_indicators": 10,
+      "penalty_if_template_only": "Score capped at 20% (20 points)"
+    }
+  },
+
+  "score_validation": {
+    "enabled": true,
+    "rules": {
+      "output_verification": {
+        "description": "CRITICAL: If code has visible output, section is COMPLETE",
+        "action": "Do NOT mark as incomplete if output is present",
+        "examples": [
+          "Code: inner_join(customers, orders) + Output showing joined data = COMPLETE",
+          "Code: anti_join(...) + Output showing unmatched records = COMPLETE",
+          "Code only, no output = INCOMPLETE"
+        ]
+      },
+      "minimum_completion": {
+        "threshold": 0.5,
+        "description": "Must complete at least 50% of sections for passing grade",
+        "action": "If < 50% complete, cap score at 50%"
+      },
+      "join_type_requirement": {
+        "minimum_join_types": 6,
+        "description": "Must use all 6 join types (inner, left, right, full, anti, semi)",
+        "action": "If < 6 join types, deduct 15% from join_operations score"
+      },
+      "multi_table_requirement": {
+        "minimum_steps": 4,
+        "description": "Must complete all 4 steps of multi-table join",
+        "action": "If < 4 steps, deduct 20% from join_operations score"
+      },
+      "output_requirement": {
+        "description": "Code without outputs counts as incomplete",
+        "action": "Sections without outputs = 0 points for that section"
+      }
+    }
+  },
+
+  "common_mistakes": {
+    "join_direction": {
+      "description": "Reversing left and right tables in join",
+      "example": "right_join(orders, customers) when should be left_join(customers, orders)",
+      "penalty": "10% deduction if results are incorrect"
+    },
+    "missing_by": {
+      "description": "Not specifying join key with by parameter",
+      "example": "inner_join(customers, orders) without by = 'CustomerID'",
+      "penalty": "May cause incorrect joins or errors"
+    },
+    "wrong_join_for_scenario": {
+      "description": "Using inner_join when left_join needed to keep all customers",
+      "example": "Part 2.2 requires left_join but student uses inner_join",
+      "penalty": "20% deduction for that section"
+    },
+    "incomplete_multi_table": {
+      "description": "Not completing all 4 steps of multi-table join progression",
+      "penalty": "Lose points for incomplete steps"
+    },
+    "no_filtering_joins": {
+      "description": "Not using anti_join or semi_join for data quality analysis",
+      "penalty": "Lose all Part 4 points (8 points)"
+    },
+    "no_grouping": {
+      "description": "Not using group_by for business analysis",
+      "penalty": "Lose points for incomplete analysis sections"
+    }
+  },
+
+  "grading_instructions": {
+    "step_0": "CRITICAL: If you see OUTPUT after code, the section IS COMPLETE. Do NOT hallucinate missing sections!",
+    "step_1": "Check if tidyverse is loaded and all 5 CSV files are imported",
+    "step_2": "Verify all 4 basic join types are performed (inner, left, right, full) with correct variable names",
+    "step_3": "Check 4-step multi-table join progression is complete",
+    "step_4": "Verify all 4 filtering joins (anti_join and semi_join) are performed",
+    "step_5": "Check all 4 business analysis sections with group_by and summarise",
+    "step_6": "Verify complex business questions are answered",
+    "step_7": "Evaluate summary section for completeness and insights",
+    "step_8": "Calculate final score: (technical × 0.25) + (joins × 0.45) + (understanding × 0.15) + (insights × 0.15)",
+    "step_9": "Apply any penalties or caps based on validation rules",
+    "step_10": "DOUBLE-CHECK: Review your incomplete list - if output is visible, remove from incomplete!"
+  },
+
+  "example_scores": {
+    "excellent_work": {
+      "description": "All 6 parts complete with outputs, all join types used correctly, comprehensive analysis, insightful summary",
+      "expected_score": "90-100 points",
+      "breakdown": "Joins: 40-45/45, Technical: 22-25/25, Understanding: 13-15/15, Insights: 13-15/15"
+    },
+    "good_work": {
+      "description": "All 6 parts complete, all join types used, good analysis, adequate summary",
+      "expected_score": "80-89 points",
+      "breakdown": "Joins: 36-39/45, Technical: 19-21/25, Understanding: 10-12/15, Insights: 10-12/15"
+    },
+    "adequate_work": {
+      "description": "5 parts complete, most join types used, basic analysis, limited summary",
+      "expected_score": "70-79 points",
+      "breakdown": "Joins: 31-35/45, Technical: 16-18/25, Understanding: 7-9/15, Insights: 7-9/15"
+    },
+    "poor_work": {
+      "description": "3-4 parts complete, some join types missing, minimal analysis, incomplete summary",
+      "expected_score": "50-69 points",
+      "breakdown": "Joins: 22-30/45, Technical: 12-15/25, Understanding: 4-6/15, Insights: 4-6/15"
+    },
+    "template_only": {
+      "description": "Minimal additions to template, no outputs, no joins performed",
+      "expected_score": "0-20 points",
+      "breakdown": "Score capped at 20% due to template-only submission"
+    }
+  },
+
+  "key_learning_objectives": {
+    "join_mastery": "Understand and correctly apply all 6 join types",
+    "multi_table_integration": "Build complex datasets through sequential joins",
+    "data_quality": "Use filtering joins to identify data quality issues",
+    "business_analysis": "Apply joins to answer real business questions",
+    "relationship_understanding": "Recognize one-to-many and many-to-many relationships"
+  },
+
+  "critical_concepts": {
+    "join_types": {
+      "inner_join": "Returns only matching records from both tables",
+      "left_join": "Returns all records from left table, matching from right",
+      "right_join": "Returns all records from right table, matching from left",
+      "full_join": "Returns all records from both tables",
+      "anti_join": "Returns records from left table NOT in right table",
+      "semi_join": "Returns records from left table that ARE in right table"
+    },
+    "when_to_use": {
+      "inner_join": "When you need complete data from both tables",
+      "left_join": "When you want to keep all records from primary table",
+      "right_join": "When you want to keep all records from secondary table",
+      "full_join": "When you need complete picture from both tables",
+      "anti_join": "To find unmatched records (data quality checks)",
+      "semi_join": "To filter one table based on matches in another"
+    }
+  }
+}

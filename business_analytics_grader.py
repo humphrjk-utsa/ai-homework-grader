@@ -189,7 +189,7 @@ class BusinessAnalyticsGrader:
             print(f"📏 Notebook size: {notebook_size_kb:.1f} KB ({notebook_size_mb:.2f} MB)")
             
             # Skip extremely large notebooks that will timeout
-            if notebook_size_kb > 400:  # More than 400KB (Alejandro's is 440KB)
+            if notebook_size_kb > 600:  # More than 600KB (increased from 400KB for better coverage)
                 print(f"⚠️ SKIPPING: Notebook too large ({notebook_size_kb:.1f} KB)")
                 print(f"   This notebook exceeds processing limits and requires manual review.")
                 raise RuntimeError(f"Notebook too large ({notebook_size_kb:.1f} KB) - requires manual review")

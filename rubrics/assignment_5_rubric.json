@@ -1,0 +1,286 @@
+{
+  "assignment_info": {
+    "name": "a5v1",
+    "title": "Assignment 5 - Data Reshaping with tidyr",
+    "description": "Data reshaping using pivot_longer() and pivot_wider() with comprehensive validation",
+    "total_points": 100
+  },
+  "rubric_elements": {
+    "technical_execution": {
+      "weight": 0.25,
+      "max_points": 25,
+      "description": "Code quality, syntax, execution, and proper use of tidyr functions",
+      "criteria": [
+        "All code cells executed with visible outputs",
+        "Proper use of pipe operator (%>%) throughout",
+        "Correct syntax for pivot_longer() and pivot_wider()",
+        "No errors or warnings that affect results",
+        "Data files imported successfully with correct paths",
+        "All required variables created (quarterly_sales_long, quarterly_sales_parsed, employee_skills_long, survey_responses_wide, sales_by_region_wide, skills_matrix)"
+      ],
+      "deductions": {
+        "no_outputs": "Code without outputs = 0 points for that section",
+        "no_pipes": "Not using %>% operator = 20% deduction",
+        "syntax_errors": "Each syntax error = 15% deduction",
+        "template_only": "Only template code with blanks = 0 points",
+        "missing_variables": "Each missing required variable = 10% deduction"
+      }
+    },
+
+    "data_reshaping": {
+      "weight": 0.40,
+      "max_points": 40,
+      "description": "Correct implementation of data reshaping operations - MOST IMPORTANT",
+      "required_sections": {
+        "part1_import": {
+          "points": 3,
+          "description": "Data import and initial exploration",
+          "verification": [
+            "read.csv",
+            "quarterly_sales_wide",
+            "survey_responses_long",
+            "employee_skills_wide",
+            "str()",
+            "head()"
+          ]
+        },
+        "part2_wide_to_long": {
+          "points": 12,
+          "description": "Converting wide to long format (3 tasks)",
+          "subtasks": {
+            "task_2_1_basic": {
+              "points": 4,
+              "description": "Basic pivot_longer for quarterly sales",
+              "verification": [
+                "pivot_longer(",
+                "cols = starts_with",
+                "names_to = \"Quarter\"",
+                "values_to = \"Sales_Amount\"",
+                "quarterly_sales_long <-"
+              ]
+            },
+            "task_2_2_parsing": {
+              "points": 4,
+              "description": "Name parsing with names_sep",
+              "verification": [
+                "pivot_longer(",
+                "names_to = c(",
+                "names_sep",
+                "quarterly_sales_parsed <-"
+              ]
+            },
+            "task_2_3_skills": {
+              "points": 4,
+              "description": "Employee skills wide to long",
+              "verification": [
+                "pivot_longer(",
+                "employee_skills_long <-",
+                "Proficiency_Level"
+              ]
+            }
+          }
+        },
+        "part3_long_to_wide": {
+          "points": 12,
+          "description": "Converting long to wide format (3 tasks)",
+          "subtasks": {
+            "task_3_1_survey": {
+              "points": 4,
+              "description": "Survey responses long to wide",
+              "verification": [
+                "pivot_wider(",
+                "names_from",
+                "values_from",
+                "survey_responses_wide <-"
+              ]
+            },
+            "task_3_2_regional": {
+              "points": 4,
+              "description": "Regional sales comparison matrix",
+              "verification": [
+                "pivot_wider(",
+                "sales_by_region_wide <-"
+              ]
+            },
+            "task_3_3_skills_matrix": {
+              "points": 4,
+              "description": "Skills matrix creation",
+              "verification": [
+                "pivot_wider(",
+                "skills_matrix <-"
+              ]
+            }
+          }
+        },
+        "part4_complex": {
+          "points": 5,
+          "description": "Complex reshaping scenarios",
+          "verification": [
+            "multiple value columns",
+            "missing value handling",
+            "values_fill"
+          ]
+        },
+        "part5_business": {
+          "points": 5,
+          "description": "Business applications and analysis",
+          "verification": [
+            "group_by",
+            "summarise",
+            "growth rates",
+            "correlation"
+          ]
+        },
+        "part6_validation": {
+          "points": 3,
+          "description": "Data validation and quality checks",
+          "verification": [
+            "validation",
+            "data preservation",
+            "record count"
+          ]
+        }
+      },
+      "scoring_rules": {
+        "section_complete": "Working code + visible output + correct result = full points",
+        "section_partial": "Code without output or incorrect result = 50% of section points",
+        "section_incomplete": "No code or template only = 0 points",
+        "calculation": "(completed_points / total_section_points) × max_points"
+      }
+    },
+
+    "data_validation": {
+      "weight": 0.15,
+      "max_points": 15,
+      "description": "Proper validation of data transformations",
+      "criteria": [
+        "Validates data preservation after transformations",
+        "Checks record counts match expectations",
+        "Verifies no unexpected missing values",
+        "Confirms data types are correct",
+        "Tests business logic consistency"
+      ],
+      "scoring": {
+        "excellent": "All validation checks present and working (13-15 points)",
+        "good": "Most validation checks present (10-12 points)",
+        "adequate": "Some validation checks present (7-9 points)",
+        "poor": "Minimal or no validation (0-6 points)"
+      }
+    },
+
+    "reflection_questions": {
+      "weight": 0.20,
+      "max_points": 20,
+      "description": "Critical thinking about data reshaping concepts and applications",
+      "questions": {
+        "question_1_format_selection": {
+          "points": 4,
+          "description": "Understanding of format selection for business scenarios",
+          "excellent": "Demonstrates clear understanding of when/why to use formats, provides specific reasoning, explains business impact (any reasonable scenario)",
+          "good": "Shows understanding with reasonable scenario and some reasoning",
+          "adequate": "Basic understanding but limited depth or reasoning",
+          "poor": "Generic answer without demonstrating understanding",
+          "minimum_words": 150,
+          "grading_note": "Accept any reasonable business scenario - grade on understanding and reasoning, not specific content"
+        },
+        "question_2_validation": {
+          "points": 4,
+          "description": "Understanding importance of data validation",
+          "excellent": "Clear explanation of why validation matters, discusses consequences, provides relevant example (any reasonable example)",
+          "good": "Good explanation with example showing understanding",
+          "adequate": "Basic understanding but limited depth",
+          "poor": "Generic answer without showing why validation matters",
+          "minimum_words": 150,
+          "grading_note": "Accept any reasonable validation scenario - focus on understanding of importance"
+        },
+        "question_3_efficiency": {
+          "points": 4,
+          "description": "Reflection on learning and efficiency improvements",
+          "excellent": "Thoughtful reflection on learning evolution, discusses efficiency gains with reasoning (any reasonable estimates)",
+          "good": "Good reflection showing growth and understanding",
+          "adequate": "Basic reflection with limited depth",
+          "poor": "Shallow reflection without demonstrating learning",
+          "minimum_words": 150,
+          "grading_note": "Accept any reasonable time estimates - focus on quality of reflection and learning demonstrated"
+        },
+        "question_4_stakeholders": {
+          "points": 4,
+          "description": "Understanding of audience-appropriate communication",
+          "excellent": "Clear understanding of different audience needs, explains format choices with reasoning (any reasonable audiences)",
+          "good": "Good understanding with reasonable differentiation",
+          "adequate": "Basic understanding of different needs",
+          "poor": "Generic answer without showing understanding of adaptation",
+          "minimum_words": 150,
+          "grading_note": "Accept any reasonable stakeholder examples - grade on understanding of adaptation"
+        },
+        "question_5_future": {
+          "points": 4,
+          "description": "Ability to transfer learning to new situations",
+          "excellent": "Three well-developed scenarios showing clear understanding of how to apply concepts (any reasonable scenarios)",
+          "good": "Three scenarios with good understanding demonstrated",
+          "adequate": "Three scenarios with limited depth or understanding",
+          "poor": "Incomplete scenarios or no clear understanding shown",
+          "minimum_words": 200,
+          "grading_note": "Accept any reasonable future scenarios - focus on ability to apply concepts, not specific industries"
+        }
+      },
+      "scoring_rules": {
+        "word_count_penalty": "Answers under minimum word count = 50% deduction for that question",
+        "no_answer": "Missing answer = 0 points for that question",
+        "template_text": "Unchanged template text = 0 points"
+      }
+    }
+  },
+
+  "grading_guidelines": {
+    "grade_ranges": {
+      "A": "90-100 points - Excellent mastery of reshaping, complete validation, thoughtful reflection",
+      "B": "80-89 points - Good understanding, most tasks complete, adequate reflection",
+      "C": "70-79 points - Basic competency, some tasks incomplete, limited reflection",
+      "D": "60-69 points - Minimal understanding, many incomplete tasks",
+      "F": "0-59 points - Insufficient work or understanding"
+    },
+    "common_issues": {
+      "file_paths": "Incorrect file paths preventing data import = major deduction",
+      "hardcoded_columns": "Hardcoded column names that don't match data = deduction",
+      "no_validation": "Missing validation checks = lose all validation points",
+      "blank_reflections": "Unfilled reflection questions = 0 points for reflection component",
+      "syntax_errors": "Code that doesn't run = 0 points for that section"
+    },
+    "bonus_opportunities": {
+      "exceptional_validation": "Comprehensive validation beyond requirements = up to 5 bonus points",
+      "advanced_techniques": "Use of advanced tidyr features not covered = up to 3 bonus points",
+      "exceptional_insights": "Exceptional business insights in reflection = up to 2 bonus points"
+    }
+  },
+
+  "autograder_checks": {
+    "required_variables": [
+      "quarterly_sales_wide",
+      "survey_responses_long",
+      "employee_skills_wide",
+      "quarterly_sales_long",
+      "quarterly_sales_parsed",
+      "employee_skills_long",
+      "survey_responses_wide",
+      "sales_by_region_wide",
+      "skills_matrix"
+    ],
+    "required_functions": [
+      "pivot_longer",
+      "pivot_wider",
+      "starts_with",
+      "names_to",
+      "values_to",
+      "names_from",
+      "values_from",
+      "names_sep"
+    ],
+    "validation_checks": [
+      "Data totals preserved",
+      "Record counts correct",
+      "No unexpected NAs",
+      "Correct data types"
+    ]
+  }
+}
