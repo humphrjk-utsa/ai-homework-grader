@@ -51,6 +51,7 @@ def get_mac_stats(user: str, ip: str, name: str) -> dict:
             'mem_percent': 0.0,
             'gpu_active_percent': 0.0,
             'power_watts': 0.0,
+            'thermal_pressure': 'Unknown',
             'active_users': 0,
             'server_status': '❌',
             'tokens_per_sec': 0.0,
@@ -93,19 +94,47 @@ def get_mac_stats(user: str, ip: str, name: str) -> dict:
         # Get GPU and Power stats using powermetrics (single call for efficiency)
         # Skip for now if causing timeouts - can be enabled later
         try:
-            power_cmd = f"""ssh {user}@{ip} "sudo powermetrics -i 200 -n 1 --samplers gpu_power,cpu_power 2>/dev/null | grep -E 'GPU Power|CPU Power|Combined Power|GPU HW active frequency|GPU Active residency'" """
+            power_cmd = f"""ssh {user}@{ip} "sudo powermetrics -i 200 -n 1 --samplers gpu_power,cpu_power,thermal 2>/dev/null | grep -E 'GPU Power|CPU Power|Combined Power|GPU HW active frequency|GPU HW active residency|GPU idle residency|pressure level'" """
             power_result = subprocess.run(power_cmd, shell=True, capture_output=True, text=True, timeout=10)
             
             if power_result.returncode == 0 and power_result.stdout:
+                print(f"🔍 DEBUG {name} powermetrics output:")
+                print(power_result.stdout)
+                print("---")
+                
                 for line in power_result.stdout.split('\n'):
-                    # Parse GPU active residency
-                    if 'GPU Active residency' in line:
+                    # Parse GPU HW active residency (the actual field name)
+                    if 'GPU HW active residency' in line:
                         parts = line.split(':')
                         if len(parts) > 1:
                             try:
-                                stats['gpu_active_percent'] = float(parts[1].strip().rstrip('%'))
-                            except:
+                                # Extract just the percentage (first value after colon)
+                                gpu_val = parts[1].strip().split('%')[0].strip()
+                                stats['gpu_active_percent'] = float(gpu_val)
+                                print(f"✅ Parsed GPU: {gpu_val}% -> {stats['gpu_active_percent']}")
+                            except Exception as e:
+                                print(f"❌ Failed to parse GPU from: {line} - {e}")
                                 pass
+                    
+                    # Also try GPU idle residency as fallback (100 - idle = active)
+                    elif 'GPU idle residency' in line and stats['gpu_active_percent'] == 0.0:
+                        parts = line.split(':')
+                        if len(parts) > 1:
+                            try:
+                                idle_val = float(parts[1].strip().rstrip('%'))
+                                stats['gpu_active_percent'] = 100.0 - idle_val
+                                print(f"✅ Calculated GPU from idle: {idle_val}% idle -> {stats['gpu_active_percent']}% active")
+                            except Exception as e:
+                                print(f"❌ Failed to parse GPU idle from: {line} - {e}")
+                                pass
+                    
+                    # Parse thermal pressure level
+                    elif 'pressure level' in line.lower():
+                        parts = line.split(':')
+                        if len(parts) > 1:
+                            pressure = parts[1].strip()
+                            stats['thermal_pressure'] = pressure
+                            print(f"✅ Thermal pressure: {pressure}")
                     
                     # Parse CPU Power (in mW)
                     elif 'CPU Power:' in line and 'mW' in line:
@@ -129,9 +158,15 @@ def get_mac_stats(user: str, ip: str, name: str) -> dict:
                                 stats['power_watts'] = combined_watts
                             except:
                                 pass
+            else:
+                print(f"⚠️ Powermetrics returned no output for {name} (returncode: {power_result.returncode})")
+                if power_result.stderr:
+                    print(f"   stderr: {power_result.stderr}")
         except Exception as e:
             # Powermetrics can be slow, don't let it break the whole function
             print(f"⚠️ Powermetrics failed for {name}: {e}")
+            import traceback
+            traceback.print_exc()
             pass
         
         # Get active users count
@@ -149,10 +184,16 @@ def get_mac_stats(user: str, ip: str, name: str) -> dict:
             response = requests.get(f"http://{ip}:{port}/health", timeout=3)
             if response.status_code == 200:
                 stats['server_status'] = '✅'
-                data = response.json()
-                stats['tokens_per_sec'] = data.get('tokens_per_second', 0)
-                stats['active_requests'] = data.get('active_requests', 0)
-        except:
+                try:
+                    data = response.json()
+                    stats['tokens_per_sec'] = data.get('tokens_per_second', data.get('throughput', 0))
+                    stats['active_requests'] = data.get('active_requests', data.get('requests', 0))
+                    print(f"✅ {name} health: {data}")
+                except:
+                    # Health endpoint returned 200 but not JSON
+                    pass
+        except Exception as e:
+            print(f"⚠️ Health check failed for {name}: {e}")
             pass
         
         return stats
@@ -328,6 +369,9 @@ def main():
         
         refresh_rate = st.slider("Refresh Rate (seconds)", 1, 10, 3)
         
+        # Disable auto-refresh option
+        auto_refresh = st.checkbox("Auto-refresh", value=True)
+        
         st.markdown("---")
         
         if st.button("🔄 Manual Refresh"):
@@ -378,7 +422,7 @@ def main():
         st.markdown(f"### {mac1_stats['server_status']} Mac Studio 1 (GPT-OSS)")
         st.caption(f"IP: {mac1_stats['ip']} | Active Users: {mac1_stats['active_users']}")
         
-        metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+        metric_col1, metric_col2, metric_col3, metric_col4, metric_col5 = st.columns(5)
         with metric_col1:
             st.metric("CPU User", f"{mac1_stats['cpu_user']:.1f}%")
         with metric_col2:
@@ -387,6 +431,10 @@ def main():
             st.metric("GPU", f"{mac1_stats['gpu_active_percent']:.1f}%")
         with metric_col4:
             st.metric("Power", f"{mac1_stats['power_watts']:.1f}W")
+        with metric_col5:
+            # Thermal pressure with emoji indicator
+            thermal_emoji = "🟢" if mac1_stats['thermal_pressure'] == "Nominal" else "🟡" if mac1_stats['thermal_pressure'] == "Moderate" else "🔴"
+            st.metric("Thermal", f"{thermal_emoji} {mac1_stats['thermal_pressure']}")
         
         # Charts in tabs
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["CPU", "Memory", "GPU", "Power", "Throughput"])
@@ -407,7 +455,7 @@ def main():
         st.markdown(f"### {mac2_stats['server_status']} Mac Studio 2 (Qwen)")
         st.caption(f"IP: {mac2_stats['ip']} | Active Users: {mac2_stats['active_users']}")
         
-        metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+        metric_col1, metric_col2, metric_col3, metric_col4, metric_col5 = st.columns(5)
         with metric_col1:
             st.metric("CPU User", f"{mac2_stats['cpu_user']:.1f}%")
         with metric_col2:
@@ -416,6 +464,10 @@ def main():
             st.metric("GPU", f"{mac2_stats['gpu_active_percent']:.1f}%")
         with metric_col4:
             st.metric("Power", f"{mac2_stats['power_watts']:.1f}W")
+        with metric_col5:
+            # Thermal pressure with emoji indicator
+            thermal_emoji = "🟢" if mac2_stats['thermal_pressure'] == "Nominal" else "🟡" if mac2_stats['thermal_pressure'] == "Moderate" else "🔴"
+            st.metric("Thermal", f"{thermal_emoji} {mac2_stats['thermal_pressure']}")
         
         # Charts in tabs
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["CPU", "Memory", "GPU", "Power", "Throughput"])
@@ -458,9 +510,10 @@ def main():
         total_requests = mac1_stats['active_requests'] + mac2_stats['active_requests']
         st.metric("Active Requests", total_requests)
     
-    # Auto-refresh
-    time.sleep(refresh_rate)
-    st.rerun()
+    # Auto-refresh only if enabled
+    if auto_refresh:
+        time.sleep(refresh_rate)
+        st.rerun()
 
 if __name__ == '__main__':
     main()

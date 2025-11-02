@@ -5,10 +5,19 @@
     "description": "Data integration using dplyr join functions (inner_join, left_join, right_join, full_join, anti_join, semi_join) for comprehensive business analysis",
     "total_points": 100
   },
+  "strict_scoring_enabled": true,
+  "strict_scoring_rules": {
+    "no_output_no_points": true,
+    "template_only_max_percent": 10,
+    "missing_section_zero": true,
+    "wrong_output_max_credit": 25,
+    "completion_based_maximum": true,
+    "differentiation_required": true
+  },
   "rubric_elements": {
     "technical_execution": {
-      "weight": 0.25,
-      "max_points": 25,
+      "weight": 0.40,
+      "max_points": 40,
       "description": "Code quality, syntax, execution, and proper use of dplyr join functions",
       "criteria": [
         "All code cells executed with visible outputs",
@@ -19,19 +28,40 @@
         "All required variables created with exact names for autograding",
         "Proper use of by parameter to specify join keys"
       ],
+      "execution_requirements": {
+        "cells_must_be_run": true,
+        "description": "ALL code cells must be executed and show outputs",
+        "penalty": "Each unexecuted cell = 2 points deduction",
+        "calculation": "Count cells without outputs, deduct 2 points each",
+        "note": "Students must run ALL cells before submission"
+      },
+      "creative_coding": {
+        "allowed": true,
+        "description": "Students may use alternative approaches if they achieve correct results",
+        "examples": [
+          "Different variable names (as long as final required variables exist)",
+          "Additional intermediate steps",
+          "Alternative pipe chains",
+          "Extra analysis beyond requirements"
+        ],
+        "grading_focus": "Grade on RESULTS and OUTPUTS, not exact code matching",
+        "key_principle": "If output is correct, code approach is acceptable"
+      },
       "deductions": {
         "no_outputs": "Code without outputs = 0 points for that section",
+        "unexecuted_cells": "Each cell without output = 2 points deduction",
         "no_pipes": "Not using %>% operator = 20% deduction",
         "syntax_errors": "Each syntax error = 15% deduction",
         "template_only": "Only template code with blanks = 0 points",
         "missing_variables": "Each missing required variable = 10% deduction",
-        "wrong_join_type": "Using incorrect join type = 20% deduction per instance"
+        "wrong_join_type": "Using incorrect join type = 20% deduction per instance",
+        "incorrect_output": "Output exists but is wrong = 50% credit for that section"
       }
     },
 
     "join_operations": {
-      "weight": 0.45,
-      "max_points": 45,
+      "weight": 0.40,
+      "max_points": 40,
       "description": "Correct implementation of join operations - MOST IMPORTANT",
       "required_sections": {
         "part1_import": {
@@ -284,8 +314,8 @@
     },
 
     "data_understanding": {
-      "weight": 0.15,
-      "max_points": 15,
+      "weight": 0.10,
+      "max_points": 10,
       "description": "Understanding of join types and data relationships",
       "criteria": [
         "Correct join type selection for each business scenario",
@@ -304,8 +334,8 @@
     },
 
     "analysis_insights": {
-      "weight": 0.15,
-      "max_points": 15,
+      "weight": 0.10,
+      "max_points": 10,
       "description": "Quality of business analysis and insights from joined data",
       "questions": {
         "summary_findings": {
@@ -574,5 +604,92 @@
       "anti_join": "To find unmatched records (data quality checks)",
       "semi_join": "To filter one table based on matches in another"
     }
+  },
+
+  "output_validation": {
+    "description": "Focus on OUTPUT correctness, not code style",
+    "principle": "Results matter more than exact code matching",
+    "validation_rules": {
+      "required_outputs": {
+        "description": "Each section must have visible output",
+        "check": "Look for output cells after code cells",
+        "penalty": "No output = 0 points for that section"
+      },
+      "output_correctness": {
+        "description": "Output must show correct results",
+        "examples": [
+          "customer_orders should have correct number of rows",
+          "join results should show proper column combinations",
+          "summary statistics should be calculated correctly",
+          "group_by results should show proper aggregations"
+        ],
+        "grading": "Compare output values to expected results, not code syntax"
+      },
+      "creative_solutions": {
+        "description": "Accept alternative approaches if output is correct",
+        "examples": [
+          "Student uses different intermediate variable names",
+          "Student adds extra analysis steps",
+          "Student uses alternative pipe chains",
+          "Student creates helper functions"
+        ],
+        "key_rule": "If final required variables exist with correct values, full credit"
+      }
+    }
+  },
+
+  "ai_grading_instructions": {
+    "primary_focus": "OUTPUT VALIDATION - Check if results are correct",
+    "secondary_focus": "CODE EXECUTION - Verify all cells were run",
+    "tertiary_focus": "CODE QUALITY - Assess approach and style",
+    
+    "step_by_step_grading": {
+      "step_1": "Count total code cells and cells with outputs",
+      "step_2": "Calculate execution penalty: (unexecuted_cells × 2 points)",
+      "step_3": "For each section, check if REQUIRED VARIABLES exist",
+      "step_4": "For each variable, validate OUTPUT shows correct results",
+      "step_5": "Award points based on OUTPUT correctness, not code style",
+      "step_6": "Accept creative solutions if outputs are correct",
+      "step_7": "Deduct only for wrong outputs or missing execution"
+    },
+    
+    "common_scenarios": {
+      "scenario_1": {
+        "situation": "Student uses different variable names but creates required ones at end",
+        "grading": "Full credit if final required variables are correct"
+      },
+      "scenario_2": {
+        "situation": "Student adds extra analysis beyond requirements",
+        "grading": "Full credit + bonus points for initiative"
+      },
+      "scenario_3": {
+        "situation": "Student uses alternative join approach but gets same result",
+        "grading": "Full credit if output matches expected result"
+      },
+      "scenario_4": {
+        "situation": "Code cells exist but not executed (no outputs)",
+        "grading": "Deduct 2 points per unexecuted cell, 0 points for that section"
+      },
+      "scenario_5": {
+        "situation": "Output exists but shows wrong number of rows/columns",
+        "grading": "50% credit for attempt, explain what's wrong"
+      }
+    },
+    
+    "critical_reminders": {
+      "reminder_1": "DO NOT penalize for creative coding approaches",
+      "reminder_2": "DO penalize for unexecuted cells (no outputs)",
+      "reminder_3": "DO validate output correctness, not code style",
+      "reminder_4": "DO accept alternative solutions if results are correct",
+      "reminder_5": "DO explain what's wrong if output is incorrect"
+    }
+  },
+
+  "assignment_prompt_additions": {
+    "execution_reminder": "⚠️ IMPORTANT: You MUST run ALL code cells before submission. Cells without outputs will lose points!",
+    "creative_coding_allowed": "✅ You may use your own approach as long as you create the required variables with correct results.",
+    "output_focus": "📊 Your outputs will be graded for correctness. Make sure your results match the expected values.",
+    "required_variables_list": "🎯 Required variables that MUST exist: customers, orders, order_items, products, suppliers, customer_orders, customer_orders_left, customer_orders_right, customer_orders_full, orders_items, orders_customers_items, complete_order_data, complete_data, customers_no_orders, orphaned_orders, products_never_ordered, active_customers, customer_metrics, product_metrics, supplier_metrics, regional_analysis, top_customers, product_combinations, critical_suppliers, market_expansion",
+    "testing_your_work": "✅ Test your work: After each section, check that your output makes sense and matches the expected row counts."
   }
 }

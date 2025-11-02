@@ -1,0 +1,709 @@
+{
+  "final_score": 95.0,
+  "max_score": 100,
+  "percentage": 95.0,
+  "grade": "A",
+  "components": {
+    "technical_execution": {
+      "score": 36,
+      "max": 40,
+      "details": {
+        "total_cells": 37,
+        "cells_with_output": 35,
+        "cells_without_output": 2,
+        "execution_rate": 0.9459459459459459,
+        "unexecuted_cells": [
+          {
+            "cell_num": 30,
+            "preview": "<VSCode.Cell id=\"#VSC-f7364f43\" language=\"markdown\"> ## Part 5: Business Analysi"
+          },
+          {
+            "cell_num": 48,
+            "preview": "# Optional: Save your analysis results (not required for autograding) # Your cod"
+          }
+        ]
+      }
+    },
+    "join_operations": {
+      "score": 40.0,
+      "max": 40,
+      "details": {
+        "part1_import": {
+          "name": "Part 1: Data Import",
+          "status": "complete",
+          "points_possible": 5,
+          "points_earned": 5,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "customers",
+            "orders",
+            "order_items",
+            "products",
+            "suppliers"
+          ],
+          "functions": [
+            "read_csv",
+            "nrow",
+            "ncol",
+            "head"
+          ]
+        },
+        "part2_1_inner": {
+          "name": "Part 2.1: Inner Join",
+          "status": "complete",
+          "points_possible": 3,
+          "points_earned": 3,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "customer_orders"
+          ],
+          "functions": [
+            "inner_join"
+          ]
+        },
+        "part2_2_left": {
+          "name": "Part 2.2: Left Join",
+          "status": "complete",
+          "points_possible": 3,
+          "points_earned": 3,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "customer_orders_left"
+          ],
+          "functions": [
+            "left_join"
+          ]
+        },
+        "part2_3_right": {
+          "name": "Part 2.3: Right Join",
+          "status": "complete",
+          "points_possible": 3,
+          "points_earned": 3,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "customer_orders_right"
+          ],
+          "functions": [
+            "right_join"
+          ]
+        },
+        "part2_4_full": {
+          "name": "Part 2.4: Full Join",
+          "status": "complete",
+          "points_possible": 3,
+          "points_earned": 3,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "customer_orders_full"
+          ],
+          "functions": [
+            "full_join"
+          ]
+        },
+        "part3_1_orders_items": {
+          "name": "Part 3.1: Orders + Items",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "orders_items"
+          ],
+          "functions": [
+            "inner_join"
+          ]
+        },
+        "part3_2_add_customers": {
+          "name": "Part 3.2: Add Customers",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "orders_customers_items"
+          ],
+          "functions": [
+            "inner_join"
+          ]
+        },
+        "part3_3_add_products": {
+          "name": "Part 3.3: Add Products",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "complete_order_data"
+          ],
+          "functions": [
+            "inner_join"
+          ]
+        },
+        "part3_4_add_suppliers": {
+          "name": "Part 3.4: Add Suppliers",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "complete_data"
+          ],
+          "functions": [
+            "inner_join"
+          ]
+        },
+        "part4_1_customers_no_orders": {
+          "name": "Part 4.1: Customers No Orders",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "customers_no_orders"
+          ],
+          "functions": [
+            "anti_join"
+          ]
+        },
+        "part4_2_orphaned_orders": {
+          "name": "Part 4.2: Orphaned Orders",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "orphaned_orders"
+          ],
+          "functions": [
+            "anti_join"
+          ]
+        },
+        "part4_3_products_never_ordered": {
+          "name": "Part 4.3: Products Never Ordered",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "products_never_ordered"
+          ],
+          "functions": [
+            "anti_join"
+          ]
+        },
+        "part4_4_active_customers": {
+          "name": "Part 4.4: Active Customers",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "active_customers"
+          ],
+          "functions": [
+            "semi_join"
+          ]
+        },
+        "part5_1_customer_metrics": {
+          "name": "Part 5.1: Customer Metrics",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "customer_metrics"
+          ],
+          "functions": [
+            "group_by",
+            "summarise"
+          ]
+        },
+        "part5_2_product_metrics": {
+          "name": "Part 5.2: Product Metrics",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "product_metrics"
+          ],
+          "functions": [
+            "group_by",
+            "summarise"
+          ]
+        },
+        "part5_3_supplier_metrics": {
+          "name": "Part 5.3: Supplier Metrics",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "supplier_metrics"
+          ],
+          "functions": [
+            "group_by",
+            "summarise"
+          ]
+        },
+        "part5_4_regional_analysis": {
+          "name": "Part 5.4: Regional Analysis",
+          "status": "complete",
+          "points_possible": 2,
+          "points_earned": 2,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "regional_analysis"
+          ],
+          "functions": [
+            "group_by",
+            "summarise"
+          ]
+        },
+        "part6_1_top_customers": {
+          "name": "Part 6.1: Top Customers",
+          "status": "complete",
+          "points_possible": 1,
+          "points_earned": 1,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "top_customers"
+          ],
+          "functions": [
+            "quantile",
+            "filter"
+          ]
+        },
+        "part6_2_product_combinations": {
+          "name": "Part 6.2: Product Combinations",
+          "status": "complete",
+          "points_possible": 1,
+          "points_earned": 1,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "product_combinations"
+          ],
+          "functions": [
+            "inner_join",
+            "filter"
+          ]
+        },
+        "part6_3_critical_suppliers": {
+          "name": "Part 6.3: Critical Suppliers",
+          "status": "complete",
+          "points_possible": 1,
+          "points_earned": 1,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "critical_suppliers"
+          ],
+          "functions": [
+            "arrange"
+          ]
+        },
+        "part6_4_market_expansion": {
+          "name": "Part 6.4: Market Expansion",
+          "status": "complete",
+          "points_possible": 1,
+          "points_earned": 1,
+          "vars_found": true,
+          "funcs_found": true,
+          "variables": [
+            "market_expansion"
+          ],
+          "functions": [
+            "filter",
+            "arrange"
+          ]
+        }
+      }
+    },
+    "data_understanding": {
+      "score": 9,
+      "max": 10
+    },
+    "analysis_insights": {
+      "score": 10,
+      "max": 10
+    }
+  },
+  "variable_check": {
+    "total_required": 25,
+    "found": 25,
+    "missing": [],
+    "all_found": true,
+    "details": {
+      "customers": true,
+      "orders": true,
+      "order_items": true,
+      "products": true,
+      "suppliers": true,
+      "customer_orders": true,
+      "customer_orders_left": true,
+      "customer_orders_right": true,
+      "customer_orders_full": true,
+      "orders_items": true,
+      "orders_customers_items": true,
+      "complete_order_data": true,
+      "complete_data": true,
+      "customers_no_orders": true,
+      "orphaned_orders": true,
+      "products_never_ordered": true,
+      "active_customers": true,
+      "customer_metrics": true,
+      "product_metrics": true,
+      "supplier_metrics": true,
+      "regional_analysis": true,
+      "top_customers": true,
+      "product_combinations": true,
+      "critical_suppliers": true,
+      "market_expansion": true
+    }
+  },
+  "section_breakdown": {
+    "part1_import": {
+      "name": "Part 1: Data Import",
+      "status": "complete",
+      "points_possible": 5,
+      "points_earned": 5,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "customers",
+        "orders",
+        "order_items",
+        "products",
+        "suppliers"
+      ],
+      "functions": [
+        "read_csv",
+        "nrow",
+        "ncol",
+        "head"
+      ]
+    },
+    "part2_1_inner": {
+      "name": "Part 2.1: Inner Join",
+      "status": "complete",
+      "points_possible": 3,
+      "points_earned": 3,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "customer_orders"
+      ],
+      "functions": [
+        "inner_join"
+      ]
+    },
+    "part2_2_left": {
+      "name": "Part 2.2: Left Join",
+      "status": "complete",
+      "points_possible": 3,
+      "points_earned": 3,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "customer_orders_left"
+      ],
+      "functions": [
+        "left_join"
+      ]
+    },
+    "part2_3_right": {
+      "name": "Part 2.3: Right Join",
+      "status": "complete",
+      "points_possible": 3,
+      "points_earned": 3,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "customer_orders_right"
+      ],
+      "functions": [
+        "right_join"
+      ]
+    },
+    "part2_4_full": {
+      "name": "Part 2.4: Full Join",
+      "status": "complete",
+      "points_possible": 3,
+      "points_earned": 3,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "customer_orders_full"
+      ],
+      "functions": [
+        "full_join"
+      ]
+    },
+    "part3_1_orders_items": {
+      "name": "Part 3.1: Orders + Items",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "orders_items"
+      ],
+      "functions": [
+        "inner_join"
+      ]
+    },
+    "part3_2_add_customers": {
+      "name": "Part 3.2: Add Customers",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "orders_customers_items"
+      ],
+      "functions": [
+        "inner_join"
+      ]
+    },
+    "part3_3_add_products": {
+      "name": "Part 3.3: Add Products",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "complete_order_data"
+      ],
+      "functions": [
+        "inner_join"
+      ]
+    },
+    "part3_4_add_suppliers": {
+      "name": "Part 3.4: Add Suppliers",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "complete_data"
+      ],
+      "functions": [
+        "inner_join"
+      ]
+    },
+    "part4_1_customers_no_orders": {
+      "name": "Part 4.1: Customers No Orders",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "customers_no_orders"
+      ],
+      "functions": [
+        "anti_join"
+      ]
+    },
+    "part4_2_orphaned_orders": {
+      "name": "Part 4.2: Orphaned Orders",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "orphaned_orders"
+      ],
+      "functions": [
+        "anti_join"
+      ]
+    },
+    "part4_3_products_never_ordered": {
+      "name": "Part 4.3: Products Never Ordered",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "products_never_ordered"
+      ],
+      "functions": [
+        "anti_join"
+      ]
+    },
+    "part4_4_active_customers": {
+      "name": "Part 4.4: Active Customers",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "active_customers"
+      ],
+      "functions": [
+        "semi_join"
+      ]
+    },
+    "part5_1_customer_metrics": {
+      "name": "Part 5.1: Customer Metrics",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "customer_metrics"
+      ],
+      "functions": [
+        "group_by",
+        "summarise"
+      ]
+    },
+    "part5_2_product_metrics": {
+      "name": "Part 5.2: Product Metrics",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "product_metrics"
+      ],
+      "functions": [
+        "group_by",
+        "summarise"
+      ]
+    },
+    "part5_3_supplier_metrics": {
+      "name": "Part 5.3: Supplier Metrics",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "supplier_metrics"
+      ],
+      "functions": [
+        "group_by",
+        "summarise"
+      ]
+    },
+    "part5_4_regional_analysis": {
+      "name": "Part 5.4: Regional Analysis",
+      "status": "complete",
+      "points_possible": 2,
+      "points_earned": 2,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "regional_analysis"
+      ],
+      "functions": [
+        "group_by",
+        "summarise"
+      ]
+    },
+    "part6_1_top_customers": {
+      "name": "Part 6.1: Top Customers",
+      "status": "complete",
+      "points_possible": 1,
+      "points_earned": 1,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "top_customers"
+      ],
+      "functions": [
+        "quantile",
+        "filter"
+      ]
+    },
+    "part6_2_product_combinations": {
+      "name": "Part 6.2: Product Combinations",
+      "status": "complete",
+      "points_possible": 1,
+      "points_earned": 1,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "product_combinations"
+      ],
+      "functions": [
+        "inner_join",
+        "filter"
+      ]
+    },
+    "part6_3_critical_suppliers": {
+      "name": "Part 6.3: Critical Suppliers",
+      "status": "complete",
+      "points_possible": 1,
+      "points_earned": 1,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "critical_suppliers"
+      ],
+      "functions": [
+        "arrange"
+      ]
+    },
+    "part6_4_market_expansion": {
+      "name": "Part 6.4: Market Expansion",
+      "status": "complete",
+      "points_possible": 1,
+      "points_earned": 1,
+      "vars_found": true,
+      "funcs_found": true,
+      "variables": [
+        "market_expansion"
+      ],
+      "functions": [
+        "filter",
+        "arrange"
+      ]
+    }
+  },
+  "cell_stats": {
+    "total_cells": 37,
+    "cells_with_output": 35,
+    "cells_without_output": 2,
+    "execution_rate": 0.9459459459459459,
+    "unexecuted_cells": [
+      {
+        "cell_num": 30,
+        "preview": "<VSCode.Cell id=\"#VSC-f7364f43\" language=\"markdown\"> ## Part 5: Business Analysi"
+      },
+      {
+        "cell_num": 48,
+        "preview": "# Optional: Save your analysis results (not required for autograding) # Your cod"
+      }
+    ]
+  }
+}

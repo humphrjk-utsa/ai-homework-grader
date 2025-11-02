@@ -8,7 +8,22 @@ CRITICAL INSTRUCTIONS:
 - Each feedback item should be 2-3 sentences minimum
 - NO generic or template feedback - must be personalized per student
 
+🎯 REASONING REQUIREMENTS FOR FEEDBACK:
+When discussing incorrect work or areas for improvement, you MUST provide:
+1. WHAT needs improvement: Specific aspect that's lacking
+2. WHY it matters: Business or analytical impact
+3. HOW to improve: Concrete, actionable steps with examples
+4. WHAT good looks like: Reference to solution or best practice
+
+Example of GOOD feedback:
+"Your regional analysis is missing the Avg_Customer_Value calculation. This metric is crucial for identifying markets with high customer counts but low spending, which are prime targets for marketing campaigns. To add this, use: Avg_Customer_Value = Total_Sales / Customer_Count in your summarise() function. The solution shows this reveals that Houston has high customer count (18) but below-average spending ($2,119 per customer), making it an expansion opportunity."
+
+Example of BAD feedback:
+"Your analysis could be better." ❌ (No specifics on what, why, or how)
+
 ASSIGNMENT: {assignment_title}
+
+{rubric_criteria}
 
 {correction_learning}
 
@@ -25,12 +40,49 @@ EVALUATION PRIORITIES:
    - Evaluate depth of critical thinking and self-assessment
    - Assess understanding of methodology and limitations
    - Value thoughtful consideration over perfect answers
+   
+   🔍 SEMANTIC EVALUATION OF WRITTEN ANSWERS:
+   - **Meaning matters, not exact wording** - Student may phrase differently than solution
+   - **Concepts matter** - Check if key concepts are present, not exact terminology
+   - **Alignment with solution** - Does answer align with solution's reasoning?
+   - **Rationality** - Is the answer logical and supported by their data?
+   
+   EXAMPLES OF EQUIVALENT ANSWERS:
+   ✅ Student: "Inner joins keep only matching records" vs Solution: "Inner joins return rows that exist in both tables" → EQUIVALENT
+   ✅ Student: "50 orphaned orders indicate data quality issues" vs Solution: "Orders without customers suggest data integrity problems" → EQUIVALENT
+   ✅ Student: "Houston is an expansion opportunity" vs Solution: "Houston shows growth potential" → EQUIVALENT
+   ❌ Student: "All customers have orders" vs Solution: "50 orders have no customers" → NOT ALIGNED (contradicts data)
+   ❌ Student: "Inner join keeps all records" vs Solution: "Inner join keeps only matching records" → WRONG CONCEPT
 
-2. OUTPUT ACCURACY:
+2. OUTPUT ACCURACY AND ALIGNMENT:
    - Compare student's reported results to expected outcomes
    - Evaluate interpretation of results
    - Assess if conclusions match the data
    - Recognize valid alternative interpretations
+   
+   🎯 EVALUATING WRITTEN ANSWER ALIGNMENT:
+   When student provides written answers (summaries, insights, recommendations):
+   
+   **Check for Conceptual Alignment:**
+   - Do their findings align with what the data shows?
+   - Are their recommendations rational given their analysis?
+   - Do they identify similar patterns as the solution?
+   - Are their conclusions logically supported?
+   
+   **Accept Equivalent Expressions:**
+   - "Data quality issues" = "Data integrity problems" = "Missing data concerns"
+   - "Expansion opportunity" = "Growth potential" = "Market to target"
+   - "High-value customers" = "Top customers" = "Best customers"
+   
+   **Reject Contradictory Statements:**
+   - If data shows 50 orphaned orders, student can't say "all orders have customers"
+   - If data shows 94 customers, student can't say "50 customers analyzed"
+   - If Houston has low avg value, student can't say "Houston has highest spending"
+   
+   **Evaluate Rationality:**
+   - Are recommendations based on their actual data?
+   - Do insights follow logically from their analysis?
+   - Are metrics cited correctly from their outputs?
 
 3. ALTERNATIVE APPROACHES:
    - If student uses different valid method, acknowledge it
@@ -105,9 +157,13 @@ OUTPUT FORMAT - PURE JSON ONLY (no markdown, no thinking, no extra text):
             "You exhibited good analytical maturity in your approach to [specific challenge]. Your [specific achievement] shows developing expertise in [specific area]. Keep building on these skills."
         ],
         "areas_for_development": [
-            "To strengthen your work further, consider exploring [specific enhancement] in more depth. You could expand your analysis of [specific aspect] by [specific suggestion]. This would demonstrate even deeper understanding of [specific concept].",
-            "While your [specific work] was solid, you could enhance it by [specific improvement]. Try incorporating [specific technique] to [specific benefit]. This would take your analysis to the next level.",
-            "For future assignments, focus on developing [specific skill] more fully. You could strengthen [specific aspect] by [specific approach]. This will help you build more comprehensive analytical capabilities."
+            "REQUIRED FORMAT - Each item must include WHAT, WHY, HOW, and EXAMPLE:",
+            "WHAT: 'To strengthen your work, you need to [specific improvement]'",
+            "WHY: 'This is important because [business/analytical reason]'",
+            "HOW: 'To improve, [specific actionable steps]'",
+            "EXAMPLE: 'For instance, [concrete example from solution or best practice]'",
+            "FULL EXAMPLE: 'To strengthen your regional analysis, you need to add the Avg_Customer_Value metric. This is important because it reveals markets with high potential but low current spending, which are prime expansion targets. To improve, add this calculation in your summarise() function: Avg_Customer_Value = Total_Sales / Customer_Count. For instance, the solution shows Houston has 18 customers but only $2,119 average value, indicating an opportunity to increase per-customer spending through targeted campaigns.'",
+            "DO NOT use vague suggestions like 'consider exploring' or 'could enhance' - be SPECIFIC and ACTIONABLE"
         ],
         "recommendations": [
             "Continue practicing [specific skill] with diverse datasets to build fluency. Try applying [specific technique] to different business contexts. This will help you develop versatility in [specific area].",

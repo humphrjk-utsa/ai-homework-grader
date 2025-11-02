@@ -1,148 +1,80 @@
-import streamlit as st
-import sqlite3
-import pandas as pd
-import json
-from datetime import datetime
+"""
+Helper utilities for AI grading corrections and feedback generation
+"""
 
 class CorrectionHelpers:
-    """Helper functions for making corrections more efficient"""
+    """Helper methods for suggesting score adjustments and generating feedback"""
     
     @staticmethod
-    def suggest_score_adjustment(ai_score, student_code, rubric_data):
-        """Suggest score adjustments based on common patterns"""
-        suggestions = []
+    def suggest_score_adjustment(original_score, content, rubric):
+        """
+        Suggest score adjustments based on content analysis
         
-        # Check for common issues
-        if "error" in student_code.lower() or "traceback" in student_code.lower():
-            if ai_score > 70:
-                suggestions.append("Consider lowering score due to execution errors")
+        Args:
+            original_score: The AI's original score
+            content: The submission content
+            rubric: The grading rubric
+            
+        Returns:
+            dict with suggestions
+        """
+        suggestions = {
+            'suggested_score': original_score,
+            'confidence': 'medium',
+            'reasons': []
+        }
         
-        # Check for incomplete work
-        if len(student_code.strip()) < 50:
-            if ai_score > 60:
-                suggestions.append("Very short response - may need lower score")
-        
-        # Check for good practices
-        if "library(" in student_code or "install.packages(" in student_code:
-            if ai_score < 80:
-                suggestions.append("Student shows good R practices - consider higher score")
+        # Basic heuristics
+        if not content or len(content.strip()) < 50:
+            suggestions['suggested_score'] = max(0, original_score - 20)
+            suggestions['reasons'].append("Very short submission")
+            suggestions['confidence'] = 'high'
         
         return suggestions
     
     @staticmethod
-    def generate_feedback_template(score_range, common_issues=None):
-        """Generate feedback templates based on score range"""
+    def generate_feedback_template(score):
+        """
+        Generate a feedback template based on score
         
-        if score_range >= 90:
-            template = "Excellent work! Your code demonstrates a strong understanding of the concepts. "
-        elif score_range >= 80:
-            template = "Good job! Your solution shows solid understanding with room for minor improvements. "
-        elif score_range >= 70:
-            template = "Nice effort! You're on the right track, but there are a few areas to strengthen. "
-        elif score_range >= 60:
-            template = "You've made a good start, but there are several important concepts to review. "
+        Args:
+            score: The numeric score
+            
+        Returns:
+            str: Feedback template
+        """
+        if score >= 90:
+            return "Excellent work! Your solution demonstrates strong understanding of the concepts."
+        elif score >= 80:
+            return "Good work! Your solution is mostly correct with minor areas for improvement."
+        elif score >= 70:
+            return "Adequate work. Your solution shows understanding but needs corrections in some areas."
+        elif score >= 60:
+            return "Your solution needs significant improvements. Please review the requirements carefully."
         else:
-            template = "This assignment needs significant revision. Let's work together to improve your understanding. "
-        
-        # Add specific suggestions based on common issues
-        if common_issues:
-            if "execution_error" in common_issues:
-                template += "Make sure to test your code before submitting to catch any errors. "
-            if "incomplete" in common_issues:
-                template += "Try to complete all parts of the assignment for full credit. "
-            if "no_comments" in common_issues:
-                template += "Adding comments to explain your code will help demonstrate your understanding. "
-        
-        return template
+            return "Your submission is incomplete or incorrect. Please review the assignment requirements and try again."
     
     @staticmethod
-    def batch_correction_interface(submissions_df):
-        """Interface for making batch corrections"""
-        st.subheader("Batch Correction Tools")
+    def smart_feedback_suggestions(human_feedback, ai_feedback, adjustment):
+        """
+        Generate smart feedback suggestions based on score adjustment
         
-        # Quick filters for common correction types
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            if st.button("Flag High Scores (>95)"):
-                high_scores = submissions_df[submissions_df['ai_score'] > 95]
-                st.write(f"Found {len(high_scores)} submissions with scores > 95")
-                return high_scores
-        
-        with col2:
-            if st.button("Flag Low Scores (<50)"):
-                low_scores = submissions_df[submissions_df['ai_score'] < 50]
-                st.write(f"Found {len(low_scores)} submissions with scores < 50")
-                return low_scores
-        
-        with col3:
-            if st.button("Flag Large Score Jumps"):
-                # This would compare to previous assignments
-                st.write("Feature coming soon!")
-        
-        return None
-    
-    @staticmethod
-    def correction_analytics(grader_db_path):
-        """Show analytics about correction patterns"""
-        conn = sqlite3.connect(grader_db_path)
-        
-        # Get correction patterns
-        corrections = pd.read_sql_query("""
-            SELECT 
-                ai_score,
-                human_score,
-                (human_score - ai_score) as adjustment,
-                human_feedback,
-                assignment_id
-            FROM ai_training_data
-            WHERE human_score IS NOT NULL
-        """, conn)
-        
-        conn.close()
-        
-        if corrections.empty:
-            return None
-        
-        # Analyze patterns
-        avg_adjustment = corrections['adjustment'].mean()
-        std_adjustment = corrections['adjustment'].std()
-        
-        # Common adjustment ranges
-        large_increases = len(corrections[corrections['adjustment'] > 10])
-        large_decreases = len(corrections[corrections['adjustment'] < -10])
-        minor_adjustments = len(corrections[corrections['adjustment'].abs() <= 5])
-        
-        return {
-            'avg_adjustment': avg_adjustment,
-            'std_adjustment': std_adjustment,
-            'large_increases': large_increases,
-            'large_decreases': large_decreases,
-            'minor_adjustments': minor_adjustments,
-            'total_corrections': len(corrections)
-        }
-    
-    @staticmethod
-    def smart_feedback_suggestions(student_code, ai_feedback, score_adjustment):
-        """Suggest improvements to feedback based on correction patterns"""
+        Args:
+            human_feedback: Existing human feedback
+            ai_feedback: AI-generated feedback
+            adjustment: Score adjustment amount
+            
+        Returns:
+            list of feedback suggestions
+        """
         suggestions = []
         
-        # If score was increased significantly
-        if score_adjustment > 10:
-            suggestions.append("Consider adding more positive reinforcement to the feedback")
-            suggestions.append("Highlight what the student did well")
+        if adjustment > 10:
+            suggestions.append("Consider mentioning what the student did better than the AI detected")
+        elif adjustment < -10:
+            suggestions.append("Consider explaining what issues the AI missed")
         
-        # If score was decreased significantly  
-        elif score_adjustment < -10:
-            suggestions.append("Add constructive guidance for improvement")
-            suggestions.append("Be specific about what needs to be fixed")
-        
-        # Check feedback tone
-        if ai_feedback and len(ai_feedback) > 0:
-            if "wrong" in ai_feedback.lower() or "incorrect" in ai_feedback.lower():
-                suggestions.append("Consider softer language: 'needs revision' instead of 'wrong'")
-            
-            if "good" not in ai_feedback.lower() and "nice" not in ai_feedback.lower():
-                suggestions.append("Add some positive elements to balance the feedback")
+        if not human_feedback and ai_feedback:
+            suggestions.append("You can edit the AI feedback or write your own")
         
         return suggestions

@@ -1,0 +1,115 @@
+{
+  "strict_scoring_rules": {
+    "enabled": true,
+    "description": "Enforces realistic score distribution and proper penalties",
+    
+    "absolute_rules": {
+      "no_output_no_points": {
+        "rule": "Code cell without output = 0 points for that section",
+        "enforcement": "Not negotiable, no partial credit",
+        "example": "Part 2 has no output = 0/12 points"
+      },
+      "template_only_cap": {
+        "rule": "Template-only submission capped at 10% of total",
+        "enforcement": "Maximum 3.75/37.5 points",
+        "detection": "Less than 30% code added beyond template"
+      },
+      "missing_section_zero": {
+        "rule": "Completely missing section = 0 points",
+        "enforcement": "No partial credit for missing work",
+        "example": "Part 3 not attempted = 0/8 points"
+      },
+      "wrong_output_limited": {
+        "rule": "Wrong output = maximum 25% credit",
+        "enforcement": "Output exists but incorrect",
+        "example": "Wrong result = 3/12 points maximum"
+      }
+    },
+    
+    "completion_based_scoring": {
+      "enabled": true,
+      "description": "Maximum score limited by completion percentage",
+      "formula": "(completed_sections / total_sections) × total_points = maximum_possible",
+      "examples": {
+        "8_of_8": "100% complete = 37.5 points possible",
+        "7_of_8": "87.5% complete = 32.8 points maximum",
+        "6_of_8": "75% complete = 28.1 points maximum",
+        "5_of_8": "62.5% complete = 23.4 points maximum",
+        "4_of_8": "50% complete = 18.8 points maximum"
+      },
+      "enforcement": "Cannot score higher than completion allows"
+    },
+    
+    "differentiation_required": {
+      "enabled": true,
+      "description": "AI must differentiate between quality levels",
+      "target_distribution": {
+        "excellent_90_100": "10-20% of submissions (truly outstanding)",
+        "good_80_89": "25-35% of submissions (solid work, minor issues)",
+        "adequate_70_79": "30-40% of submissions (acceptable, several issues)",
+        "poor_60_69": "10-20% of submissions (major issues)",
+        "failing_0_59": "5-10% of submissions (incomplete or template)"
+      },
+      "warning": "If all scores are 80-90%, AI is being too lenient"
+    },
+    
+    "penalty_enforcement": {
+      "syntax_errors": {
+        "penalty": "3 points per error (not percentage)",
+        "cumulative": true,
+        "example": "3 syntax errors = -9 points total"
+      },
+      "unexecuted_cells": {
+        "penalty": "2 points per unexecuted cell",
+        "cumulative": true,
+        "example": "5 unexecuted cells = -10 points"
+      },
+      "missing_variables": {
+        "penalty": "5 points per missing required variable",
+        "cumulative": true,
+        "example": "2 missing variables = -10 points"
+      },
+      "incorrect_approach": {
+        "penalty": "50% of section points if approach is fundamentally wrong",
+        "example": "Using wrong join type = 6/12 points maximum"
+      }
+    }
+  },
+  
+  "reweighted_categories": {
+    "description": "Technical skills matter more than soft skills",
+    "old_weights": {
+      "technical_execution": 0.25,
+      "data_analysis": 0.40,
+      "business_thinking": 0.20,
+      "communication": 0.15
+    },
+    "new_weights": {
+      "technical_execution": 0.40,
+      "data_analysis": 0.40,
+      "business_thinking": 0.10,
+      "communication": 0.10
+    },
+    "rationale": "Code correctness and analysis are objective; thinking and communication are subjective and AI is too generous"
+  },
+  
+  "ai_grading_prompt_additions": {
+    "critical_instructions": [
+      "NO OUTPUT = 0 POINTS for that section (absolute rule)",
+      "TEMPLATE ONLY = Maximum 10% of total points (3.75/37.5)",
+      "MISSING SECTION = 0 points (no partial credit)",
+      "WRONG OUTPUT = Maximum 25% credit for that section",
+      "COMPLETION LIMITS SCORE = Cannot score higher than completion percentage",
+      "",
+      "DIFFERENTIATION REQUIRED:",
+      "- Excellent (90-100%): All complete, all correct, exceptional quality",
+      "- Good (80-89%): Mostly complete, minor errors, good quality",
+      "- Adequate (70-79%): Some incomplete, several errors, acceptable",
+      "- Poor (60-69%): Much incomplete, major errors, barely passing",
+      "- Failing (0-59%): Template only or mostly incomplete",
+      "",
+      "DO NOT give everyone 85%. Spread scores based on actual work quality.",
+      "Perfect work deserves 95%+. Incomplete work deserves 60-70%."
+    ]
+  }
+}

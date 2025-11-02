@@ -157,16 +157,85 @@ class BusinessAnalyticsGrader:
         except Exception as e:
             return None
     
+    def _build_rubric_summary(self, rubric_criteria: Dict, rubric_elements: Dict) -> str:
+        """Build a concise rubric summary for AI prompts"""
+        summary = "\n=== ASSIGNMENT-SPECIFIC RUBRIC ===\n"
+        
+        # Add weights
+        summary += "SCORING WEIGHTS:\n"
+        for key, value in rubric_elements.items():
+            weight_pct = value.get('weight', 0) * 100
+            summary += f"- {key.replace('_', ' ').title()}: {weight_pct:.0f}%\n"
+        
+        # Add key criteria if available
+        if rubric_criteria and 'rubric_elements' in rubric_criteria:
+            summary += "\nKEY REQUIREMENTS:\n"
+            for key, criteria in rubric_criteria['rubric_elements'].items():
+                if 'description' in criteria:
+                    summary += f"- {key.replace('_', ' ').title()}: {criteria['description']}\n"
+                
+                # Add specific criteria points
+                if 'criteria' in criteria and isinstance(criteria['criteria'], list):
+                    for criterion in criteria['criteria'][:5]:  # Limit to top 5
+                        summary += f"  • {criterion}\n"
+        
+        # Add scoring rules if available
+        if rubric_criteria and 'scoring_rules' in rubric_criteria:
+            summary += "\nSCORING RULES:\n"
+            rules = rubric_criteria['scoring_rules']
+            for key, value in list(rules.items())[:5]:  # Limit to top 5 rules
+                summary += f"- {key.replace('_', ' ').title()}: {value}\n"
+        
+        summary += "=================================\n"
+        return summary
+    
     def grade_submission(self, 
                         student_code: str,
                         student_markdown: str,
                         template_code: str = "",
                         solution_code: str = "",
                         assignment_info: Dict = None,
-                        rubric_elements: Dict = None,
                         notebook_path: str = None,
                         preprocessing_info: Dict = None) -> Dict[str, Any]:
         """Grade submission with business analytics context"""
+        
+        # Ensure assignment_info is a dict, not None
+        if assignment_info is None:
+            assignment_info = {}
+        
+        # Get rubric weights from assignment_info if available, otherwise use defaults
+        rubric_elements = {
+            "technical_execution": {"weight": 0.40},
+            "data_analysis": {"weight": 0.40},
+            "business_thinking": {"weight": 0.10},
+            "communication": {"weight": 0.10}
+        }
+        
+        # Try to load full rubric from assignment_info
+        rubric_criteria = {}
+        rubric = None  # Initialize rubric variable for validator
+        if assignment_info and 'rubric' in assignment_info:
+            try:
+                import json
+                rubric_data = json.loads(assignment_info['rubric']) if isinstance(assignment_info['rubric'], str) else assignment_info['rubric']
+                
+                # Store full rubric for prompt inclusion and validator
+                rubric_criteria = rubric_data
+                rubric = rubric_data  # Store for validator
+                
+                if 'rubric_elements' in rubric_data:
+                    # Extract weights from rubric_elements
+                    for key, value in rubric_data['rubric_elements'].items():
+                        if key in rubric_elements and 'weight' in value:
+                            rubric_elements[key]['weight'] = value['weight']
+                            # Also store the full criteria
+                            rubric_elements[key]['criteria'] = value
+                    print(f"✅ Loaded custom rubric with detailed criteria")
+            except Exception as e:
+                print(f"⚠️ Could not load rubric, using defaults: {e}")
+                rubric = None  # Ensure rubric is None if loading fails
+        else:
+            rubric = None  # No rubric in assignment_info
         
         start_time = time.time()
         
@@ -209,6 +278,39 @@ class BusinessAnalyticsGrader:
                 print(f"⚠️ Validation issues found: {validation_penalty}% penalty")
                 for issue in validation_results['issues']:
                     print(f"   - {issue}")
+            
+            # Check if notebook needs execution
+            print("🔍 Checking if notebook has been executed...")
+            from notebook_executor import NotebookExecutor
+            executor = NotebookExecutor(data_folder='data', timeout=60)
+            
+            needs_exec, total_cells, executed_cells = executor.needs_execution(notebook_path)
+            
+            if needs_exec:
+                print(f"⚡ Notebook not fully executed ({executed_cells}/{total_cells} cells)")
+                print(f"🚀 Attempting to execute notebook before grading...")
+                
+                try:
+                    notebook_to_use, exec_info = executor.execute_if_needed(notebook_path)
+                    
+                    if exec_info['execution_success']:
+                        print(f"✅ Notebook executed successfully!")
+                        print(f"📝 Using executed notebook for grading")
+                        notebook_path = notebook_to_use  # Use executed version
+                        
+                        # Reduce validation penalty since we executed it
+                        if validation_penalty >= 50:
+                            print(f"📉 Reducing validation penalty from {validation_penalty}% to 10% (auto-executed)")
+                            validation_penalty = 10
+                    else:
+                        print(f"⚠️ Execution failed: {exec_info.get('error_message', 'Unknown error')}")
+                        print(f"📝 Using original notebook (may have incomplete outputs)")
+                        
+                except Exception as e:
+                    print(f"⚠️ Could not execute notebook: {e}")
+                    print(f"📝 Proceeding with original notebook")
+            else:
+                print(f"✅ Notebook already executed ({executed_cells}/{total_cells} cells)")
             
             # Add output verification to prevent AI hallucination
             print("🔍 Verifying outputs exist...")
@@ -289,13 +391,17 @@ class BusinessAnalyticsGrader:
             # Prepare prompts using prompt manager (combines general + assignment-specific)
             assignment_name = assignment_info.get('name', assignment_info.get('title', 'Unknown'))
             
+            # Build rubric summary for prompts
+            rubric_summary = self._build_rubric_summary(rubric_criteria, rubric_elements)
+            
             code_prompt = self.prompt_manager.get_combined_prompt(
                 assignment_name,
                 "code_analysis",
                 assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
                 template_code=template_code if template_code else "# No template provided",
                 student_code=student_code,
-                solution_code=solution_code
+                solution_code=solution_code,
+                rubric_criteria=rubric_summary
             )
             
             feedback_prompt = self.prompt_manager.get_combined_prompt(
@@ -303,15 +409,45 @@ class BusinessAnalyticsGrader:
                 "feedback",
                 assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
                 student_markdown=student_markdown,
-                student_code_summary=student_code[:800]
+                student_code_summary=student_code[:800],
+                rubric_criteria=rubric_summary
             )
             
             # Execute in parallel across Mac Studios
-            result = self.distributed_client.generate_parallel_sync(code_prompt, feedback_prompt)
-            
-            if result.get('code_analysis') and result.get('feedback'):
+            print("🚀 About to call generate_parallel_sync...")
+            try:
+                result = self.distributed_client.generate_parallel_sync(code_prompt, feedback_prompt)
+                print(f"✅ generate_parallel_sync returned")
+                
+                print(f"🔍 DEBUG - Parallel result keys: {result.keys()}")
+                print(f"🔍 DEBUG - Has code_analysis: {bool(result.get('code_analysis'))}")
+                print(f"🔍 DEBUG - Has feedback: {bool(result.get('feedback'))}")
+                
+                # Check for errors first
+                if result.get('error'):
+                    print(f"❌ ERROR from distributed client: {result['error']}")
+                    raise RuntimeError(f"Distributed MLX generation failed: {result['error']}")
+                
+                # Check for missing responses
+                if not result.get('code_analysis'):
+                    print(f"❌ ERROR: No code_analysis in result")
+                    raise RuntimeError(f"Distributed MLX generation failed: No code analysis returned")
+                
+                if not result.get('feedback'):
+                    print(f"❌ ERROR: No feedback in result")
+                    raise RuntimeError(f"Distributed MLX generation failed: No feedback returned")
+                
+                # Parse the responses
+                print("📊 Parsing code analysis response...")
                 code_analysis = self._parse_code_analysis_response(result['code_analysis'])
+                print("📊 Parsing feedback response...")
                 comprehensive_feedback = self._parse_feedback_response(result['feedback'])
+                print("✅ Both responses parsed successfully")
+            except Exception as e:
+                print(f"❌ EXCEPTION in parallel generation:")
+                import traceback
+                traceback.print_exc()
+                raise
                 
                 # Update timing stats
                 self.grading_stats['code_analysis_time'] = result.get('qwen_time', 0)
@@ -329,19 +465,22 @@ class BusinessAnalyticsGrader:
                 print(f"   🔧 Qwen (Code): {qwen_perf.get('output_tokens', 0)} tokens @ {qwen_perf.get('tokens_per_second', 0):.1f} tok/s")
                 print(f"   📝 GPT-OSS (Feedback): {gemma_perf.get('output_tokens', 0)} tokens @ {gemma_perf.get('tokens_per_second', 0):.1f} tok/s")
                 print(f"   🚀 Combined Throughput: {performance_metrics.get('combined_tokens_per_second', 0):.1f} tok/s")
-            else:
-                raise RuntimeError(f"Distributed MLX generation failed: {result.get('error', 'Unknown error')}")
+            except Exception as e:
+                print(f"❌ EXCEPTION in parallel generation:")
+                import traceback
+                traceback.print_exc()
+                raise
         else:
             # Use Ollama system
             # Submit both tasks simultaneously
             future_code = self.executor.submit(
                 self._execute_business_code_analysis, 
-                student_code, template_code, solution_code, assignment_info, rubric_elements
+                student_code, template_code, solution_code, assignment_info
             )
             
             future_feedback = self.executor.submit(
                 self._execute_business_feedback_generation,
-                student_code, student_markdown, assignment_info, rubric_elements
+                student_code, student_markdown, assignment_info
             )
             
             # Wait for both results
@@ -364,12 +503,12 @@ class BusinessAnalyticsGrader:
         print("="*80)
         print(f"🔍 Before validation: technical_score={code_analysis.get('technical_score', 0)}, overall_score={comprehensive_feedback.get('overall_score', 0)}")
         code_analysis, comprehensive_feedback = validate_and_adjust_scores(
-            code_analysis, comprehensive_feedback, student_code, template_code
+            code_analysis, comprehensive_feedback, student_code, template_code, rubric, output_comparison
         )
         print(f"🔍 After validation: technical_score={code_analysis.get('technical_score', 0)}, overall_score={comprehensive_feedback.get('overall_score', 0)}")
         
         # Merge results with business context and apply validation penalty
-        final_result = self._merge_business_results(code_analysis, comprehensive_feedback, assignment_info, validation_penalty, preprocessing_info)
+        final_result = self._merge_business_results(code_analysis, comprehensive_feedback, assignment_info, validation_penalty, preprocessing_info, rubric_elements)
         
         # FIX AI HALLUCINATION: Verify outputs exist and override if AI is wrong
         if notebook_path:
@@ -408,7 +547,7 @@ class BusinessAnalyticsGrader:
         return final_result
     
     def _execute_business_code_analysis(self, student_code: str, template_code: str, solution_code: str,
-                                       assignment_info: Dict, rubric_elements: Dict) -> Dict[str, Any]:
+                                       assignment_info: Dict) -> Dict[str, Any]:
         """Execute code analysis with business analytics context"""
         start_time = time.time()
         
@@ -438,7 +577,7 @@ class BusinessAnalyticsGrader:
         return self._parse_business_code_response(response)
     
     def _execute_business_feedback_generation(self, student_code: str, student_markdown: str,
-                                            assignment_info: Dict, rubric_elements: Dict) -> Dict[str, Any]:
+                                            assignment_info: Dict) -> Dict[str, Any]:
         """Execute feedback generation with business context"""
         start_time = time.time()
         
@@ -632,7 +771,7 @@ class BusinessAnalyticsGrader:
     
     def _merge_business_results(self, code_analysis: Dict, feedback: Dict, 
                                assignment_info: Dict, validation_penalty: float = 0,
-                               preprocessing_info: Dict = None) -> Dict[str, Any]:
+                               preprocessing_info: Dict = None, rubric_elements: Dict = None) -> Dict[str, Any]:
         """Merge results with business-friendly weighting for 37.5 point scale"""
         
         # Extract individual component scores (no defaults - use actual scores)
@@ -641,11 +780,24 @@ class BusinessAnalyticsGrader:
         data_interpretation = feedback.get("data_interpretation", 50)
         communication_clarity = feedback.get("communication_clarity", 50)
         
+        # Get weights from rubric if available, otherwise use defaults
+        # Default weights: Technical 40%, Analysis 40%, Business 10%, Communication 10%
+        technical_weight = 0.40
+        business_weight = 0.10
+        analysis_weight = 0.40
+        communication_weight = 0.10
+        
+        if rubric_elements:
+            technical_weight = rubric_elements.get('technical_execution', {}).get('weight', 0.40)
+            business_weight = rubric_elements.get('business_thinking', {}).get('weight', 0.10)
+            analysis_weight = rubric_elements.get('data_analysis', {}).get('weight', 0.40)
+            communication_weight = rubric_elements.get('communication', {}).get('weight', 0.10)
+        
         # Calculate points for each rubric component (37.5 total points)
-        technical_points = (technical_score / 100) * 9.375      # 25% of 37.5
-        business_points = (business_understanding / 100) * 11.25 # 30% of 37.5
-        analysis_points = (data_interpretation / 100) * 9.375   # 25% of 37.5
-        communication_points = (communication_clarity / 100) * 7.5 # 20% of 37.5
+        technical_points = (technical_score / 100) * (37.5 * technical_weight)
+        business_points = (business_understanding / 100) * (37.5 * business_weight)
+        analysis_points = (data_interpretation / 100) * (37.5 * analysis_weight)
+        communication_points = (communication_clarity / 100) * (37.5 * communication_weight)
         
         # Calculate actual total from components
         final_score_37_5 = technical_points + business_points + analysis_points + communication_points
@@ -717,7 +869,7 @@ class BusinessAnalyticsGrader:
             "grading_philosophy": "Encouraging and supportive for beginning students"
         }
 
-    def _prepare_code_analysis_prompt(self, student_code, solution_code, assignment_info, rubric_elements, output_comparison=None):
+    def _prepare_code_analysis_prompt(self, student_code, solution_code, assignment_info, output_comparison=None):
         """Prepare prompt for distributed MLX code analysis with deep evaluation"""
         
         # Add programmatic output comparison if available (SUMMARY ONLY to avoid timeout)
@@ -726,15 +878,24 @@ class BusinessAnalyticsGrader:
             match_rate = output_comparison.get('match_rate', 0)
             comparison_section = f"""
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PROGRAMMATIC OUTPUT VERIFICATION:
+🔬 PROGRAMMATIC OUTPUT VERIFICATION (PRIMARY GRADING EVIDENCE):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+This is an AUTOMATED comparison of student outputs vs solution outputs.
+Use this as PRIMARY evidence for grading accuracy.
+
+Results:
 - Cells with matching outputs: {output_comparison['matching_cells']}/{output_comparison['total_cells']} ({match_rate:.1f}%)
 - Overall accuracy: {output_comparison.get('accuracy_score', 0):.1f}%
 
-GRADING GUIDANCE:
-- If match rate >= 90%: Student has correct outputs (score 90-100)
-- If match rate 75-89%: Mostly correct outputs (score 80-90)  
-- If match rate 60-74%: Some correct outputs (score 70-80)
-- If match rate < 60%: Incorrect or missing outputs (score 50-70)
+🚨 CRITICAL GRADING RULES - FOLLOW EXACTLY:
+- If match rate >= 90%: Outputs are CORRECT → Score 90-100%
+- If match rate 75-89%: Outputs are MOSTLY CORRECT → Score 80-90%  
+- If match rate 60-74%: Outputs are PARTIALLY CORRECT → Score 70-80%
+- If match rate 40-59%: Outputs are MOSTLY INCORRECT → Score 50-70%
+- If match rate < 40%: Outputs are INCORRECT or MISSING → Score 30-50%
+
+⚠️ DO NOT give high scores if match rate is low!
+⚠️ Low match rate = incorrect outputs = low score
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
         
@@ -780,20 +941,58 @@ DEEP ANALYSIS REQUIREMENTS:
    - Quote specific lines when giving suggestions
    - Provide concrete code examples for improvements
 
-SCORING GUIDELINES:
-- Complete working code with correct outputs: 95-100
-- Working code with minor issues: 90-95
-- Mostly working with some errors: 85-90
-- Partial implementation: 75-85
+SCORING GUIDELINES - HONEST AND FAIR:
 
-CRITICAL RULES:
-- Having outputs means work is ATTEMPTED, not necessarily CORRECT
-- Compare student outputs to solution outputs for CORRECTNESS
-- If outputs don't match solution: penalize for incorrect results (70-85 range)
-- If outputs match solution: reward for correct work (90-100 range)
-- If outputs are close but different approach: evaluate validity (85-95 range)
-- Do NOT claim work is "incomplete" if outputs exist - say "incorrect" or "needs revision"
-- Focus on ACCURACY of results, not just presence of code
+EXCELLENT (90-100):
+- ALL required sections complete with outputs
+- Outputs MATCH solution outputs (correct results)
+- Code executes without errors
+- Demonstrates mastery of concepts
+- May use alternative valid approaches
+
+GOOD (80-89):
+- Most sections complete (80-90% of work)
+- Most outputs correct (1-2 minor errors)
+- Code mostly works as intended
+- Solid understanding demonstrated
+- Minor issues that don't affect main results
+
+ADEQUATE (70-79):
+- Majority of sections attempted (60-80% of work)
+- Some outputs correct, some wrong
+- Several errors affecting results
+- Basic understanding shown
+- Needs significant corrections
+
+POOR (60-69):
+- Some sections attempted (40-60% of work)
+- Many outputs wrong or missing
+- Major errors throughout
+- Minimal understanding
+- Requires substantial rework
+
+FAILING (0-59):
+- Few/no sections complete (<40% of work)
+- No outputs or all outputs wrong
+- Template only or fundamentally wrong
+- Does not demonstrate understanding
+
+CRITICAL SCORING RULES:
+1. NO OUTPUT = 0 points for that section (not negotiable)
+2. WRONG OUTPUT = Major deduction (compare to solution output)
+3. CORRECT OUTPUT = Full credit (even if different approach)
+4. COUNT SECTIONS: Score reflects actual completion percentage
+5. COMPARE TO SOLUTION: Outputs should match expected results
+6. BE HONEST: Don't inflate scores - give credit where deserved
+7. FLEXIBILITY: Accept alternative valid approaches if outputs are correct
+
+EXAMPLES:
+- 8/8 sections, all outputs match solution → 95-100
+- 8/8 sections, 2 outputs wrong → 80-85
+- 6/8 sections complete, all correct → 75-80
+- 6/8 sections, half wrong → 65-70
+- 4/8 sections attempted → 50-60
+- Template only or no outputs → 10-20
 
 OUTPUT ONLY THIS JSON (no explanations, no markdown blocks, just JSON):
 
@@ -820,9 +1019,35 @@ OUTPUT ONLY THIS JSON (no explanations, no markdown blocks, just JSON):
     ]
 }}
 
-CRITICAL: Base scores on actual code execution and outputs. Recognize valid alternatives. Provide specific, actionable suggestions with code examples."""
+STRICT ENFORCEMENT - READ CAREFULLY:
 
-    def _prepare_feedback_prompt(self, student_code, student_markdown, assignment_info, rubric_elements):
+1. COUNT SECTIONS WITH CORRECT OUTPUTS:
+   - Only count sections where output EXISTS and is CORRECT
+   - Compare to solution output to verify correctness
+   - Wrong output = section is NOT correct
+
+2. CALCULATE MAXIMUM POSSIBLE SCORE:
+   - If 8/8 sections correct → Can score 90-100
+   - If 7/8 sections correct → Maximum 87, typical 80-85
+   - If 6/8 sections correct → Maximum 75, typical 70-75
+   - If 4/8 sections correct → Maximum 60, typical 50-55
+   - If 0-2 sections correct → Maximum 30, typical 10-20
+
+3. BE HONEST WITH SCORING:
+   - Don't inflate scores to be nice
+   - Wrong is wrong - deduct appropriately
+   - Missing is missing - give 0 for that section
+   - Correct is correct - give full credit
+
+4. PROVIDE SPECIFIC CORRECTIONS:
+   - "Your output shows X rows, should show Y rows"
+   - "Your join result is missing Z column"
+   - "Your calculation gives A, should give B"
+
+CRITICAL: Base scores on actual code execution and outputs. Recognize valid alternatives. Provide specific, actionable suggestions with code examples. BE HONEST - don't give 85% to everyone!
+"""
+    
+    def _prepare_feedback_prompt(self, student_code, student_markdown, assignment_info):
         """Prepare prompt for comprehensive feedback with reflection focus"""
         return f"""You are a business analytics instructor providing feedback on first-year student work. Focus heavily on reflection questions and critical thinking. Output ONLY valid JSON.
 
@@ -858,19 +1083,52 @@ EVALUATION PRIORITIES:
    - Quote specific reflections or findings
    - Provide concrete examples
 
-SCORING GUIDELINES:
-- Complete work with thoughtful reflections: 92-100
-- Complete work with basic reflections: 88-92
-- Mostly complete with good effort: 85-88
-- Partial completion: 75-85
+SCORING GUIDELINES - HONEST FEEDBACK:
 
-CRITICAL RULES:
-- Having outputs means work is ATTEMPTED, not necessarily CORRECT
-- Evaluate if results match expected outcomes from solution
-- If results are wrong: provide specific corrections needed
-- If results are correct: acknowledge successful completion
-- Do NOT claim work is "incomplete" if outputs exist - say "needs correction" if wrong
-- Focus on ACCURACY and QUALITY, not just completion
+EXCELLENT (90-100):
+- All work complete with correct results
+- Thoughtful, detailed reflections
+- Clear understanding demonstrated
+- Professional presentation
+
+GOOD (80-89):
+- Most work complete with mostly correct results
+- Good reflections showing understanding
+- Minor errors or omissions
+- Solid effort throughout
+
+ADEQUATE (70-79):
+- Majority of work attempted
+- Some correct, some incorrect results
+- Basic reflections present
+- Acceptable but needs improvement
+
+POOR (60-69):
+- Some work attempted
+- Many incorrect results
+- Minimal or weak reflections
+- Significant gaps in understanding
+
+FAILING (0-59):
+- Little to no work completed
+- Wrong or missing results
+- No meaningful reflections
+- Does not meet minimum standards
+
+CRITICAL FEEDBACK RULES:
+1. BE HONEST: Don't inflate scores to be nice
+2. COMPARE TO SOLUTION: Results should match expected outcomes
+3. WRONG = WRONG: If output doesn't match solution, say so clearly
+4. CORRECT = CORRECT: Give full credit for right answers
+5. SPECIFIC FEEDBACK: Point out exactly what's wrong and how to fix it
+6. CONSTRUCTIVE: Explain what they need to do differently
+7. FAIR: Credit good work, penalize incomplete/wrong work
+
+FEEDBACK APPROACH:
+- If outputs match solution: "Excellent work! Your results are correct."
+- If outputs are wrong: "Your output shows X, but should show Y. Review [concept]."
+- If section missing: "Section Z is incomplete. You need to [specific action]."
+- If partially correct: "Good start on X, but Y needs correction. Try [suggestion]."
 
 OUTPUT ONLY THIS JSON (no text before/after, no markdown blocks):
 

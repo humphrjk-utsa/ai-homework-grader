@@ -10,6 +10,7 @@ import json
 import os
 import tempfile
 import zipfile
+import sqlite3
 from datetime import datetime
 from enhanced_training_interface import EnhancedTrainingInterface, display_interactive_notebook
 from enhanced_training_database import setup_enhanced_training_database
@@ -304,13 +305,16 @@ def enhanced_training_page():
                                 st.error("✗")
                     with col4:
                         if st.button("📄", key=f"pdf_{submission['id']}", help="Generate PDF"):
-                            with st.spinner("Generating..."):
-                                # Use SAME logic as review page - get full feedback, remove verbose arrays
-                                from report_generator import PDFReportGenerator
-                                report_gen = PDFReportGenerator()
+                            try:
+                                with st.spinner("Generating..."):
+                                    # Use SAME logic as review page - get full feedback, remove verbose arrays
+                                    from report_generator import PDFReportGenerator
+                                    report_gen = PDFReportGenerator()
                                 
                                 # Get submission data
+                                import sqlite3 as sql3
                                 conn = training.get_database_connection()
+                                conn.row_factory = sql3.Row
                                 cursor = conn.cursor()
                                 cursor.execute("SELECT * FROM submissions WHERE id = ?", (submission['id'],))
                                 sub_data = cursor.fetchone()
@@ -318,31 +322,55 @@ def enhanced_training_page():
                                 
                                 if sub_data and sub_data['ai_feedback']:
                                     try:
-                                        analysis_result = json.loads(sub_data['ai_feedback'])
+                                        feedback_data = json.loads(sub_data['ai_feedback'])
                                         # ai_feedback now contains updated instructor_comments if human reviewed
                                     except:
-                                        analysis_result = {}
+                                        feedback_data = {}
                                 else:
-                                    analysis_result = {}
+                                    feedback_data = {}
                                 
-                                # Use final_score (which is human_score if reviewed, otherwise ai_score)
-                                analysis_result['total_score'] = submission.get('final_score', submission['ai_score'])
+                                # Format for report generator (same as connect_web_interface.py)
+                                # Ensure submission is a dict
+                                if not isinstance(submission, dict):
+                                    st.error(f"ERROR: submission is {type(submission)}, not dict!")
+                                    submission = dict(submission) if hasattr(submission, '_asdict') else {}
+                                
+                                analysis_result = {
+                                    'total_score': submission.get('final_score', submission.get('ai_score', 0)),
+                                    'max_score': 37.5,
+                                    'element_scores': {
+                                        'technical_execution': feedback_data.get('component_scores', {}).get('technical_points', 0),
+                                        'business_thinking': feedback_data.get('component_scores', {}).get('business_points', 0),
+                                        'data_analysis': feedback_data.get('component_scores', {}).get('analysis_points', 0),
+                                        'communication': feedback_data.get('component_scores', {}).get('communication_points', 0)
+                                    },
+                                    # Include comprehensive feedback and technical analysis
+                                    'comprehensive_feedback': feedback_data.get('comprehensive_feedback', {}),
+                                    'technical_analysis': feedback_data.get('technical_analysis', {}),
+                                    'overall_assessment': feedback_data.get('comprehensive_feedback', {}).get('instructor_comments', 'Good work!'),
+                                }
                                 
                                 # Check if human reviewed
                                 if sub_data and sub_data['human_score'] is not None:
                                     analysis_result['human_reviewed'] = True
-                                    analysis_result['ai_score'] = submission['ai_score']  # Show original AI score for reference
+                                    analysis_result['ai_score'] = submission.get('ai_score', 0)  # Show original AI score for reference
                                 else:
                                     analysis_result['human_reviewed'] = False
                                 
-                                analysis_result['max_score'] = 37.5
-                                
-                                display_name = anonymize_name(submission['student_name'], submission['student_id'])
-                                pdf_path = report_gen.generate_report(
-                                    student_name=display_name,
-                                    assignment_id=selected_assignment['title'],
-                                    analysis_result=analysis_result
-                                )
+                                try:
+                                    display_name = anonymize_name(submission.get('student_name', 'Unknown'), submission.get('student_id', 'Unknown'))
+                                    assignment_title = selected_assignment.get('title', 'Unknown') if isinstance(selected_assignment, dict) else 'Unknown'
+                                    pdf_path = report_gen.generate_report(
+                                        student_name=display_name,
+                                        assignment_id=assignment_title,
+                                        analysis_result=analysis_result
+                                    )
+                                except Exception as e:
+                                    sub_id = submission.get('id', '?') if isinstance(submission, dict) else '?'
+                                    st.error(f"Failed to generate PDF for {sub_id}: {e}")
+                                    import traceback
+                                    st.code(traceback.format_exc())
+                                    pdf_path = None
                                 if pdf_path and os.path.exists(pdf_path):
                                     with open(pdf_path, 'rb') as f:
                                         safe_name = "".join(c for c in display_name if c.isalnum() or c in (' ', '-', '_'))
@@ -359,6 +387,10 @@ def enhanced_training_page():
                                         pass
                                 else:
                                     st.error("Failed")
+                            except Exception as e:
+                                st.error(f"PDF generation error: {e}")
+                                import traceback
+                                st.code(traceback.format_exc())
                 
                 # Add spacing between student entries
                 st.markdown("<div style='margin-bottom: 16px;'></div>", unsafe_allow_html=True)
@@ -668,10 +700,12 @@ def enhanced_training_page():
                     try:
                         # Use SAME logic as review page
                         from report_generator import PDFReportGenerator
+                        import sqlite3
                         report_gen = PDFReportGenerator()
                         
                         # Get submission data
                         conn = training.get_database_connection()
+                        conn.row_factory = sqlite3.Row
                         cursor = conn.cursor()
                         cursor.execute("SELECT * FROM submissions WHERE id = ?", (submission['id'],))
                         sub_data = cursor.fetchone()

@@ -1,0 +1,243 @@
+{
+  "assignment_info": {
+    "name": "a3v1",
+    "title": "Assignment 3 - Data Transformation with dplyr",
+    "description": "Data transformation using select(), filter(), and arrange() with pipe operator",
+    "total_points": 37.5
+  },
+  "rubric_elements": {
+    "technical_execution": {
+      "weight": 0.25,
+      "max_points": 9.375,
+      "description": "Code quality, syntax, execution, and proper use of dplyr functions",
+      "criteria": [
+        "All code cells executed with visible outputs",
+        "Proper use of pipe operator (%>%) throughout",
+        "Correct syntax for select(), filter(), arrange()",
+        "No errors or warnings that affect results",
+        "Working directory properly set",
+        "Data imported successfully"
+      ],
+      "deductions": {
+        "no_outputs": "Code without outputs = 0 points for that section",
+        "no_pipes": "Not using %>% operator = 20% deduction",
+        "syntax_errors": "Each syntax error = 10% deduction",
+        "template_only": "Only template code = 0 points"
+      }
+    },
+    "data_analysis": {
+      "weight": 0.30,
+      "max_points": 11.25,
+      "description": "Correct implementation of data transformation operations",
+      "required_sections": {
+        "part1_import": {
+          "points": 0.5,
+          "description": "Data import and initial exploration",
+          "verification": ["read_csv", "transactions <-", "head()", "str()"]
+        },
+        "part2_select": {
+          "points": 2.0,
+          "description": "Column selection (4 tasks: basic, range, pattern, exclusion)",
+          "verification": ["select(", "starts_with", "contains", "-TransactionID"]
+        },
+        "part3_filter": {
+          "points": 2.5,
+          "description": "Row filtering (5 tasks: single, AND, OR, date, advanced)",
+          "verification": ["filter(", "&", "%in%", "intersect"]
+        },
+        "part4_arrange": {
+          "points": 1.5,
+          "description": "Data sorting (3 tasks: single, multiple, date)",
+          "verification": ["arrange(", "desc("]
+        },
+        "part5_chaining": {
+          "points": 2.25,
+          "description": "Chained operations (3 tasks: simple, complex, business)",
+          "verification": ["%>%", "filter.*%>%.*select", "filter.*%>%.*arrange"]
+        },
+        "part6_analysis": {
+          "points": 2.5,
+          "description": "Data analysis questions (4 tasks)",
+          "verification": ["nrow(", "count(", "group_by"]
+        }
+      },
+      "scoring_rules": {
+        "section_complete": "Working code + visible output = full points",
+        "section_partial": "Code without output = 50% of section points",
+        "section_incomplete": "No code or template only = 0 points",
+        "calculation": "(completed_sections / total_sections) × max_points"
+      }
+    },
+    "business_thinking": {
+      "weight": 0.25,
+      "max_points": 9.375,
+      "description": "Understanding of business applications and data transformation concepts",
+      "reflection_questions": {
+        "question_1_pipes": {
+          "points": 2.34,
+          "description": "Pipe operator benefits with specific example",
+          "excellent": "Discusses readability, provides specific code example, explains nested vs piped",
+          "good": "Mentions readability, provides example, basic explanation",
+          "adequate": "Generic discussion of pipes, weak example",
+          "poor": "No example or very shallow answer",
+          "minimum_words": 50
+        },
+        "question_2_filtering": {
+          "points": 2.34,
+          "description": "Filtering strategy trade-offs",
+          "excellent": "Discusses specificity vs generality, sample size, business impact",
+          "good": "Mentions trade-offs with some reasoning",
+          "adequate": "Basic understanding but limited depth",
+          "poor": "Generic answer without specific reasoning",
+          "minimum_words": 50
+        },
+        "question_3_sorting": {
+          "points": 2.34,
+          "description": "Sorting importance with 3 business scenarios",
+          "excellent": "Provides 3 detailed scenarios with business context",
+          "good": "Provides 3 scenarios with some detail",
+          "adequate": "Provides 2-3 scenarios but limited detail",
+          "poor": "Fewer than 3 scenarios or very generic",
+          "minimum_words": 75,
+          "required_scenarios": 3
+        },
+        "question_4_application": {
+          "points": 2.34,
+          "description": "Real-world combined operations scenario",
+          "excellent": "Detailed scenario using select+filter+arrange with clear insights",
+          "good": "Scenario with some detail and business context",
+          "adequate": "Basic scenario but limited business application",
+          "poor": "Generic or unclear scenario",
+          "minimum_words": 75
+        }
+      },
+      "scoring_rules": {
+        "excellent": "90-100% of question points",
+        "good": "75-89% of question points",
+        "adequate": "60-74% of question points",
+        "poor": "40-59% of question points",
+        "fail": "0-39% of question points (no answer or off-topic)"
+      }
+    },
+    "communication": {
+      "weight": 0.20,
+      "max_points": 7.5,
+      "description": "Code comments, output clarity, and overall presentation",
+      "criteria": [
+        "Code is well-commented and easy to understand",
+        "Outputs are clearly labeled and formatted",
+        "Variable names are meaningful",
+        "Results are interpreted correctly",
+        "Notebook is organized and professional"
+      ],
+      "scoring_guide": {
+        "excellent": "All criteria met, professional presentation",
+        "good": "Most criteria met, clear communication",
+        "adequate": "Basic communication, some clarity issues",
+        "poor": "Minimal comments, unclear outputs"
+      }
+    }
+  },
+  "template_detection": {
+    "enabled": true,
+    "template_file": "data/raw/homework_lesson_3_data_transformation.ipynb",
+    "detection_rules": {
+      "code_length_threshold": 1.2,
+      "description": "Student code must be at least 120% of template length",
+      "key_indicators": ["read_csv", "select(", "filter(", "arrange(", "%>%", "head(", "nrow("],
+      "minimum_indicators": 6,
+      "penalty_if_template_only": "Score capped at 20% (7.5 points)"
+    }
+  },
+  "score_validation": {
+    "enabled": true,
+    "rules": {
+      "minimum_completion": {
+        "threshold": 0.5,
+        "description": "Must complete at least 50% of sections for passing grade",
+        "action": "If < 50% complete, cap score at 50%"
+      },
+      "reflection_requirement": {
+        "minimum_questions": 2,
+        "description": "Must answer at least 2 reflection questions substantively",
+        "action": "If < 2 questions answered, deduct 25% from total score"
+      },
+      "output_requirement": {
+        "description": "Code without outputs counts as incomplete",
+        "action": "Sections without outputs = 0 points for that section"
+      },
+      "pipe_operator_requirement": {
+        "minimum_usage": 10,
+        "description": "Must use %>% at least 10 times",
+        "action": "If < 10 uses, deduct 15% from technical_execution score"
+      }
+    }
+  },
+  "common_issues": {
+    "template_submission": {
+      "indicators": [
+        "# Your code here:",
+        "Code length < 120% of template",
+        "No outputs visible",
+        "Fewer than 6 key functions used"
+      ],
+      "score_cap": 7.5,
+      "feedback": "This submission appears to be primarily template code with minimal student work."
+    },
+    "incomplete_execution": {
+      "indicators": ["Code cells without outputs", "execution_count is null"],
+      "penalty": "50% deduction per incomplete section",
+      "feedback": "Code must be executed to show outputs. Unexecuted code receives partial credit."
+    },
+    "shallow_reflections": {
+      "indicators": [
+        "Word count < 50 per question",
+        "Generic phrases: 'it depends', 'it's useful', 'it helps'",
+        "No specific examples"
+      ],
+      "penalty": "50% deduction per shallow answer",
+      "feedback": "Reflection answers should be substantive (50+ words) with specific examples."
+    },
+    "syntax_errors": {
+      "indicators": [
+        "Using = instead of == in filter",
+        "Missing desc() for descending sort",
+        "Not loading tidyverse"
+      ],
+      "penalty": "10% deduction per error type",
+      "feedback": "Review R syntax for logical comparisons and dplyr functions."
+    }
+  },
+  "grading_instructions": {
+    "step_1": "Check if tidyverse is loaded and data is imported",
+    "step_2": "Count completed sections (code + output) out of 21 code sections",
+    "step_3": "Evaluate 4 reflection questions for depth and specificity",
+    "step_4": "Check for pipe operator usage (minimum 10 times)",
+    "step_5": "Compare to template to detect template-only submissions",
+    "step_6": "Apply score validation rules",
+    "step_7": "Calculate final score: (technical × 0.25) + (analysis × 0.30) + (business × 0.25) + (communication × 0.20)",
+    "step_8": "Apply any penalties or caps based on validation rules"
+  },
+  "example_scores": {
+    "excellent_work": {
+      "description": "All 21 code sections complete with outputs, 4 excellent reflections, proper pipe usage",
+      "expected_score": "34-37.5 points (90-100%)"
+    },
+    "good_work": {
+      "description": "18-20 sections complete, 3-4 good reflections, mostly proper pipe usage",
+      "expected_score": "28-33 points (75-89%)"
+    },
+    "adequate_work": {
+      "description": "15-17 sections complete, 2-3 adequate reflections, some pipe usage",
+      "expected_score": "22-27 points (60-74%)"
+    },
+    "poor_work": {
+      "description": "10-14 sections complete, 1-2 poor reflections, minimal pipe usage",
+      "expected_score": "15-21 points (40-59%)"
+    },
+    "template_only": {
+      "description": "Minimal additions to template, no outputs, no reflections",
+      "expected_score": "0-7.5 points (0-20%)"
+    }
+  }
+}

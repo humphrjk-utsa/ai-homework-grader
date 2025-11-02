@@ -10,7 +10,7 @@ import json
 import os
 import time
 import nbformat
-from business_analytics_grader import BusinessAnalyticsGrader
+from business_analytics_grader_v2 import BusinessAnalyticsGraderV2
 from grading_validator import GradingValidator
 from report_generator import PDFReportGenerator
 from ai_grader import filter_ai_feedback_for_storage
@@ -137,11 +137,60 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
     """Grade a single submission using business analytics grader"""
     
     try:
-        # Initialize our business analytics grader (two-model system)
-        business_grader = BusinessAnalyticsGrader()
+        # Get assignment info first to get rubric and solution paths
+        conn = sqlite3.connect(grader.db_path)
+        assignment_info_df = pd.read_sql_query("""
+            SELECT name, description, rubric, template_notebook, solution_notebook, total_points FROM assignments WHERE id = ?
+        """, conn, params=(assignment_id,))
+        conn.close()
         
-        # Show two-model system info
-        st.info("🤖 **Two-Model AI System Active**: Qwen 3.0 Coder (code analysis) + Gemma 3.0 (feedback generation)")
+        if assignment_info_df.empty:
+            st.error("Assignment not found")
+            return
+        
+        assignment_row = assignment_info_df.iloc[0]
+        
+        # Determine rubric and solution paths for V2 grader
+        rubric_path = None
+        solution_path = None
+        
+        # Try to find rubric JSON file
+        if assignment_row.get('rubric'):
+            # Check if rubric is a file path or JSON string
+            rubric_str = assignment_row['rubric']
+            if rubric_str.endswith('.json') and os.path.exists(rubric_str):
+                rubric_path = rubric_str
+            else:
+                # Try to find rubric file based on assignment name
+                assignment_name = assignment_row['name'].lower().replace(' ', '_')
+                potential_rubric = f"rubrics/{assignment_name}_rubric.json"
+                if os.path.exists(potential_rubric):
+                    rubric_path = potential_rubric
+                else:
+                    # Try assignment_6_rubric.json as fallback
+                    if os.path.exists("rubrics/assignment_6_rubric.json"):
+                        rubric_path = "rubrics/assignment_6_rubric.json"
+        
+        # Get solution notebook path
+        if assignment_row.get('solution_notebook') and os.path.exists(assignment_row['solution_notebook']):
+            solution_path = assignment_row['solution_notebook']
+        
+        # Initialize our business analytics grader V2 (4-layer validation + two-model system)
+        business_grader = BusinessAnalyticsGraderV2(
+            rubric_path=rubric_path,
+            solution_path=solution_path
+        )
+        
+        # Show system info
+        if rubric_path and solution_path:
+            st.info("🤖 **Enhanced 4-Layer Grading System Active**: Systematic Validation + Output Comparison + AI Analysis")
+            st.caption(f"📋 Rubric: {os.path.basename(rubric_path)} | 📊 Solution: {os.path.basename(solution_path)}")
+        else:
+            st.info("🤖 **Two-Model AI System Active**: Qwen 3.0 Coder (code analysis) + Gemma 3.0 (feedback generation)")
+            if not rubric_path:
+                st.warning("⚠️ No rubric file found - using legacy validation")
+            if not solution_path:
+                st.warning("⚠️ No solution notebook found - output comparison disabled")
         
         # Extract notebook content
         notebook_path = submission['notebook_path']
@@ -193,40 +242,14 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
             elif cell.cell_type == 'markdown':
                 student_markdown += cell.source + "\n\n"
         
-        # Get assignment info including solution notebook
-        conn = sqlite3.connect(grader.db_path)
-        assignment_info_df = pd.read_sql_query("""
-            SELECT name, description, rubric, template_notebook, solution_notebook, total_points FROM assignments WHERE id = ?
-        """, conn, params=(assignment_id,))
-        conn.close()
-        
-        if assignment_info_df.empty:
-            st.error("Assignment not found")
-            return
-        
-        assignment_row = assignment_info_df.iloc[0]
-        
-        # Prepare assignment info
+        # Prepare assignment info (include rubric for weight extraction)
         assignment_info = {
             "title": assignment_row['name'],
             "name": assignment_row['name'],  # Add name for prompt manager
             "description": assignment_row['description'],
-            "student_name": submission['student_name'] or f"Student {submission['student_identifier']}"
+            "student_name": submission['student_name'] or f"Student {submission['student_identifier']}",
+            "rubric": assignment_row['rubric']  # Include rubric for weight extraction
         }
-        
-        # Parse rubric
-        rubric_elements = {}
-        if assignment_row['rubric']:
-            try:
-                rubric_data = json.loads(assignment_row['rubric'])
-                rubric_elements = {
-                    "technical_execution": {"weight": 0.25, "max_score": assignment_row['total_points']},
-                    "business_thinking": {"weight": 0.30, "max_score": assignment_row['total_points']},
-                    "data_analysis": {"weight": 0.25, "max_score": assignment_row['total_points']},
-                    "communication": {"weight": 0.20, "max_score": assignment_row['total_points']}
-                }
-            except:
-                pass
         
         # Load template code (what students received)
         template_code = ""
@@ -284,7 +307,6 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
                 template_code=template_code,
                 solution_code=solution_code,
                 assignment_info=assignment_info,
-                rubric_elements=rubric_elements,
                 notebook_path=notebook_to_use
             )
             
@@ -455,11 +477,47 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
     
     total_submissions = len(submissions)
     
-    # Initialize grader and validator (two-model system)
-    business_grader = BusinessAnalyticsGrader()
+    # Get assignment info for rubric and solution paths
+    conn = sqlite3.connect(grader.db_path)
+    assignment_info_df = pd.read_sql_query("""
+        SELECT name, rubric, solution_notebook FROM assignments WHERE id = ?
+    """, conn, params=(assignment_id,))
+    conn.close()
+    
+    rubric_path = None
+    solution_path = None
+    
+    if not assignment_info_df.empty:
+        assignment_row = assignment_info_df.iloc[0]
+        
+        # Try to find rubric JSON file
+        if assignment_row.get('rubric'):
+            rubric_str = assignment_row['rubric']
+            if rubric_str.endswith('.json') and os.path.exists(rubric_str):
+                rubric_path = rubric_str
+            else:
+                assignment_name = assignment_row['name'].lower().replace(' ', '_')
+                potential_rubric = f"rubrics/{assignment_name}_rubric.json"
+                if os.path.exists(potential_rubric):
+                    rubric_path = potential_rubric
+                elif os.path.exists("rubrics/assignment_6_rubric.json"):
+                    rubric_path = "rubrics/assignment_6_rubric.json"
+        
+        # Get solution notebook path
+        if assignment_row.get('solution_notebook') and os.path.exists(assignment_row['solution_notebook']):
+            solution_path = assignment_row['solution_notebook']
+    
+    # Initialize grader V2 with 4-layer validation
+    business_grader = BusinessAnalyticsGraderV2(
+        rubric_path=rubric_path,
+        solution_path=solution_path
+    )
     validator = GradingValidator() if use_validation else None
     
-    st.info("🤖 **Parallel Two-Model Processing**: Code analysis + feedback generation running simultaneously")
+    if rubric_path and solution_path:
+        st.info("🤖 **Enhanced 4-Layer Grading System**: Systematic Validation + Output Comparison + AI Analysis")
+    else:
+        st.info("🤖 **Parallel Two-Model Processing**: Code analysis + feedback generation running simultaneously")
     
     # Performance metrics tracking
     batch_performance = {
@@ -561,8 +619,17 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
             graded_count += 1
             
         except Exception as e:
+            # Log full error details
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"❌ GRADING ERROR for {display_name}:")
+            print(f"Error: {str(e)}")
+            print(f"Full traceback:\n{error_trace}")
+            
             with results_container:
                 st.error(f"❌ {display_name}: Failed - {str(e)}")
+                with st.expander("Show error details"):
+                    st.code(error_trace)
             failed_count += 1
     
     # Calculate final batch performance metrics
@@ -614,7 +681,6 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
             # Performance trends
             st.subheader("📈 Performance Trends")
             
-            import pandas as pd
             import matplotlib.pyplot as plt
             
             # Create performance DataFrame
@@ -706,21 +772,16 @@ def grade_submission_internal(business_grader, submission, assignment_id, grader
     
     assignment_row = assignment_info_df.iloc[0]
     
-    # Prepare assignment info
+    # Prepare assignment info (include rubric for weight extraction)
     assignment_info = {
         "title": assignment_row['name'],
         "name": assignment_row['name'],
         "description": assignment_row['description'],
-        "student_name": submission['student_name'] or f"Student {submission['student_identifier']}"
+        "student_name": submission['student_name'] or f"Student {submission['student_identifier']}",
+        "rubric": assignment_row['rubric']  # Include rubric for weight extraction
     }
     
-    # Parse rubric
-    rubric_elements = {
-        "technical_execution": {"weight": 0.25, "max_score": assignment_row['total_points']},
-        "business_thinking": {"weight": 0.30, "max_score": assignment_row['total_points']},
-        "data_analysis": {"weight": 0.25, "max_score": assignment_row['total_points']},
-        "communication": {"weight": 0.20, "max_score": assignment_row['total_points']}
-    }
+    # Rubric is now handled internally by the grader with fixed weights
     
     # Load template code (what students received) - CRITICAL for score validation
     template_code = ""
@@ -790,7 +851,6 @@ def grade_submission_internal(business_grader, submission, assignment_id, grader
         template_code=template_code,
         solution_code=solution_code,
         assignment_info=assignment_info,
-        rubric_elements=rubric_elements,
         notebook_path=notebook_to_use,
         preprocessing_info=preprocessing_info
     )

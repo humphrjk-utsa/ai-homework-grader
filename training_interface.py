@@ -428,6 +428,7 @@ class TrainingInterface:
     def get_submissions_for_review(self, assignment_filter, status_filter):
         """Get submissions that need review based on filters"""
         conn = sqlite3.connect(self.grader.db_path)
+        conn.row_factory = sqlite3.Row
         
         # Updated query to use submissions table (where Business Analytics Grader stores data)
         # Use ABS() to ensure scores are always positive

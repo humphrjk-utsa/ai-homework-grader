@@ -267,6 +267,7 @@ class DistributedMLXClient:
     
     def generate_parallel_sync(self, code_prompt: str, feedback_prompt: str) -> Dict[str, Any]:
         """Synchronous wrapper for parallel generation"""
+        print(f"🚀 ENTERED generate_parallel_sync")
         try:
             print(f"🚀 Starting parallel generation...")
             print(f"   Qwen server: {self.qwen_server_url}")
@@ -356,14 +357,22 @@ class DistributedMLXClient:
         except Exception as e:
             import traceback
             error_details = traceback.format_exc()
-            print(f"❌ Parallel generation failed: {e}")
+            print(f"❌ Parallel generation EXCEPTION: {e}")
+            print(f"Exception type: {type(e).__name__}")
             print(f"Full traceback:\n{error_details}")
-            st.error(f"❌ Parallel generation failed: {e}")
+            
+            # Try to show in Streamlit if available
+            try:
+                st.error(f"❌ Parallel generation failed: {e}")
+                st.code(error_details)
+            except:
+                pass
+            
             return {
                 'code_analysis': None,
                 'feedback': None,
                 'parallel_time': 0,
-                'error': f"{str(e)}\n{error_details}"
+                'error': f"{type(e).__name__}: {str(e)}"
             }
     
     def get_system_status(self) -> Dict[str, Any]:

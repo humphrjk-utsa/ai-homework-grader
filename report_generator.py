@@ -424,6 +424,14 @@ class PDFReportGenerator:
                     max_score = 8
                 elif element == 'reflection_questions':
                     max_score = 12.5
+                elif element == 'technical_execution':
+                    max_score = 15  # 40% of 37.5
+                elif element == 'data_analysis':
+                    max_score = 15  # 40% of 37.5
+                elif element == 'business_thinking':
+                    max_score = 3.75  # 10% of 37.5
+                elif element == 'communication':
+                    max_score = 3.75  # 10% of 37.5
                 else:
                     max_score = 5
                 
