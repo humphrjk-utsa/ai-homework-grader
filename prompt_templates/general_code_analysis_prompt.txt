@@ -24,11 +24,11 @@ When comparing student outputs to solution outputs:
 6. **Key metrics** - Total_Spent, averages, counts must be similar
 
 EXAMPLES OF EQUIVALENT OUTPUTS:
-✅ Student: "Customers: 94, Orders: 250" vs Solution: "Orders: 250, Customers: 94" → MATCH
-✅ Student: Top customer spent $8471.51 vs Solution: Top customer spent $8471.5 → MATCH
-✅ Student: Data frame with rows in different order but same content → MATCH
-❌ Student: 50 customers vs Solution: 94 customers → NO MATCH (wrong count)
-❌ Student: $5000 total vs Solution: $8471 total → NO MATCH (wrong value)
+✅ Order doesn't matter: "A: 100, B: 200" vs "B: 200, A: 100" → MATCH
+✅ Rounding differences: "Value: 123.45" vs "Value: 123.5" → MATCH
+✅ Row order doesn't matter: Data frames with same content in different order → MATCH
+❌ Wrong values: "Count: 50" vs "Count: 100" → NO MATCH
+❌ Wrong calculations: "Total: 500" vs "Total: 1000" → NO MATCH
 
 CRITICAL INSTRUCTIONS:
 - Output ONLY valid JSON (no thinking, no reasoning, no internal dialogue)
@@ -49,7 +49,7 @@ When outputs are wrong, you MUST explain:
 4. HOW to fix it: Specific code changes needed
 
 Example of GOOD feedback:
-"Your customer_metrics output shows 50 customers, but the solution shows 94. This happened because you used inner_join() instead of left_join(), which excluded customers without orders. The correct approach is: customer_metrics <- complete_data %>% group_by(CustomerID, Name) %>% summarise(...). This ensures all customers are included in the analysis."
+"Your output shows [specific wrong value], but the solution shows [correct value]. This happened because [specific reason: wrong function, missing step, incorrect logic]. The correct approach is: [specific code example]. This will produce [expected result]."
 
 Example of BAD feedback:
 "Your output is incorrect." ❌ (No explanation of what, why, or how to fix)
@@ -198,7 +198,7 @@ OUTPUT FORMAT - PURE JSON ONLY (no markdown, no thinking, no extra text):
         "  2. WHY it's wrong: 'This happened because [specific reason: missing code, wrong function, logic error]'",
         "  3. WHAT was expected: 'The solution shows [expected output/approach]'",
         "  4. HOW to fix: 'To fix this, [specific code change needed]'",
-        "EXAMPLE: 'You did not create the required variable product_metrics. This section requires you to calculate Total_Revenue, Total_Quantity, and Order_Frequency for each product using group_by(ProductID, Product_Name) %>% summarise(...). The solution shows this should produce a data frame with 50 products. Add this code after the supplier_metrics section.'",
+        "EXAMPLE: See assignment-specific prompt for concrete examples relevant to this assignment.",
         "If 0-2 sections completed: 'You must complete the assignment. Currently X out of Y sections have working code.'",
         "List ALL incomplete sections by name with DETAILED, SPECIFIC guidance",
         "If below 50%: 'This submission does not demonstrate the required skills and cannot receive a passing grade.'"

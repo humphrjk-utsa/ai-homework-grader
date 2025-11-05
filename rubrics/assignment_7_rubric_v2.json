@@ -1,0 +1,560 @@
+{
+  "assignment_info": {
+    "name": "a7_v2",
+    "title": "Assignment 7 - String Manipulation and Date/Time Data (Version 2 - Processed Data)",
+    "description": "Data cleaning and temporal analysis using stringr and lubridate with realistic business data",
+    "total_points": 100,
+    "data_version": "v2_processed",
+    "data_location": "data/processed/"
+  },
+  "strict_scoring_enabled": true,
+  "strict_scoring_rules": {
+    "no_output_no_points": true,
+    "template_only_max_percent": 10,
+    "missing_section_zero": false,
+    "wrong_output_max_credit": 50,
+    "completion_based_maximum": true,
+    "differentiation_required": true,
+    "flexible_column_names": true,
+    "accept_adaptations": true
+  },
+  "data_structure": {
+    "note": "This rubric is for Version 2 data with PascalCase columns and CustomerID instead of customer names",
+    "feedback_columns": ["FeedbackID", "CustomerID", "Feedback_Text", "Contact_Info", "Feedback_Date"],
+    "transaction_columns": ["LogID", "CustomerID", "Transaction_DateTime", "Amount", "Status"],
+    "product_columns": ["ProductID", "Product_Description", "Category", "Price", "In_Stock"],
+    "expected_rows": {
+      "feedback": 100,
+      "transactions": 150,
+      "products": 75
+    }
+  },
+  "rubric_elements": {
+    "technical_execution": {
+      "weight": 0.20,
+      "max_points": 20,
+      "description": "Code quality, syntax, execution, and proper use of stringr and lubridate functions",
+      "criteria": [
+        "All code cells executed with visible outputs",
+        "Proper use of pipe operator (%>%) throughout",
+        "Correct syntax for stringr functions (str_trim, str_detect, str_extract, etc.)",
+        "Correct syntax for lubridate functions (parse_date_time, year, month, wday, etc.)",
+        "Handles mixed date formats appropriately",
+        "No critical errors that prevent analysis",
+        "Data files imported successfully",
+        "All required variables created"
+      ],
+      "execution_requirements": {
+        "cells_must_be_run": true,
+        "description": "ALL code cells must be executed and show outputs",
+        "penalty": "Each unexecuted cell = 2 points deduction",
+        "note": "Students must run ALL cells before submission"
+      },
+      "deductions": {
+        "no_outputs": "Code without outputs = 0 points for that section",
+        "unexecuted_cells": "Each cell without output = 2 points deduction",
+        "no_pipes": "Not using %>% operator = 10% deduction",
+        "syntax_errors": "Each critical syntax error = 10% deduction",
+        "template_only": "Only template code with blanks = 0 points",
+        "data_loss": "Losing >20% of data = 15% deduction"
+      }
+    },
+
+    "string_manipulation": {
+      "weight": 0.25,
+      "max_points": 25,
+      "description": "String cleaning, pattern detection, and extraction using stringr",
+      "required_sections": {
+        "part2_cleaning": {
+          "points": 10,
+          "description": "String cleaning and standardization",
+          "subtasks": {
+            "task_2_1_clean_products": {
+              "points": 4,
+              "description": "Clean product names with str_trim and str_to_title",
+              "verification": [
+                "str_trim(",
+                "str_to_title(",
+                "product_name_clean"
+              ],
+              "accepts": ["Product_Description", "product_name"],
+              "note": "Must work with Product_Description column"
+            },
+            "task_2_2_clean_categories": {
+              "points": 3,
+              "description": "Standardize categories",
+              "verification": [
+                "str_to_title(",
+                "category_clean"
+              ],
+              "accepts": ["Category", "category"]
+            },
+            "task_2_3_clean_feedback": {
+              "points": 3,
+              "description": "Clean feedback text",
+              "verification": [
+                "str_to_lower(",
+                "str_squish(",
+                "feedback_clean"
+              ],
+              "accepts": ["Feedback_Text", "feedback_text"]
+            }
+          }
+        },
+        "part3_patterns": {
+          "points": 20,
+          "description": "Pattern detection and extraction",
+          "subtasks": {
+            "task_3_1_detect_features": {
+              "points": 8,
+              "description": "Detect product features (wireless, premium, gaming)",
+              "verification": [
+                "str_detect(",
+                "is_wireless",
+                "is_premium",
+                "is_gaming"
+              ]
+            },
+            "task_3_2_extract_specs": {
+              "points": 6,
+              "description": "Extract specifications from product names",
+              "verification": [
+                "str_extract(",
+                "\\\\d+",
+                "size_number"
+              ]
+            },
+            "task_3_3_sentiment": {
+              "points": 6,
+              "description": "Sentiment analysis with str_count",
+              "verification": [
+                "str_count(",
+                "positive_words",
+                "negative_words",
+                "sentiment_score"
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    "date_time_operations": {
+      "weight": 0.25,
+      "max_points": 25,
+      "description": "Date parsing, component extraction, and temporal analysis using lubridate",
+      "required_sections": {
+        "part4_date_basics": {
+          "points": 15,
+          "description": "Date parsing and component extraction",
+          "subtasks": {
+            "task_4_1_parse_dates": {
+              "points": 5,
+              "description": "Parse transaction dates - accepts multiple approaches",
+              "verification": [
+                "date_parsed"
+              ],
+              "accepts_functions": ["ymd", "mdy", "dmy", "parse_date_time"],
+              "note": "Mixed date formats in data require parse_date_time() or filtering",
+              "grading": {
+                "parse_date_time_all_data": "Full credit - handles all formats",
+                "mdy_with_filter": "Partial credit (80%) - loses some data but valid approach",
+                "ymd_only": "Minimal credit (40%) - doesn't match data format"
+              }
+            },
+            "task_4_2_extract_components": {
+              "points": 7,
+              "description": "Extract date components",
+              "verification": [
+                "year(",
+                "month(",
+                "day(",
+                "wday(",
+                "quarter(",
+                "trans_year",
+                "trans_month",
+                "trans_month_name",
+                "trans_weekday",
+                "trans_quarter"
+              ]
+            },
+            "task_4_3_weekend_flag": {
+              "points": 3,
+              "description": "Identify weekend transactions",
+              "verification": [
+                "wday(",
+                "%in% c(1, 7)",
+                "is_weekend"
+              ]
+            }
+          }
+        },
+        "part5_recency": {
+          "points": 15,
+          "description": "Date calculations and customer recency analysis",
+          "subtasks": {
+            "task_5_1_calculate_recency": {
+              "points": 7,
+              "description": "Calculate days since transaction",
+              "verification": [
+                "today(",
+                "as.numeric(",
+                "days_since"
+              ]
+            },
+            "task_5_2_categorize": {
+              "points": 8,
+              "description": "Categorize customers by recency",
+              "verification": [
+                "case_when(",
+                "recency_category",
+                "Recent",
+                "Moderate",
+                "At Risk"
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    "business_analysis": {
+      "weight": 0.20,
+      "max_points": 20,
+      "description": "Combined operations and business intelligence",
+      "required_sections": {
+        "part6_combined": {
+          "points": 10,
+          "description": "Combined string and date operations",
+          "subtasks": {
+            "task_6_1_personalization": {
+              "points": 5,
+              "description": "Extract names and create personalized messages",
+              "verification": [
+                "str_extract(",
+                "first_name",
+                "paste(",
+                "personalized_message"
+              ],
+              "note": "Data has CustomerID not customer_name - accept workarounds",
+              "accepts_approaches": [
+                "Creating synthetic names from CustomerID",
+                "Joining with feedback table",
+                "Using CustomerID directly"
+              ],
+              "grading": {
+                "proper_join_or_synthetic": "Full credit",
+                "uses_customerid_as_name": "Partial credit (60%) - functional but not ideal"
+              }
+            },
+            "task_6_2_weekday": {
+              "points": 3,
+              "description": "Weekday pattern analysis",
+              "verification": [
+                "group_by(trans_weekday)",
+                "summarize(",
+                "transaction_count"
+              ]
+            },
+            "task_6_3_monthly": {
+              "points": 2,
+              "description": "Monthly pattern analysis",
+              "verification": [
+                "group_by(",
+                "n_distinct(",
+                "unique_customers"
+              ],
+              "accepts": ["CustomerID", "customer_name"]
+            }
+          }
+        },
+        "part7_summary": {
+          "points": 5,
+          "description": "Business intelligence dashboard",
+          "verification": [
+            "nrow(",
+            "sum(",
+            "mean(",
+            "Product Analysis",
+            "Customer Sentiment",
+            "Transaction Patterns"
+          ],
+          "note": "Date display must be formatted, not raw timestamps"
+        }
+      }
+    },
+
+    "reflection_questions": {
+      "weight": 0.10,
+      "max_points": 10,
+      "description": "Thoughtful analysis and business understanding",
+      "questions": {
+        "question_8_1": {
+          "points": 2,
+          "description": "Data quality impact with specific examples"
+        },
+        "question_8_2": {
+          "points": 2,
+          "description": "Pattern detection business insights"
+        },
+        "question_8_3": {
+          "points": 2,
+          "description": "Date analysis importance (3+ applications)"
+        },
+        "question_8_4": {
+          "points": 2,
+          "description": "Customer recency strategy with prioritization"
+        },
+        "question_8_5": {
+          "points": 1,
+          "description": "Sentiment analysis application and limitations"
+        },
+        "question_8_6": {
+          "points": 1,
+          "description": "Real-world application scenario"
+        }
+      }
+    }
+  },
+
+  "autograder_checks": {
+    "required_variables": [
+      "feedback",
+      "transactions",
+      "products",
+      "products_clean",
+      "feedback_clean",
+      "transactions_clean",
+      "customer_outreach",
+      "weekday_patterns",
+      "monthly_patterns",
+      "top_categories"
+    ],
+    "flexible_column_matching": {
+      "enabled": true,
+      "mappings": {
+        "product_name": ["Product_Description", "product_name"],
+        "feedback_text": ["Feedback_Text", "feedback_text"],
+        "transaction_date": ["Transaction_DateTime", "transaction_date"],
+        "customer_name": ["CustomerID", "customer_name"],
+        "category": ["Category", "category"]
+      }
+    },
+    "sections": {
+      "part1_setup": {
+        "name": "Part 1: Setup and Data Import",
+        "points": 5,
+        "variables": ["feedback", "transactions", "products"],
+        "functions": ["library", "read_csv", "str", "head"],
+        "expected_data": {
+          "feedback_rows": 100,
+          "transaction_rows": 150,
+          "product_rows": 75
+        }
+      },
+      "part2_string_cleaning": {
+        "name": "Part 2: String Cleaning",
+        "points": 10,
+        "variables": ["products_clean", "feedback_clean"],
+        "functions": ["str_trim", "str_to_title", "str_to_lower", "str_squish"],
+        "required_columns": ["product_name_clean", "category_clean", "feedback_clean"]
+      },
+      "part3_pattern_detection": {
+        "name": "Part 3: Pattern Detection and Extraction",
+        "points": 20,
+        "variables": ["products_clean", "feedback_clean"],
+        "functions": ["str_detect", "str_extract", "str_count"],
+        "required_columns": ["is_wireless", "is_premium", "is_gaming", "size_number", "positive_words", "negative_words", "sentiment_score"]
+      },
+      "part4_date_operations": {
+        "name": "Part 4: Date Parsing and Component Extraction",
+        "points": 20,
+        "variables": ["transactions_clean"],
+        "functions": ["parse_date_time", "mdy", "year", "month", "day", "wday", "quarter"],
+        "required_columns": ["date_parsed", "trans_year", "trans_month", "trans_day", "trans_weekday", "trans_quarter", "is_weekend"],
+        "validation": {
+          "check_na_count": true,
+          "max_na_percent": 20,
+          "note": "Some NAs acceptable if student filtered or couldn't parse all formats"
+        }
+      },
+      "part5_recency_analysis": {
+        "name": "Part 5: Customer Recency Analysis",
+        "points": 15,
+        "variables": ["transactions_clean"],
+        "functions": ["today", "case_when"],
+        "required_columns": ["days_since", "recency_category"]
+      },
+      "part6_combined_operations": {
+        "name": "Part 6: Combined String and Date Operations",
+        "points": 10,
+        "variables": ["customer_outreach", "weekday_patterns", "monthly_patterns"],
+        "functions": ["str_extract", "group_by", "summarise", "n_distinct"],
+        "flexible_checks": {
+          "customer_name_source": ["CustomerID", "customer_name", "synthetic"],
+          "note": "Accept any valid approach to handle missing customer names"
+        }
+      },
+      "part7_business_intelligence": {
+        "name": "Part 7: Business Intelligence Summary",
+        "points": 10,
+        "variables": ["top_categories"],
+        "functions": ["group_by", "summarise", "arrange"],
+        "output_checks": {
+          "date_format": "Must use format() not raw timestamps",
+          "complete_dashboard": "All 4 sections present"
+        }
+      },
+      "part8_reflections": {
+        "name": "Part 8: Reflection Questions",
+        "points": 10,
+        "reflection_questions": 6,
+        "check_type": "markdown",
+        "min_words_per_question": 50
+      }
+    }
+  },
+
+  "common_issues_and_solutions": {
+    "issue_1_mixed_date_formats": {
+      "problem": "Data has both mdy and dmy formats",
+      "correct_solution": "Use parse_date_time() with multiple orders",
+      "acceptable_solution": "Use mdy() and filter out NAs (loses some data)",
+      "incorrect_solution": "Use ymd() - doesn't match data format"
+    },
+    "issue_2_no_customer_names": {
+      "problem": "Transactions only have CustomerID not customer_name",
+      "correct_solution": "Create synthetic names or join with feedback",
+      "acceptable_solution": "Use CustomerID directly in messages",
+      "incorrect_solution": "Extract from CustomerID as if it were a name"
+    },
+    "issue_3_date_display": {
+      "problem": "Dates display as Unix timestamps",
+      "correct_solution": "Use format(date, '%Y-%m-%d')",
+      "incorrect_solution": "Print date object directly"
+    },
+    "issue_4_column_names": {
+      "problem": "Template references product_name but data has Product_Description",
+      "correct_solution": "Use actual column names from data",
+      "note": "This is a template/data mismatch issue"
+    }
+  },
+
+  "grading_guidelines": {
+    "full_credit_criteria": [
+      "All code executes without critical errors",
+      "Handles mixed date formats appropriately",
+      "Adapts to missing customer names creatively",
+      "Formats dates properly in output",
+      "Uses correct column names from data",
+      "All reflection questions answered thoughtfully"
+    ],
+    "partial_credit_scenarios": {
+      "data_loss_acceptable": "If student filters NAs from date parsing, give 80% credit if they acknowledge the loss",
+      "customerid_as_name": "If student uses CustomerID as name, give 60% credit if messages are otherwise correct",
+      "timestamp_display": "If dates show as timestamps, deduct 5 points but don't fail entire section"
+    },
+    "zero_credit_scenarios": [
+      "Code not executed (no outputs)",
+      "Only template code with TODOs",
+      "Critical errors preventing any analysis",
+      "Wrong data files used"
+    ]
+  },
+
+  "partial_credit_rules": {
+    "part4_date_operations": {
+      "parse_date_time_all_formats": {
+        "condition_type": "count_formats",
+        "formats": ["mdy", "dmy", "ymd"],
+        "min_count": 3,
+        "max_count": 3,
+        "multiplier": 1.0,
+        "priority": 1,
+        "explanation": "Used parse_date_time() with all 3 date formats - perfect!"
+      },
+      "parse_date_time_two_formats": {
+        "condition_type": "count_formats",
+        "formats": ["mdy", "dmy", "ymd"],
+        "min_count": 2,
+        "max_count": 2,
+        "multiplier": 0.85,
+        "priority": 2,
+        "explanation": "Used parse_date_time() with 2/3 formats (some data loss acceptable)"
+      },
+      "parse_date_time_one_format": {
+        "condition_type": "count_formats",
+        "formats": ["mdy", "dmy", "ymd"],
+        "min_count": 1,
+        "max_count": 1,
+        "multiplier": 0.70,
+        "priority": 3,
+        "explanation": "Used parse_date_time() with 1 format only (significant data loss)"
+      },
+      "mdy_only": {
+        "condition_type": "all_of",
+        "patterns": ["\\bmdy\\s*\\(", "date_parsed"],
+        "not_patterns": ["parse_date_time"],
+        "multiplier": 0.70,
+        "priority": 4,
+        "explanation": "Used mdy() - lesson method but loses 40% of data"
+      },
+      "ymd_only": {
+        "condition_type": "all_of",
+        "patterns": ["\\bymd\\s*\\(", "date_parsed"],
+        "not_patterns": ["parse_date_time"],
+        "multiplier": 0.40,
+        "priority": 5,
+        "explanation": "Used ymd() - doesn't match data format"
+      }
+    },
+    "part6_combined_operations": {
+      "synthetic_customer_names": {
+        "condition_type": "regex",
+        "pattern": "paste\\s*\\([\"']Customer[\"']",
+        "multiplier": 1.0,
+        "priority": 1,
+        "explanation": "Created synthetic customer names - excellent workaround!"
+      },
+      "joined_customer_data": {
+        "condition_type": "any_of",
+        "patterns": ["left_join", "inner_join", "merge"],
+        "multiplier": 1.0,
+        "priority": 2,
+        "explanation": "Joined with feedback table to get customer names - excellent!"
+      },
+      "customerid_digits_extraction": {
+        "condition_type": "regex",
+        "pattern": "str_extract\\s*\\(\\s*CustomerID.*?\\\\\\\\d",
+        "multiplier": 0.30,
+        "priority": 3,
+        "explanation": "Extracts digits from CustomerID (functional but incorrect logic)"
+      },
+      "customerid_direct_use": {
+        "condition_type": "all_of",
+        "patterns": ["CustomerID", "first_name"],
+        "not_patterns": ["\\\\\\\\d"],
+        "multiplier": 0.60,
+        "priority": 4,
+        "explanation": "Uses CustomerID directly (acceptable workaround)"
+      }
+    },
+    "part7_business_intelligence": {
+      "wrong_category_first_value": {
+        "condition_type": "regex",
+        "pattern": "category_clean\\s*\\[\\s*1\\s*\\]",
+        "multiplier": 0.70,
+        "priority": 1,
+        "explanation": "Takes first category instead of most common (deduct 30%)"
+      },
+      "correct_category_method": {
+        "condition_type": "all_of",
+        "patterns": ["count\\s*\\(", "arrange\\s*\\(", "category"],
+        "not_patterns": ["\\[\\s*1\\s*\\]"],
+        "multiplier": 1.0,
+        "priority": 2,
+        "explanation": "Used correct method to find most common category"
+      }
+    }
+  }
+}
