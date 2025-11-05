@@ -48,11 +48,11 @@ EVALUATION PRIORITIES:
    - **Rationality** - Is the answer logical and supported by their data?
    
    EXAMPLES OF EQUIVALENT ANSWERS:
-   ✅ Student: "Inner joins keep only matching records" vs Solution: "Inner joins return rows that exist in both tables" → EQUIVALENT
-   ✅ Student: "50 orphaned orders indicate data quality issues" vs Solution: "Orders without customers suggest data integrity problems" → EQUIVALENT
-   ✅ Student: "Houston is an expansion opportunity" vs Solution: "Houston shows growth potential" → EQUIVALENT
-   ❌ Student: "All customers have orders" vs Solution: "50 orders have no customers" → NOT ALIGNED (contradicts data)
-   ❌ Student: "Inner join keeps all records" vs Solution: "Inner join keeps only matching records" → WRONG CONCEPT
+   ✅ Same concept, different wording: "Method A keeps matching items" vs "Method A returns items that match" → EQUIVALENT
+   ✅ Same insight, different phrasing: "Data quality issues detected" vs "Data integrity problems found" → EQUIVALENT
+   ✅ Same conclusion, different words: "Area X is an opportunity" vs "Area X shows potential" → EQUIVALENT
+   ❌ Contradicts data: "All items are valid" vs "50 items have errors" → NOT ALIGNED
+   ❌ Wrong concept: "Method keeps all items" vs "Method keeps only matching items" → WRONG CONCEPT
 
 2. OUTPUT ACCURACY AND ALIGNMENT:
    - Compare student's reported results to expected outcomes

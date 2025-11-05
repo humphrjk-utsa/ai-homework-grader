@@ -17,6 +17,7 @@ from output_comparator import OutputComparator, compare_and_generate_prompt
 
 # Import new validators
 from validators.assignment_6_systematic_validator import Assignment6SystematicValidator
+from validators.rubric_driven_validator import RubricDrivenValidator
 from validators.smart_output_validator import SmartOutputValidator
 
 
@@ -54,7 +55,21 @@ class BusinessAnalyticsGraderV2:
         
         if rubric_path and os.path.exists(rubric_path):
             print(f"📋 Loading systematic validator with rubric: {rubric_path}")
-            self.systematic_validator = Assignment6SystematicValidator(rubric_path)
+            # Try to use rubric-driven validator first (works for any assignment with autograder_checks)
+            try:
+                self.systematic_validator = RubricDrivenValidator(rubric_path)
+                print(f"✅ Using RubricDrivenValidator (generic)")
+            except (ValueError, KeyError) as e:
+                # Fallback to Assignment 6 validator if rubric doesn't have autograder_checks
+                print(f"⚠️ Rubric missing autograder_checks: {e}")
+                print(f"⚠️ Falling back to Assignment6SystematicValidator")
+                self.systematic_validator = Assignment6SystematicValidator(rubric_path)
+            except Exception as e:
+                print(f"❌ Error loading RubricDrivenValidator: {e}")
+                print(f"⚠️ Falling back to Assignment6SystematicValidator")
+                import traceback
+                traceback.print_exc()
+                self.systematic_validator = Assignment6SystematicValidator(rubric_path)
             
             if solution_path and os.path.exists(solution_path):
                 print(f"📊 Loading output validator with solution: {solution_path}")
@@ -119,10 +134,14 @@ class BusinessAnalyticsGraderV2:
         # LAYER 1: Systematic Validation
         print("\n[LAYER 1: SYSTEMATIC VALIDATION]")
         print("-"*80)
+        print(f"DEBUG: Validator type: {type(self.systematic_validator).__name__}")
         sys_result = self.systematic_validator.validate_notebook(notebook_path)
+        print(f"DEBUG: Section breakdown keys: {list(sys_result.get('section_breakdown', {}).keys())}")
         
         print(f"✅ Variables Found: {sys_result['variable_check']['found']}/{sys_result['variable_check']['total_required']}")
-        print(f"✅ Sections Complete: {sum(1 for s in sys_result['section_breakdown'].values() if s['status'] == 'complete')}/21")
+        total_sections = len(sys_result['section_breakdown'])
+        complete_sections = sum(1 for s in sys_result['section_breakdown'].values() if s['status'] == 'complete')
+        print(f"✅ Sections Complete: {complete_sections}/{total_sections}")
         print(f"✅ Execution Rate: {sys_result['cell_stats']['execution_rate']*100:.1f}%")
         print(f"✅ Base Score: {sys_result['final_score']:.1f}/100")
         
@@ -202,7 +221,8 @@ class BusinessAnalyticsGraderV2:
         
         complete_sections = sum(1 for s in sys_result['section_breakdown'].values() if s['status'] == 'complete')
         total_sections = len(sys_result['section_breakdown'])
-        summary_lines.append(f"- Sections Complete: {complete_sections}/{total_sections} ({complete_sections/total_sections*100:.0f}%)")
+        section_pct = (complete_sections/total_sections*100) if total_sections > 0 else 0
+        summary_lines.append(f"- Sections Complete: {complete_sections}/{total_sections} ({section_pct:.0f}%)")
         
         summary_lines.append(f"- Execution Rate: {sys_result['cell_stats']['execution_rate']*100:.1f}%")
         summary_lines.append(f"- Base Score: {sys_result['final_score']:.1f}/100")
@@ -400,7 +420,10 @@ class BusinessAnalyticsGraderV2:
         code_strengths = []
         for section_id, section_data in sys_result['section_breakdown'].items():
             if section_data['status'] == 'complete':
-                code_strengths.append(f"✅ Completed {section_data['name']} ({section_data['points_earned']:.1f}/{section_data['points_possible']} points)")
+                # Handle both old and new validator formats
+                points_earned = section_data.get('points_earned', section_data.get('score', 0))
+                points_possible = section_data.get('points_possible', section_data.get('points', 0))
+                code_strengths.append(f"✅ Completed {section_data['name']} ({points_earned:.1f}/{points_possible} points)")
         
         if not code_strengths:
             code_strengths = ["Submission received and processed"]
@@ -409,9 +432,10 @@ class BusinessAnalyticsGraderV2:
         code_suggestions = []
         for section_id, section_data in sys_result['section_breakdown'].items():
             if section_data['status'] == 'incomplete':
+                points_possible = section_data.get('points_possible', section_data.get('points', 0))
                 code_suggestions.append(
                     f"• WHAT: Complete {section_data['name']}\n"
-                    f"  WHY: This section is worth {section_data['points_possible']} points and tests key learning objectives\n"
+                    f"  WHY: This section is worth {points_possible} points and tests key learning objectives\n"
                     f"  HOW: Implement the required code as specified in the assignment instructions\n"
                     f"  EXAMPLE: See the solution notebook for reference implementation"
                 )
@@ -516,7 +540,10 @@ class BusinessAnalyticsGraderV2:
         # Add validation-based strengths
         for section_id, section_data in sys_result['section_breakdown'].items():
             if section_data['status'] == 'complete':
-                code_strengths.append(f"✅ Completed {section_data['name']} ({section_data['points_earned']:.1f}/{section_data['points_possible']} points)")
+                # Handle both old and new validator formats
+                points_earned = section_data.get('points_earned', section_data.get('score', 0))
+                points_possible = section_data.get('points_possible', section_data.get('points', 0))
+                code_strengths.append(f"✅ Completed {section_data['name']} ({points_earned:.1f}/{points_possible} points)")
         
         # Merge code suggestions from AI and validation
         code_suggestions = []
@@ -526,9 +553,10 @@ class BusinessAnalyticsGraderV2:
         # Add validation-based suggestions
         for section_id, section_data in sys_result['section_breakdown'].items():
             if section_data['status'] == 'incomplete':
+                points_possible = section_data.get('points_possible', section_data.get('points', 0))
                 code_suggestions.append(
                     f"• WHAT: Complete {section_data['name']}\n"
-                    f"  WHY: This section is worth {section_data['points_possible']} points\n"
+                    f"  WHY: This section is worth {points_possible} points\n"
                     f"  HOW: Implement the required code as specified\n"
                     f"  EXAMPLE: See solution notebook for reference"
                 )
@@ -541,8 +569,9 @@ class BusinessAnalyticsGraderV2:
         if code_analysis.get('technical_observations'):
             technical_observations.extend(code_analysis['technical_observations'])
         
+        section_pct = (complete_sections/total_sections*100) if total_sections > 0 else 0
         technical_observations.append(
-            f"Completion: {complete_sections}/{total_sections} sections ({complete_sections/total_sections*100:.0f}%). Score: {final_score:.0f}%"
+            f"Completion: {complete_sections}/{total_sections} sections ({section_pct:.0f}%). Score: {final_score:.0f}%"
         )
         technical_observations.append(f"Variables found: {sys_result['variable_check']['found']}/{sys_result['variable_check']['total_required']}")
         

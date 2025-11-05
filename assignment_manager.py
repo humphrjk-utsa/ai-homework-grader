@@ -97,29 +97,51 @@ def upload_submissions_page(grader):
 def upload_single_submission(grader, assignment_id):
     st.info("📄 **Single File Upload** - Auto-extracts Canvas ID from filename")
     
+    # Use session state to track current file
+    if 'last_uploaded_file' not in st.session_state:
+        st.session_state.last_uploaded_file = None
+    
     notebook_file = st.file_uploader("Upload Notebook (.ipynb)", type=['ipynb'], key="single_upload")
     
     if notebook_file:
+        # Check if this is a new file
+        current_file_id = f"{notebook_file.name}_{notebook_file.size}"
+        if st.session_state.last_uploaded_file != current_file_id:
+            st.session_state.last_uploaded_file = current_file_id
+            # Clear any cached values
+            if 'manual_override_id' in st.session_state:
+                del st.session_state.manual_override_id
+            if 'manual_override_name' in st.session_state:
+                del st.session_state.manual_override_name
+        
         # Auto-extract Canvas ID and name from filename
         filename = notebook_file.name.replace('.ipynb', '')
         parsed_info = parse_github_classroom_filename(filename)
         
         # Show extracted info
+        st.markdown("**📋 Extracted from filename:**")
         col1, col2 = st.columns(2)
         with col1:
             st.info(f"**Canvas ID:** {parsed_info['id']}")
         with col2:
             st.info(f"**Name:** {parsed_info['name']}")
         
-        # Allow manual override
-        with st.expander("✏️ Override extracted info (optional)"):
-            override_id = st.text_input("Canvas ID", value=parsed_info['id'])
-            override_name = st.text_input("Student Name", value=parsed_info['name'])
+        # Allow manual override with session state
+        st.markdown("---")
+        st.markdown("**✏️ Edit if needed:**")
+        col3, col4 = st.columns(2)
+        with col3:
+            override_id = st.text_input("Canvas ID", value=parsed_info['id'], key="manual_override_id")
+        with col4:
+            override_name = st.text_input("Student Name", value=parsed_info['name'], key="manual_override_name")
         
-        # Use the values (either from expander or defaults)
-        if 'override_id' not in locals():
-            override_id = parsed_info['id']
-            override_name = parsed_info['name']
+        # Optional label for duplicate filenames
+        submission_label = st.text_input(
+            "📝 Submission Label (optional)", 
+            placeholder="e.g., 'revised', 'resubmit', 'v2'",
+            help="Add a label to distinguish multiple submissions with the same filename",
+            key="submission_label"
+        )
         
         if st.button("📤 Upload This Submission", type="primary"):
             try:
@@ -134,7 +156,12 @@ def upload_single_submission(grader, assignment_id):
                 os.makedirs(submission_dir, exist_ok=True)
                 
                 safe_name = override_name.replace(' ', '_')
-                notebook_path = os.path.join(submission_dir, f"{safe_name}_{override_id}.ipynb")
+                # Add label if provided
+                if submission_label:
+                    safe_label = submission_label.replace(' ', '_')
+                    notebook_path = os.path.join(submission_dir, f"{safe_name}_{override_id}_{safe_label}.ipynb")
+                else:
+                    notebook_path = os.path.join(submission_dir, f"{safe_name}_{override_id}.ipynb")
                 
                 with open(notebook_path, "wb") as f:
                     f.write(notebook_content)

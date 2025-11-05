@@ -322,7 +322,15 @@ class BusinessAnalyticsGrader:
             
             # NEW: Compare outputs programmatically if solution notebook exists
             output_comparison = None
-            solution_notebook_path = notebook_path.replace('submissions', 'data/raw').replace(os.path.basename(notebook_path), 'homework_lesson_3_solution.ipynb')
+            # Get solution path from assignment_info if available
+            if assignment_info and 'solution_notebook' in assignment_info:
+                solution_notebook_path = assignment_info['solution_notebook']
+            elif assignment_info and 'solution_path' in assignment_info:
+                solution_notebook_path = assignment_info['solution_path']
+            else:
+                # No solution available for comparison
+                solution_notebook_path = None
+                print("⚠️ No solution notebook in assignment_info, skipping output comparison")
             
             # Check notebook size before attempting comparison
             import os
@@ -332,7 +340,7 @@ class BusinessAnalyticsGrader:
             if notebook_size_kb > 200:
                 print(f"⚠️ Notebook too large ({notebook_size_kb:.1f} KB), skipping output comparison to prevent hang")
                 output_comparison = None
-            elif os.path.exists(solution_notebook_path):
+            elif solution_notebook_path and os.path.exists(solution_notebook_path):
                 print("🔬 Comparing outputs to solution...")
                 try:
                     from output_comparator import OutputComparator
@@ -538,6 +546,24 @@ class BusinessAnalyticsGrader:
         # Add detailed performance diagnostics if using distributed MLX
         if self.use_distributed_mlx and self.distributed_client:
             final_result['performance_diagnostics'] = self.distributed_client.get_performance_diagnostics()
+        else:
+            # Add basic performance metrics even without distributed MLX
+            final_result['performance_diagnostics'] = {
+                'qwen_performance': {
+                    'generation_time_seconds': self.grading_stats.get('code_analysis_time', 0),
+                    'tokens_per_second': 0,  # Not available without distributed client
+                    'model': 'Local Ollama'
+                },
+                'gemma_performance': {
+                    'generation_time_seconds': self.grading_stats.get('feedback_generation_time', 0),
+                    'tokens_per_second': 0,  # Not available without distributed client
+                    'model': 'Local Ollama'
+                },
+                'combined_metrics': {
+                    'parallel_efficiency': self.grading_stats.get('parallel_efficiency', 0),
+                    'combined_throughput_tokens_per_second': 0
+                }
+            }
         
         print(f"🎉 Business analytics grading complete!")
         print(f"⚡ Parallel time: {parallel_time:.1f}s")

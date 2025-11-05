@@ -91,6 +91,7 @@ class EnhancedTrainingInterface:
                 s.human_feedback,
                 s.final_score,
                 s.graded_date,
+                s.submission_date,
                 COALESCE(s.final_score, s.ai_score) as display_score,
                 st.name as student_name
             FROM submissions s
@@ -131,6 +132,24 @@ class EnhancedTrainingInterface:
             sub['grade_indicator'] = '✅' if sub['human_score'] is not None else '🤖'
             sub['score_status'] = f"AI: {sub['ai_score']:.1f}" + (f" → Human: {sub['human_score']:.1f}" if sub['human_score'] else "")
             sub['grading_method'] = 'Human' if sub['human_score'] is not None else 'AI'
+            
+            # Calculate grade category based on final score
+            final_score = sub.get('final_score', sub.get('ai_score', 0))
+            percentage = (final_score / 37.5 * 100) if final_score else 0
+            if percentage >= 90:
+                sub['grade_category'] = 'A'
+            elif percentage >= 80:
+                sub['grade_category'] = 'B'
+            elif percentage >= 70:
+                sub['grade_category'] = 'C'
+            elif percentage >= 60:
+                sub['grade_category'] = 'D'
+            else:
+                sub['grade_category'] = 'F'
+            
+            # Add review_date field
+            sub['review_date'] = sub.get('graded_date', '')
+            
             submissions.append(sub)
         
         conn.close()

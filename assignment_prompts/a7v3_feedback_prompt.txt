@@ -1,0 +1,128 @@
+ASSIGNMENT 7: STRING MANIPULATION AND DATE/TIME - FEEDBACK FOCUS
+
+This assignment emphasizes practical data cleaning and temporal analysis skills essential for business analytics.
+
+REFLECTION QUESTIONS (6 total - CRITICAL FOR GRADING):
+
+Question 8.1: Data Quality Impact (3 points)
+- Must provide SPECIFIC examples from their homework (not generic statements)
+- Must explain HOW cleaning improved analysis capability
+- Must demonstrate understanding of data cleaning benefits
+- GOOD: "Converting feedback to lowercase with str_to_lower() allowed me to count 'love', 'Love', and 'LOVE' as the same positive word, increasing accuracy from 15 to 30 positive reviews detected."
+- BAD: "Cleaning data is important because it makes things better."
+
+Question 8.2: Pattern Detection Value (3 points)
+- Must identify SPECIFIC business insights from pattern detection
+- Must explain practical applications for businesses
+- Must show understanding of segmentation value
+- GOOD: "Detecting 'wireless' in product names revealed 17 wireless products (23% of catalog). This helps inventory managers stock wireless accessories and marketing teams target tech-savvy customers."
+- BAD: "Pattern detection helps find patterns in data."
+
+Question 8.3: Date Analysis Importance (4 points - REQUIRES 3+ APPLICATIONS)
+- Must provide AT LEAST 3 specific business applications
+- Must explain operational benefits for each
+- Must demonstrate understanding of temporal patterns
+- GOOD: "1) Staffing: Friday is busiest (55 transactions) so schedule more staff. 2) Inventory: March has 89 transactions vs April's 28, so stock up before busy months. 3) Promotions: Run sales on slow days (Monday: 28 transactions) to boost revenue."
+- BAD: "Dates are important for business."
+- INSUFFICIENT: Only 1-2 applications listed (max 2/4 points)
+
+Question 8.4: Customer Recency Strategy (4 points)
+- Must provide SPECIFIC actions for each category (Recent, Moderate, At Risk)
+- Must explain prioritization rationale
+- Must demonstrate understanding of customer lifecycle
+- GOOD: "Recent (<30 days): Send thank-you email + loyalty program invite to maintain engagement. Moderate (30-90 days): Send 'we miss you' email with new product highlights. At Risk (>90 days): Send 20% discount code with urgency ('expires in 7 days') to re-activate."
+- BAD: "Send emails to customers."
+
+Question 8.5: Sentiment Analysis Applications & Limitations (3 points)
+- Must identify practical applications
+- Must discuss MULTIPLE limitations (not just one)
+- Must show understanding of method constraints
+- GOOD: "Applications: Monitor product quality issues, identify training needs for customer service. Limitations: Can't detect sarcasm ('great, another broken product'), misses context ('I don't love it' counted as positive), ignores neutral reviews, simple word counting misses nuance."
+- BAD: "Sentiment analysis tells if customers are happy."
+
+Question 8.6: Real-World Scenario (3 points)
+- Must describe REALISTIC business scenario
+- Must show CLEAR combination of string AND date techniques
+- Must identify SPECIFIC insights to discover
+- GOOD: "An e-commerce company analyzes customer support tickets. Use str_detect() to categorize issues ('shipping', 'defect', 'billing') and ymd() to parse ticket dates. Then analyze: Which issue types spike on Mondays? Do 'defect' tickets increase after holiday shipping? Calculate days_since for unresolved tickets to prioritize old cases."
+- BAD: "You could use this for any business with data."
+
+SCORING RUBRIC FOR REFLECTIONS:
+
+Excellent (90-100%): All 6 questions answered with specific examples, clear reasoning, and demonstrated understanding. Answers show critical thinking and business acumen.
+
+Good (80-89%): 5-6 questions answered adequately. Most answers have specific examples. Some depth of reasoning. Minor gaps in detail.
+
+Satisfactory (70-79%): 4-5 questions answered. Answers are basic but show understanding. Limited specific examples. Superficial reasoning.
+
+Needs Improvement (60-69%): 3-4 questions answered. Answers are generic or lack depth. Few specific examples. Minimal reasoning.
+
+Unsatisfactory (<60%): 0-2 questions answered, or answers are placeholder text, or responses show misunderstanding.
+
+CRITICAL EVALUATION RULES:
+
+1. COUNT ANSWERED QUESTIONS:
+   - Total questions: 6
+   - Count questions with substantive answers (not "[YOUR ANSWER HERE]" or blank)
+   - Calculate: (answered / 6) × 100 = base reflection score
+
+2. EVALUATE DEPTH:
+   - Specific examples from homework: +10 points
+   - Clear business reasoning: +10 points
+   - Multiple points per question: +5 points
+   - Generic/superficial answers: -20 points
+   - Placeholder text remaining: -30 points per question
+
+3. QUESTION 8.3 SPECIAL RULE:
+   - MUST have 3+ business applications to get full credit
+   - 2 applications = max 2/4 points
+   - 1 application = max 1/4 points
+   - 0 applications = 0/4 points
+
+4. ALIGNMENT WITH DATA:
+   - Check if student's examples match their actual outputs
+   - If they cite wrong numbers (e.g., "50 customers" when they have 100), penalize
+   - If they reference analyses they didn't complete, penalize
+
+FEEDBACK STRUCTURE FOR REFLECTIONS:
+
+For COMPLETE answers:
+"Your response to Question 8.X demonstrates strong understanding of [concept]. You provided specific examples like [quote their example], which shows you grasp [key point]. Your explanation of [specific aspect] was particularly insightful because [reason]. This level of critical thinking is exactly what's expected in business analytics."
+
+For INCOMPLETE answers:
+"Your response to Question 8.X needs more depth. You stated '[quote their answer]', but this lacks specific examples from your homework. To improve, reference your actual results (e.g., 'I found 17 wireless products using str_detect()') and explain the business impact (e.g., 'This helps inventory managers...'). The solution shows [example of good answer]."
+
+For MISSING answers:
+"You did not answer Question 8.X. This question asks about [topic] and is worth [X] points. To complete this, you need to [specific requirements]. For example, [concrete example]. This reflection is essential for demonstrating your understanding of [concept]."
+
+COMMON ISSUES TO ADDRESS:
+
+Issue: Generic answers without examples
+Feedback: "Your answers are too generic. Instead of saying 'cleaning data is important', cite specific examples: 'Using str_trim() removed extra spaces from 45 product names, allowing accurate grouping by category.' Reference your actual code and outputs."
+
+Issue: Missing Question 8.3 applications
+Feedback: "Question 8.3 requires at least 3 business applications of date analysis, but you provided only [X]. Add more examples such as: staffing optimization based on busy days, inventory planning based on seasonal patterns, or promotional timing based on slow periods. Each should explain the operational benefit."
+
+Issue: Shallow understanding of limitations
+Feedback: "Your discussion of sentiment analysis limitations is too brief. Expand on multiple limitations: inability to detect sarcasm, context-dependency of words, missing neutral sentiment, oversimplification of complex emotions. Explain why each limitation matters for business decisions."
+
+Issue: Unrealistic scenarios
+Feedback: "Your Question 8.6 scenario is too vague. Provide a specific business context (e.g., 'retail company analyzing product reviews'), specific string operations (e.g., 'str_detect() to find mentions of competitors'), specific date operations (e.g., 'calculate days_since review to prioritize recent feedback'), and specific insights (e.g., 'identify which competitor is mentioned most in recent negative reviews')."
+
+REFLECTION SCORE CALCULATION:
+1. Base score = (answered questions / 6) × 100
+2. Adjust for depth:
+   - All answers have specific examples: +10
+   - All answers show business reasoning: +10
+   - Question 8.3 has 3+ applications: +5
+   - Any generic/superficial answers: -20
+   - Any placeholder text: -30 per question
+3. Cap at 100, floor at 0
+4. Final reflection_quality score
+
+REMEMBER:
+- Reflection questions are worth 20% of total grade
+- Be strict about requiring specific examples and clear reasoning
+- Don't accept generic statements like "data cleaning is important"
+- Question 8.3 MUST have 3+ applications for full credit
+- Reference their actual homework outputs when evaluating alignment
