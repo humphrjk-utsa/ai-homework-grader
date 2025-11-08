@@ -351,10 +351,8 @@ class BusinessAnalyticsGraderV2:
                     raise RuntimeError(f"Distributed MLX generation failed: {result['error']}")
                 
                 # Parse the responses
-                from business_analytics_grader import BusinessAnalyticsGrader
-                temp_grader = BusinessAnalyticsGrader()
-                code_analysis = temp_grader._parse_code_analysis_response(result['code_analysis'])
-                comprehensive_feedback = temp_grader._parse_feedback_response(result['feedback'])
+                code_analysis = self._parse_code_analysis_response(result['code_analysis'])
+                comprehensive_feedback = self._parse_feedback_response(result['feedback'])
                 
                 # Update timing stats with detailed metrics
                 self.grading_stats['code_analysis_time'] = result.get('qwen_time', 0)
@@ -387,33 +385,23 @@ class BusinessAnalyticsGraderV2:
                 code_analysis = None
                 comprehensive_feedback = None
         else:
-            # Use Ollama system
+            # Use Ollama system (fallback)
             print("🤖 Using Ollama for AI analysis...")
             try:
-                from business_analytics_grader import BusinessAnalyticsGrader
-                temp_grader = BusinessAnalyticsGrader()
-                
                 # Submit both tasks simultaneously
                 future_code = self.executor.submit(
-                    temp_grader._execute_business_code_analysis, 
+                    self._execute_ollama_code_analysis, 
                     student_code, template_code, solution_code, assignment_info
                 )
                 
                 future_feedback = self.executor.submit(
-                    temp_grader._execute_business_feedback_generation,
+                    self._execute_ollama_feedback_generation,
                     student_code, student_markdown, assignment_info
                 )
                 
                 # Wait for both results
                 code_analysis = future_code.result()
                 comprehensive_feedback = future_feedback.result()
-                
-                # Extract metrics from temp_grader if available
-                if hasattr(temp_grader, 'grading_stats'):
-                    if 'qwen_metrics' in temp_grader.grading_stats:
-                        self.grading_stats['qwen_metrics'] = temp_grader.grading_stats['qwen_metrics']
-                    if 'gemma_metrics' in temp_grader.grading_stats:
-                        self.grading_stats['gemma_metrics'] = temp_grader.grading_stats['gemma_metrics']
                 
                 print(f"✅ AI analysis completed")
                 
@@ -836,6 +824,169 @@ EXAMPLES:
         comments += "Review the detailed feedback below for specific areas to improve."
         
         return comments
+    
+    def _execute_ollama_code_analysis(self, student_code: str, template_code: str, 
+                                     solution_code: str, assignment_info: Dict) -> Dict[str, Any]:
+        """Execute code analysis using Ollama"""
+        start_time = time.time()
+        
+        print(f"🔧 [CODE] Analyzing with Ollama...")
+        
+        assignment_name = assignment_info.get('name', assignment_info.get('title', 'Unknown'))
+        prompt = self.prompt_manager.get_combined_prompt(
+            assignment_name,
+            "code_analysis",
+            assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
+            template_code=template_code if template_code else "# No template provided",
+            student_code=student_code,
+            solution_code=solution_code
+        )
+        
+        response = self._generate_with_ollama(self.code_model, prompt, max_tokens=1500)
+        
+        analysis_time = time.time() - start_time
+        self.grading_stats['code_analysis_time'] = analysis_time
+        
+        print(f"✅ [CODE] Analysis complete ({analysis_time:.1f}s)")
+        
+        if not response:
+            return {"error": "Code analysis failed", "technical_score": 85}
+        
+        return self._parse_code_analysis_response(response)
+    
+    def _execute_ollama_feedback_generation(self, student_code: str, student_markdown: str,
+                                           assignment_info: Dict) -> Dict[str, Any]:
+        """Execute feedback generation using Ollama"""
+        start_time = time.time()
+        
+        print(f"📝 [FEEDBACK] Generating with Ollama...")
+        
+        assignment_name = assignment_info.get('name', assignment_info.get('title', 'Unknown'))
+        prompt = self.prompt_manager.get_combined_prompt(
+            assignment_name,
+            "feedback",
+            assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
+            student_markdown=student_markdown,
+            student_code_summary=student_code[:800]
+        )
+        
+        response = self._generate_with_ollama(self.feedback_model, prompt, max_tokens=2000)
+        
+        feedback_time = time.time() - start_time
+        self.grading_stats['feedback_generation_time'] = feedback_time
+        
+        print(f"✅ [FEEDBACK] Generation complete ({feedback_time:.1f}s)")
+        
+        if not response:
+            return {"error": "Feedback generation failed", "overall_score": 85}
+        
+        return self._parse_feedback_response(response)
+    
+    def _generate_with_ollama(self, model: str, prompt: str, max_tokens: int = 2000) -> Optional[str]:
+        """Generate response using Ollama and capture metrics"""
+        try:
+            payload = {
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "num_predict": max_tokens,
+                    "temperature": 0.2,
+                    "top_p": 0.9
+                }
+            }
+            
+            response = requests.post(self.api_url, json=payload, timeout=300)
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Capture performance metrics
+                if 'prompt_eval_count' in result or 'eval_count' in result:
+                    metrics = {
+                        'prompt_tokens': result.get('prompt_eval_count', 0),
+                        'completion_tokens': result.get('eval_count', 0),
+                        'total_tokens': result.get('prompt_eval_count', 0) + result.get('eval_count', 0),
+                        'prompt_eval_duration_ms': result.get('prompt_eval_duration', 0) / 1_000_000,
+                        'eval_duration_ms': result.get('eval_duration', 0) / 1_000_000,
+                        'total_duration_ms': result.get('total_duration', 0) / 1_000_000,
+                    }
+                    
+                    # Calculate tokens per second
+                    if metrics['eval_duration_ms'] > 0:
+                        metrics['decode_tokens_per_second'] = (metrics['completion_tokens'] / metrics['eval_duration_ms']) * 1000
+                    else:
+                        metrics['decode_tokens_per_second'] = 0
+                    
+                    if metrics['prompt_eval_duration_ms'] > 0:
+                        metrics['prefill_tokens_per_second'] = (metrics['prompt_tokens'] / metrics['prompt_eval_duration_ms']) * 1000
+                    else:
+                        metrics['prefill_tokens_per_second'] = 0
+                    
+                    # Store metrics
+                    model_key = 'qwen' if 'qwen' in model.lower() or 'coder' in model.lower() else 'gemma'
+                    self.grading_stats[f'{model_key}_metrics'] = metrics
+                
+                return result.get('response', '')
+            else:
+                return None
+                
+        except Exception as e:
+            print(f"⚠️ Ollama generation failed: {e}")
+            return None
+    
+    def _parse_code_analysis_response(self, response: str) -> Dict[str, Any]:
+        """Parse code analysis response"""
+        try:
+            if "```json" in response:
+                json_part = response.split("```json")[1].split("```")[0].strip()
+                result = json.loads(json_part)
+                return result
+            elif "{" in response and "}" in response:
+                start = response.find("{")
+                end = response.rfind("}") + 1
+                json_part = response[start:end]
+                result = json.loads(json_part)
+                return result
+        except:
+            pass
+        
+        # Fallback parsing
+        return {
+            "technical_score": 85,
+            "code_strengths": ["Code analysis completed"],
+            "code_suggestions": ["Review feedback for details"],
+            "technical_observations": [response[:200]]
+        }
+    
+    def _parse_feedback_response(self, response: str) -> Dict[str, Any]:
+        """Parse feedback response"""
+        try:
+            if "```json" in response:
+                json_part = response.split("```json")[1].split("```")[0].strip()
+                result = json.loads(json_part)
+                return result
+            elif "{" in response and "}" in response:
+                start = response.find("{")
+                end = response.rfind("}") + 1
+                json_part = response[start:end]
+                result = json.loads(json_part)
+                return result
+        except:
+            pass
+        
+        # Fallback parsing
+        return {
+            "overall_score": 85,
+            "instructor_comments": response[:500] if response else "Feedback generated",
+            "detailed_feedback": {
+                "reflection_assessment": ["Review submission"],
+                "analytical_strengths": ["Analysis completed"],
+                "business_application": ["Business context considered"],
+                "areas_for_development": ["See detailed feedback"],
+                "recommendations": ["Continue practicing"]
+            }
+        }
 
 
 # Convenience function
