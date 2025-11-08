@@ -177,7 +177,22 @@ class BusinessAnalyticsGraderV2:
         # Calculate adjusted score
         base_score = sys_result['final_score']
         if output_result:
-            adjusted_score = base_score + output_result['score_adjustment']
+            # Smart penalty application:
+            # - If base_score is already low (< 30%), don't apply output penalties
+            #   (missing outputs are already reflected in the base score)
+            # - If base_score is decent (>= 30%), apply penalties for wrong outputs
+            #   (student did the work but got wrong answers)
+            if base_score < 30:
+                # Student hasn't done much work - don't double-penalize for missing outputs
+                adjusted_score = base_score
+            else:
+                # Student did substantial work - penalize for incorrect outputs
+                # But cap penalty to not exceed base score
+                if output_result['score_adjustment'] < 0:
+                    max_penalty = min(abs(output_result['score_adjustment']), base_score * 0.5)  # Max 50% penalty
+                    adjusted_score = max(0, base_score - max_penalty)
+                else:
+                    adjusted_score = base_score + output_result['score_adjustment']
         else:
             adjusted_score = base_score
         
