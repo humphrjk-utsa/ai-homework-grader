@@ -130,6 +130,7 @@ def show_grading_performance_stats(grading_stats):
     
     st.subheader("⚡ Two-Model Performance")
     
+    # Main timing metrics
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -142,7 +143,11 @@ def show_grading_performance_stats(grading_stats):
     
     with col3:
         efficiency = grading_stats.get('parallel_efficiency', 0)
-        st.metric("Parallel Speedup", f"{efficiency:.1f}x")
+        if efficiency > 0:
+            st.metric("Parallel Speedup", f"{efficiency:.1f}x")
+        else:
+            total_time = grading_stats.get('total_time', 0)
+            st.metric("Total Time", f"{total_time:.1f}s")
     
     # Show parallel vs sequential comparison
     parallel_time = grading_stats.get('parallel_time', 0)
@@ -151,6 +156,56 @@ def show_grading_performance_stats(grading_stats):
     if parallel_time > 0 and sequential_time > 0:
         time_saved = sequential_time - parallel_time
         st.success(f"⚡ **Parallel Processing Saved {time_saved:.1f} seconds** ({parallel_time:.1f}s vs {sequential_time:.1f}s sequential)")
+    
+    # Show detailed throughput metrics if available
+    qwen_metrics = grading_stats.get('qwen_metrics', {})
+    gemma_metrics = grading_stats.get('gemma_metrics', {})
+    
+    if qwen_metrics or gemma_metrics:
+        st.markdown("---")
+        st.markdown("**🚀 Throughput Metrics (Disaggregated System)**")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**🔧 Qwen Coder (Code Analysis)**")
+            if qwen_metrics:
+                prefill_speed = qwen_metrics.get('prefill_tokens_per_second', 0)
+                decode_speed = qwen_metrics.get('decode_tokens_per_second', 0)
+                prompt_tokens = qwen_metrics.get('prompt_tokens', 0)
+                completion_tokens = qwen_metrics.get('completion_tokens', 0)
+                
+                if prefill_speed > 0:
+                    st.metric("Prefill Speed", f"{prefill_speed:.0f} tok/s", 
+                             help="Prompt processing speed on DGX Spark 1")
+                if decode_speed > 0:
+                    st.metric("Decode Speed", f"{decode_speed:.0f} tok/s", 
+                             help="Token generation speed on Mac Studio 2")
+                
+                st.caption(f"📊 {prompt_tokens} prompt + {completion_tokens} completion = {prompt_tokens + completion_tokens} total tokens")
+                st.caption(f"⏱️ {code_time:.1f}s total")
+            else:
+                st.info("No metrics available")
+        
+        with col2:
+            st.markdown("**📝 Gemma (Feedback Generation)**")
+            if gemma_metrics:
+                prefill_speed = gemma_metrics.get('prefill_tokens_per_second', 0)
+                decode_speed = gemma_metrics.get('decode_tokens_per_second', 0)
+                prompt_tokens = gemma_metrics.get('prompt_tokens', 0)
+                completion_tokens = gemma_metrics.get('completion_tokens', 0)
+                
+                if prefill_speed > 0:
+                    st.metric("Prefill Speed", f"{prefill_speed:.0f} tok/s", 
+                             help="Prompt processing speed on DGX Spark 2")
+                if decode_speed > 0:
+                    st.metric("Decode Speed", f"{decode_speed:.0f} tok/s", 
+                             help="Token generation speed on Mac Studio 1")
+                
+                st.caption(f"📊 {prompt_tokens} prompt + {completion_tokens} completion = {prompt_tokens + completion_tokens} total tokens")
+                st.caption(f"⏱️ {feedback_time:.1f}s total")
+            else:
+                st.info("No metrics available")
 
 def show_model_selection_interface():
     """Allow users to select different models for the two-model system"""

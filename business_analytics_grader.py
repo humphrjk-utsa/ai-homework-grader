@@ -133,7 +133,7 @@ class BusinessAnalyticsGrader:
             return False
     
     def generate_with_ollama(self, model: str, prompt: str, max_tokens: int = 2000) -> Optional[str]:
-        """Generate response using Ollama"""
+        """Generate response using Ollama and capture performance metrics"""
         try:
             payload = {
                 "model": model,
@@ -150,6 +150,33 @@ class BusinessAnalyticsGrader:
             
             if response.status_code == 200:
                 result = response.json()
+                
+                # Capture performance metrics from Ollama response
+                if 'prompt_eval_count' in result or 'eval_count' in result:
+                    metrics = {
+                        'prompt_tokens': result.get('prompt_eval_count', 0),
+                        'completion_tokens': result.get('eval_count', 0),
+                        'total_tokens': result.get('prompt_eval_count', 0) + result.get('eval_count', 0),
+                        'prompt_eval_duration_ms': result.get('prompt_eval_duration', 0) / 1_000_000,  # Convert ns to ms
+                        'eval_duration_ms': result.get('eval_duration', 0) / 1_000_000,
+                        'total_duration_ms': result.get('total_duration', 0) / 1_000_000,
+                    }
+                    
+                    # Calculate tokens per second
+                    if metrics['eval_duration_ms'] > 0:
+                        metrics['decode_tokens_per_second'] = (metrics['completion_tokens'] / metrics['eval_duration_ms']) * 1000
+                    else:
+                        metrics['decode_tokens_per_second'] = 0
+                    
+                    if metrics['prompt_eval_duration_ms'] > 0:
+                        metrics['prefill_tokens_per_second'] = (metrics['prompt_tokens'] / metrics['prompt_eval_duration_ms']) * 1000
+                    else:
+                        metrics['prefill_tokens_per_second'] = 0
+                    
+                    # Store metrics for this model
+                    model_key = 'qwen' if 'qwen' in model.lower() or 'coder' in model.lower() else 'gemma'
+                    self.grading_stats[f'{model_key}_metrics'] = metrics
+                
                 return result.get('response', '')
             else:
                 return None

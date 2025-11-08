@@ -356,9 +356,26 @@ class BusinessAnalyticsGraderV2:
                 code_analysis = temp_grader._parse_code_analysis_response(result['code_analysis'])
                 comprehensive_feedback = temp_grader._parse_feedback_response(result['feedback'])
                 
-                # Update timing stats
+                # Update timing stats with detailed metrics
                 self.grading_stats['code_analysis_time'] = result.get('qwen_time', 0)
                 self.grading_stats['feedback_generation_time'] = result.get('gemma_time', 0)
+                
+                # Extract detailed performance metrics if available
+                if 'qwen_metrics' in result:
+                    qwen_metrics = result['qwen_metrics']
+                    self.grading_stats['qwen_tokens_per_second'] = qwen_metrics.get('tokens_per_second', 0)
+                    self.grading_stats['qwen_total_tokens'] = qwen_metrics.get('total_tokens', 0)
+                    self.grading_stats['qwen_prompt_eval_time'] = qwen_metrics.get('prompt_eval_time', 0)
+                
+                if 'gemma_metrics' in result:
+                    gemma_metrics = result['gemma_metrics']
+                    self.grading_stats['gemma_tokens_per_second'] = gemma_metrics.get('tokens_per_second', 0)
+                    self.grading_stats['gemma_total_tokens'] = gemma_metrics.get('total_tokens', 0)
+                    self.grading_stats['gemma_prompt_eval_time'] = gemma_metrics.get('prompt_eval_time', 0)
+                
+                # Store parallel efficiency
+                if 'parallel_efficiency' in result:
+                    self.grading_stats['parallel_efficiency'] = result['parallel_efficiency']
                 
                 print(f"✅ AI analysis completed")
                 print(f"   🔧 Qwen: {result.get('qwen_time', 0):.1f}s")
@@ -390,6 +407,13 @@ class BusinessAnalyticsGraderV2:
                 # Wait for both results
                 code_analysis = future_code.result()
                 comprehensive_feedback = future_feedback.result()
+                
+                # Extract metrics from temp_grader if available
+                if hasattr(temp_grader, 'grading_stats'):
+                    if 'qwen_metrics' in temp_grader.grading_stats:
+                        self.grading_stats['qwen_metrics'] = temp_grader.grading_stats['qwen_metrics']
+                    if 'gemma_metrics' in temp_grader.grading_stats:
+                        self.grading_stats['gemma_metrics'] = temp_grader.grading_stats['gemma_metrics']
                 
                 print(f"✅ AI analysis completed")
                 
