@@ -24,7 +24,7 @@ The grading system is now fully configured for the Test-DGX branch with the disa
 - Captures detailed Ollama metrics (prefill/decode speeds, token counts)
 - Displays prefill and decode speeds separately in UI
 - Shows DGX Spark prefill + Mac Studio decode architecture
-- Extracts metrics from both Qwen and Gemma models
+- Extracts metrics from both Qwen and GPT-OSS models
 
 ---
 
@@ -46,7 +46,7 @@ The grading system is now fully configured for the Test-DGX branch with the disa
                 ▼                       ▼
     ┌───────────────────┐   ┌───────────────────┐
     │  DGX Spark 1      │   │  DGX Spark 2      │
-    │  Qwen Prefill     │   │  Gemma Prefill    │
+    │  Qwen Prefill     │   │  GPT-OSS Prefill  │
     │  (Code Analysis)  │   │  (Feedback Gen)   │
     └─────────┬─────────┘   └─────────┬─────────┘
               │                       │
@@ -54,7 +54,7 @@ The grading system is now fully configured for the Test-DGX branch with the disa
               ▼                       ▼
     ┌───────────────────┐   ┌───────────────────┐
     │  Mac Studio 2     │   │  Mac Studio 1     │
-    │  Qwen Decode      │   │  Gemma Decode     │
+    │  Qwen Decode      │   │  GPT-OSS Decode   │
     │  (M4 Max 128GB)   │   │  (M3 Ultra 512GB) │
     └───────────────────┘   └───────────────────┘
 ```
@@ -104,7 +104,7 @@ After grading, you'll see:
 - **Main Timing**: Code analysis time, feedback generation time, parallel speedup
 - **Throughput Metrics**: 
   - Qwen Coder: Prefill speed (DGX Spark 1), Decode speed (Mac Studio 2)
-  - Gemma: Prefill speed (DGX Spark 2), Decode speed (Mac Studio 1)
+  - GPT-OSS: Prefill speed (DGX Spark 2), Decode speed (Mac Studio 1)
 - **Token Counts**: Prompt + completion tokens for each model
 
 ---

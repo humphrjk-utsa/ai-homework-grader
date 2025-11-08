@@ -41,27 +41,27 @@ def show_two_model_status():
         
         # Check for our specific models
         qwen_model = "mlx-community/Qwen3-Coder-30B-A3B-Instruct-8bit"
-        gemma_model = "mlx-community/gemma-3-27b-it-bf16"
+        gptoss_model = "lmstudio-community/gpt-oss-120b-MLX-8bit"
         
         qwen_available = qwen_model in available_mlx_models
-        gemma_available = gemma_model in available_mlx_models
+        gptoss_available = gptoss_model in available_mlx_models
         
         # Display status
         if qwen_available:
-            st.sidebar.success("✅ Qwen 3.0 Coder (MLX bf16)")
+            st.sidebar.success("✅ Qwen 3.0 Coder (MLX 8bit)")
         else:
             st.sidebar.error("❌ Qwen 3.0 Coder - Not Available")
         
-        if gemma_available:
-            st.sidebar.success("✅ Gemma 3.0 (MLX bf16)")
+        if gptoss_available:
+            st.sidebar.success("✅ GPT-OSS 120B (MLX 8bit)")
         else:
-            st.sidebar.error("❌ Gemma 3.0 - Not Available")
+            st.sidebar.error("❌ GPT-OSS 120B - Not Available")
         
-        if qwen_available and gemma_available:
+        if qwen_available and gptoss_available:
             st.sidebar.info("⚡ **MLX Two-Model System Ready**")
             st.sidebar.success("🍎 Apple Silicon Optimized")
             mlx_available = True
-        elif qwen_available or gemma_available:
+        elif qwen_available or gptoss_available:
             st.sidebar.warning("⚠️ Partial MLX setup - some models missing")
         else:
             st.sidebar.warning("⚠️ MLX models not found")
@@ -96,9 +96,9 @@ def show_two_model_status():
                 
                 # Feedback generator status
                 if feedback_model in available_models:
-                    st.sidebar.success("✅ Gemma 3.0 (Ollama)")
+                    st.sidebar.success("✅ GPT-OSS 120B (Ollama)")
                 else:
-                    st.sidebar.error("❌ Gemma 3.0 - Not Available")
+                    st.sidebar.error("❌ GPT-OSS 120B - Not Available")
                 
                 # Show parallel processing info
                 if code_model in available_models and feedback_model in available_models:
@@ -188,7 +188,7 @@ def show_grading_performance_stats(grading_stats):
                 st.info("No metrics available")
         
         with col2:
-            st.markdown("**📝 Gemma (Feedback Generation)**")
+            st.markdown("**📝 GPT-OSS (Feedback Generation)**")
             if gemma_metrics:
                 prefill_speed = gemma_metrics.get('prefill_tokens_per_second', 0)
                 decode_speed = gemma_metrics.get('decode_tokens_per_second', 0)
@@ -235,7 +235,7 @@ def show_model_selection_interface():
             
             with col2:
                 st.write("**Feedback Generation Model:**")
-                feedback_models = [m for m in available_models if any(keyword in m.lower() for keyword in ['gemma', 'llama', 'mistral'])]
+                feedback_models = [m for m in available_models if any(keyword in m.lower() for keyword in ['gpt-oss', 'gemma', 'llama', 'mistral'])]
                 if not feedback_models:
                     feedback_models = available_models
                 
@@ -269,7 +269,7 @@ def show_two_model_explanation():
         - Evaluates programming best practices
         - Identifies code issues and improvements
         
-        📝 **Feedback Generator (Gemma 3.0)**:
+        📝 **Feedback Generator (GPT-OSS 120B)**:
         - Reviews written analysis and reflections
         - Evaluates business thinking
         - Assesses communication clarity

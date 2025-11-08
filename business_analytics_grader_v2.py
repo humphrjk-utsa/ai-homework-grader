@@ -27,7 +27,7 @@ class BusinessAnalyticsGraderV2:
     - Layer 1: Systematic validation (variables, sections, execution)
     - Layer 2: Smart output validation (compare with solution)
     - Layer 3: AI code analysis (Qwen Coder)
-    - Layer 4: AI feedback synthesis (GPT-OSS/Gemma)
+    - Layer 4: AI feedback synthesis (GPT-OSS 120B)
     """
     
     def __init__(self, 
