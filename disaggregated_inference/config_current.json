@@ -1,0 +1,32 @@
+{
+  "comment": "Current working configuration using Thunderbolt IPs",
+  "prefill_servers": [
+    {
+      "host": "169.254.150.103",
+      "port": 8000,
+      "model": "qwen",
+      "name": "DGX Spark 1"
+    },
+    {
+      "host": "169.254.150.104",
+      "port": 8000,
+      "model": "gpt-oss",
+      "name": "DGX Spark 2"
+    }
+  ],
+  "decode_servers": [
+    {
+      "host": "169.254.150.101",
+      "port": 8001,
+      "model": "qwen",
+      "name": "Mac Studio 1"
+    },
+    {
+      "host": "169.254.150.102",
+      "port": 8001,
+      "model": "gpt-oss",
+      "name": "Mac Studio 2"
+    }
+  ],
+  "note": "Once ConnectX-7 static IPs are configured, update to 192.168.100.x for prefill servers"
+}
