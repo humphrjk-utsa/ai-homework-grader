@@ -1,0 +1,619 @@
+{
+  "final_score": 35.6,
+  "final_score_percentage": 95.0,
+  "max_points": 37.5,
+  "component_scores": {
+    "technical_points": 14.2,
+    "business_points": 3.6,
+    "analysis_points": 14.2,
+    "communication_points": 3.6,
+    "bonus_points": 0.0
+  },
+  "component_percentages": {
+    "technical_score": 95.0,
+    "business_understanding": 95.0,
+    "data_interpretation": 95.0,
+    "communication_clarity": 95.0
+  },
+  "technical_analysis": {
+    "code_strengths": [
+      "Successfully implemented multi-table joins with 4-step progression using dplyr",
+      "Executed data quality checks using anti-joins and semi-joins",
+      "Generated comprehensive business analysis including customer, product, supplier, and regional insights"
+    ],
+    "code_suggestions": [
+      "Fix duplicate output of CUSTOMER STRATEGY and PRODUCT STRATEGY sections by removing redundant cat() calls",
+      "Correct the 'Top Customer' value in summary to match actual data (should be Customer 53 with $8471.51)",
+      "Ensure all variables are properly initialized before use in conditional statements to prevent runtime errors"
+    ],
+    "technical_observations": [
+      "Completion: 7 out of 7 sections (100%). Score: 100%",
+      "Completed: Data Import, Basic Joins, Multi-table Joins, Data Quality, Business Analysis, Complex Questions, Summary",
+      "Incomplete: None",
+      "Completion: 0/0 sections (0%). Score: 95%",
+      "Variables found: 25/25",
+      "Output accuracy: 88.0% (22/25 checks passed)"
+    ]
+  },
+  "comprehensive_feedback": {
+    "instructor_comments": "You have delivered a thorough and well\u2011structured analysis, correctly implementing all required joins and extracting valuable business insights such as top customers, product performance, and supplier risk. Your data\u2011quality checks using anti_join and semi_join are particularly strong, and the summary metrics are clearly presented. To elevate your work, deepen your reflective commentary, benchmark join performance, and tie recommendations to concrete financial impacts. Keep building on these solid foundations, and you will become an even more effective analytics professional.",
+    "detailed_feedback": {
+      "reflection_assessment": [
+        "Your reflection correctly identifies the main outcomes of each join step, but it could go deeper by linking those outcomes to specific decisions you would make as a data analyst.",
+        "You noted the percentage of orders matched to customers, yet you did not discuss why the 20% mismatch matters for downstream reporting or how you might prioritize fixing it.",
+        "The summary of technical learnings is useful, but adding a brief evaluation of alternative join strategies (e.g., using data.table for speed) would demonstrate higher-level critical thinking."
+      ],
+      "analytical_strengths": [
+        "You accurately calculated key metrics such as total spent per customer and revenue per product, showing solid command of aggregation functions in R.",
+        "Your use of anti_join and semi_join to surface orphaned orders and active customers demonstrates a strong grasp of data\u2011quality diagnostics.",
+        "The multi\u2011table join pipeline (orders \u2192 items \u2192 customers \u2192 products \u2192 suppliers) was built step\u2011by\u2011step, preserving data integrity and making the process easy to follow."
+      ],
+      "business_application": [
+        "Identifying the top\u2011spending customer (Customer 53) and quantifying its contribution provides a clear target for VIP retention programs.",
+        "Highlighting Chicago\u2019s sales dominance and recommending it as a template for other markets shows you can translate data insights into actionable regional strategies.",
+        "Your supplier dependency analysis, especially flagging Supplier 7 as critical, directly supports risk\u2011mitigation planning in the supply chain."
+      ],
+      "areas_for_development": [
+        "WHAT: Expand the depth of your reflection on data\u2011quality findings. WHY: Understanding root causes helps prioritize remediation efforts. HOW: After reporting orphaned orders, investigate patterns (e.g., date ranges, order status) to hypothesize why they lack customers. EXAMPLE: Run a filter on orphaned_orders by order_date and summarize counts per month.",
+        "WHAT: Incorporate performance benchmarking for your joins. WHY: Large datasets can become slow, and efficient joins are essential in production environments. HOW: Compare dplyr joins with data.table\u2019s fast joins on a subset of the data and report execution times. EXAMPLE: Use system.time(inner_join(...)) vs. setkey() + merge() and note the speed difference.",
+        "WHAT: Strengthen the narrative around your business recommendations. WHY: Stakeholders need clear, quantified actions to justify investments. HOW: Attach specific ROI estimates or cost\u2011benefit calculations to each recommendation. EXAMPLE: Estimate the revenue lift from a VIP program for the top 10% customers by applying a 5% increase in average order value."
+      ],
+      "recommendations": [
+        "For future assignments, create a short \u201creflection notebook\u201d where you explicitly answer: what worked, what didn\u2019t, and what you will change next time.",
+        "Explore visualization tools (e.g., ggplot2 heatmaps) to illustrate product\u2011combination frequencies, which will make your recommendation section more compelling.",
+        "Read the \u201cData Wrangling with dplyr\u201d chapter in *R for Data Science* and practice the advanced join functions (nest_join, join_by) to handle more complex key relationships."
+      ]
+    }
+  },
+  "validation_results": {
+    "total_penalty_percent": 5.0,
+    "adjusted_score": 95.0,
+    "base_score": 100.0,
+    "issues": [
+      "Output mismatch for customer_orders_full: row_count_mismatch",
+      "Output mismatch for regional_analysis: numerical_mismatch",
+      "Output mismatch for market_expansion: numerical_mismatch"
+    ],
+    "systematic_results": {
+      "variable_check": {
+        "found": 25,
+        "total_required": 25,
+        "found_variables": [
+          "customers",
+          "orders",
+          "order_items",
+          "products",
+          "suppliers",
+          "customer_orders",
+          "customer_orders_left",
+          "customer_orders_right",
+          "customer_orders_full",
+          "orders_items",
+          "orders_customers_items",
+          "complete_order_data",
+          "complete_data",
+          "customers_no_orders",
+          "orphaned_orders",
+          "products_never_ordered",
+          "active_customers",
+          "customer_metrics",
+          "product_metrics",
+          "supplier_metrics",
+          "regional_analysis",
+          "top_customers",
+          "product_combinations",
+          "critical_suppliers",
+          "market_expansion"
+        ],
+        "missing_variables": [],
+        "missing": [],
+        "completion_rate": 1.0
+      },
+      "section_breakdown": {},
+      "cell_stats": {
+        "total_cells": 39,
+        "executed_cells": 39,
+        "execution_rate": 1.0
+      },
+      "overall_score": {
+        "overall_score": 100.0,
+        "section_score": 0,
+        "variable_score": 100.0,
+        "total_possible_points": 0,
+        "earned_points": 0
+      },
+      "final_score": 100.0,
+      "rubric_name": "a6v1"
+    },
+    "output_results": {
+      "overall_match": 0.88,
+      "total_checks": 25,
+      "passed_checks": 22,
+      "comparisons": [
+        {
+          "variable": "customers",
+          "match": true,
+          "issue": null,
+          "message": "customers: \u2705 200 rows (matches 200)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "orders",
+          "match": true,
+          "issue": null,
+          "message": "orders: \u2705 200 rows (matches 200)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "order_items",
+          "match": true,
+          "issue": null,
+          "message": "order_items: \u2705 200 rows (matches 200)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "products",
+          "match": true,
+          "issue": null,
+          "message": "products: \u2705 200 rows (matches 200)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "suppliers",
+          "match": true,
+          "issue": null,
+          "message": "suppliers: \u2705 200 rows (matches 200)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "customer_orders",
+          "match": true,
+          "issue": null,
+          "message": "customer_orders: \u2705 250 rows (matches 250)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "customer_orders_left",
+          "match": true,
+          "issue": null,
+          "message": "customer_orders_left: \u2705 250 rows (matches 250)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "customer_orders_right",
+          "match": true,
+          "issue": null,
+          "message": "customer_orders_right: \u2705 250 rows (matches 250)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "customer_orders_full",
+          "match": false,
+          "issue": "row_count_mismatch",
+          "message": "customer_orders_full: Expected 400 rows, not found in output",
+          "student_value": {
+            "row_count": 250,
+            "numbers": [
+              250.0,
+              50.0,
+              250.0,
+              50.0
+            ],
+            "counts": [
+              250,
+              0,
+              0,
+              250,
+              0,
+              0
+            ]
+          },
+          "solution_value": {
+            "row_count": 400,
+            "numbers": [
+              400.0
+            ],
+            "counts": [
+              250,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "variable": "orders_items",
+          "match": true,
+          "issue": null,
+          "message": "orders_items: \u2705 310 rows (matches 310)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "orders_customers_items",
+          "match": true,
+          "issue": null,
+          "message": "orders_customers_items: \u2705 310 rows (matches 310)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "complete_order_data",
+          "match": true,
+          "issue": null,
+          "message": "complete_order_data: \u2705 310 rows (matches 310)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "complete_data",
+          "match": true,
+          "issue": null,
+          "message": "complete_data: \u2705 310 rows (matches 310)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "customers_no_orders",
+          "match": true,
+          "issue": null,
+          "message": "customers_no_orders: \u2705 50.00 (matches 50.00)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "orphaned_orders",
+          "match": true,
+          "issue": null,
+          "message": "orphaned_orders: \u2705 100.00 (matches 100.00)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "products_never_ordered",
+          "match": true,
+          "issue": null,
+          "message": "products_never_ordered: \u2705 100.00 (matches 100.00)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "active_customers",
+          "match": true,
+          "issue": null,
+          "message": "active_customers: \u2705 100.00 (matches 100.00)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "customer_metrics",
+          "match": true,
+          "issue": null,
+          "message": "customer_metrics: \u2705 10.00 (matches 10.00)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "product_metrics",
+          "match": true,
+          "issue": null,
+          "message": "product_metrics: \u2705 72277.52 (matches 72277.52)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "supplier_metrics",
+          "match": true,
+          "issue": null,
+          "message": "supplier_metrics: \u2705 72277.52 (matches 72277.52)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "regional_analysis",
+          "match": false,
+          "issue": "numerical_mismatch",
+          "message": "regional_analysis: 72277.52 (expected 4931.51 \u00b15.0%)",
+          "student_value": {
+            "numbers": [
+              72277.52,
+              72277.52
+            ]
+          },
+          "solution_value": {
+            "numbers": [
+              4931.51
+            ]
+          }
+        },
+        {
+          "variable": "top_customers",
+          "match": true,
+          "issue": null,
+          "message": "top_customers: \u2705 10.00 (matches 10.00)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "product_combinations",
+          "match": true,
+          "issue": null,
+          "message": "product_combinations: \u2705 90.00 (matches 90.00)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "critical_suppliers",
+          "match": true,
+          "issue": null,
+          "message": "critical_suppliers: \u2705 90.00 (matches 90.00)",
+          "student_value": null,
+          "solution_value": null
+        },
+        {
+          "variable": "market_expansion",
+          "match": false,
+          "issue": "numerical_mismatch",
+          "message": "market_expansion: 4931.51 (expected 90.00 \u00b15.0%)",
+          "student_value": {
+            "numbers": [
+              4931.51,
+              4931.51
+            ],
+            "counts": [
+              3
+            ]
+          },
+          "solution_value": {
+            "numbers": [
+              90.0,
+              39.0,
+              90.0,
+              39.0,
+              23.0,
+              90.0,
+              39.0,
+              23.0,
+              90.0,
+              39.0,
+              23.0,
+              90.0,
+              39.0,
+              23.0,
+              90.0,
+              39.0,
+              23.0,
+              90.0,
+              39.0,
+              24.0,
+              24.0,
+              143.0,
+              18.0,
+              24.0,
+              119.0,
+              24.0,
+              24.0,
+              24.0,
+              578.0,
+              90.0,
+              39.0,
+              24.0,
+              24.0,
+              417.0,
+              16.0,
+              24.0,
+              276.0,
+              24.0,
+              24.0,
+              24.0,
+              673.0,
+              90.0,
+              39.0,
+              24.0,
+              24.0,
+              333.0,
+              19.0,
+              24.0,
+              596.0,
+              24.0,
+              24.0,
+              24.0,
+              319.0,
+              90.0,
+              39.0,
+              24.0,
+              24.0,
+              506.0,
+              18.0,
+              24.0,
+              695.0,
+              24.0,
+              24.0,
+              24.0,
+              107.0,
+              90.0,
+              39.0,
+              24.0,
+              24.0,
+              278.0,
+              23.0,
+              24.0,
+              143.0,
+              24.0,
+              24.0,
+              24.0,
+              383.0
+            ]
+          }
+        }
+      ],
+      "discrepancies": [
+        {
+          "variable": "customer_orders_full",
+          "match": false,
+          "issue": "row_count_mismatch",
+          "message": "customer_orders_full: Expected 400 rows, not found in output",
+          "student_value": {
+            "row_count": 250,
+            "numbers": [
+              250.0,
+              50.0,
+              250.0,
+              50.0
+            ],
+            "counts": [
+              250,
+              0,
+              0,
+              250,
+              0,
+              0
+            ]
+          },
+          "solution_value": {
+            "row_count": 400,
+            "numbers": [
+              400.0
+            ],
+            "counts": [
+              250,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "variable": "regional_analysis",
+          "match": false,
+          "issue": "numerical_mismatch",
+          "message": "regional_analysis: 72277.52 (expected 4931.51 \u00b15.0%)",
+          "student_value": {
+            "numbers": [
+              72277.52,
+              72277.52
+            ]
+          },
+          "solution_value": {
+            "numbers": [
+              4931.51
+            ]
+          }
+        },
+        {
+          "variable": "market_expansion",
+          "match": false,
+          "issue": "numerical_mismatch",
+          "message": "market_expansion: 4931.51 (expected 90.00 \u00b15.0%)",
+          "student_value": {
+            "numbers": [
+              4931.51,
+              4931.51
+            ],
+            "counts": [
+              3
+            ]
+          },
+          "solution_value": {
+            "numbers": [
+              90.0,
+              39.0,
+              90.0,
+              39.0,
+              23.0,
+              90.0,
+              39.0,
+              23.0,
+              90.0,
+              39.0,
+              23.0,
+              90.0,
+              39.0,
+              23.0,
+              90.0,
+              39.0,
+              23.0,
+              90.0,
+              39.0,
+              24.0,
+              24.0,
+              143.0,
+              18.0,
+              24.0,
+              119.0,
+              24.0,
+              24.0,
+              24.0,
+              578.0,
+              90.0,
+              39.0,
+              24.0,
+              24.0,
+              417.0,
+              16.0,
+              24.0,
+              276.0,
+              24.0,
+              24.0,
+              24.0,
+              673.0,
+              90.0,
+              39.0,
+              24.0,
+              24.0,
+              333.0,
+              19.0,
+              24.0,
+              596.0,
+              24.0,
+              24.0,
+              24.0,
+              319.0,
+              90.0,
+              39.0,
+              24.0,
+              24.0,
+              506.0,
+              18.0,
+              24.0,
+              695.0,
+              24.0,
+              24.0,
+              24.0,
+              107.0,
+              90.0,
+              39.0,
+              24.0,
+              24.0,
+              278.0,
+              23.0,
+              24.0,
+              143.0,
+              24.0,
+              24.0,
+              24.0,
+              383.0
+            ]
+          }
+        }
+      ],
+      "score_adjustment": -5
+    },
+    "validation_summary": "VALIDATION RESULTS:\n- Variables Found: 25/25\n- Sections Complete: 0/0 (0%)\n- Execution Rate: 100.0%\n- Base Score: 100.0/100\n- Output Match Rate: 88.0%\n- Output Checks Passed: 22/25"
+  },
+  "grading_timestamp": "2025-11-08 20:42:42",
+  "grading_system": "4-Layer Validation + AI Analysis",
+  "grading_stats": {
+    "validation_time": 0.02224111557006836,
+    "code_analysis_time": 0,
+    "feedback_generation_time": 0,
+    "total_time": 17.039281845092773,
+    "parallel_time": 17.016533136367798
+  }
+}

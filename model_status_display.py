@@ -14,7 +14,25 @@ def show_two_model_status():
     st.sidebar.markdown("---")
     st.sidebar.subheader("🤖 AI Model Status")
     
-    # Check MLX models first (preferred for Apple Silicon)
+    # Check for disaggregated system first (DGX + Mac)
+    disaggregated_available = False
+    import os
+    if os.path.exists('disaggregated_inference/config_current.json'):
+        try:
+            import json
+            with open('disaggregated_inference/config_current.json', 'r') as f:
+                config = json.load(f)
+            
+            st.sidebar.success("✅ Qwen 3.0 Coder (Disaggregated)")
+            st.sidebar.success("✅ GPT-OSS 120B (Disaggregated)")
+            st.sidebar.info("🚀 **Disaggregated Inference System**")
+            st.sidebar.success("⚡ DGX Prefill + Mac Decode")
+            disaggregated_available = True
+            return  # Exit early if disaggregated is available
+        except:
+            pass
+    
+    # Check MLX models as fallback (preferred for Apple Silicon)
     mlx_available = False
     try:
         from models.mlx_ai_client import MLXAIClient

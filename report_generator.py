@@ -58,6 +58,98 @@ class PDFReportGenerator:
         os.makedirs(assignment_folder, exist_ok=True)
         return assignment_folder
     
+    def _safe_paragraph(self, text: str, style):
+        """Create a Paragraph with extra Unicode cleaning to prevent black squares"""
+        if not text:
+            return Paragraph("", style)
+        
+        # AGGRESSIVE cleaning - replace problematic characters with safe alternatives
+        import re
+        
+        # Replace non-breaking hyphens and special dashes with regular hyphens
+        safe_text = text.replace('\u2011', '-')  # Non-breaking hyphen (causes black squares)
+        safe_text = safe_text.replace('\u2010', '-')  # Hyphen
+        safe_text = safe_text.replace('\u2012', '-')  # Figure dash
+        safe_text = safe_text.replace('\u2013', '-')  # En dash
+        safe_text = safe_text.replace('\u2014', '-')  # Em dash
+        safe_text = safe_text.replace('\u2015', '-')  # Horizontal bar
+        
+        # Remove box drawing characters (U+2500-U+257F)
+        safe_text = re.sub(r'[\u2500-\u257F]', '', safe_text)
+        # Remove geometric shapes (U+25A0-U+25FF) - this includes ■
+        safe_text = re.sub(r'[\u25A0-\u25FF]', '', safe_text)
+        # Remove dingbats (U+2700-U+27BF)
+        safe_text = re.sub(r'[\u2700-\u27BF]', '', safe_text)
+        # Remove miscellaneous symbols (U+2600-U+26FF)
+        safe_text = re.sub(r'[\u2600-\u26FF]', '', safe_text)
+        
+        # Clean up any double spaces left by removals
+        safe_text = ' '.join(safe_text.split())
+        return Paragraph(safe_text, style)
+    
+    def _format_structured_feedback(self, text: str, story, style_name='Normal'):
+        """Format feedback with WHAT/WHY/HOW/EXAMPLE structure into separate sections"""
+        if not text or not isinstance(text, str):
+            return
+        
+        # Check if this has the structured format
+        if 'WHAT:' in text and 'WHY:' in text:
+            # Split into sections
+            sections = {}
+            current_section = None
+            current_text = []
+            
+            for line in text.split('\n'):
+                line = line.strip()
+                if line.startswith('WHAT:'):
+                    if current_section and current_text:
+                        sections[current_section] = ' '.join(current_text)
+                    current_section = 'WHAT'
+                    current_text = [line[5:].strip()]
+                elif line.startswith('WHY:'):
+                    if current_section and current_text:
+                        sections[current_section] = ' '.join(current_text)
+                    current_section = 'WHY'
+                    current_text = [line[4:].strip()]
+                elif line.startswith('HOW:'):
+                    if current_section and current_text:
+                        sections[current_section] = ' '.join(current_text)
+                    current_section = 'HOW'
+                    current_text = [line[4:].strip()]
+                elif line.startswith('EXAMPLE:'):
+                    if current_section and current_text:
+                        sections[current_section] = ' '.join(current_text)
+                    current_section = 'EXAMPLE'
+                    current_text = [line[8:].strip()]
+                elif line and current_section:
+                    current_text.append(line)
+            
+            # Add the last section
+            if current_section and current_text:
+                sections[current_section] = ' '.join(current_text)
+            
+            # Format each section on separate lines with bold labels
+            if 'WHAT' in sections:
+                story.append(self._safe_paragraph(f"<b>What:</b> {self._clean_text(sections['WHAT'])}", self.styles[style_name]))
+                story.append(Spacer(1, 3))
+            if 'WHY' in sections:
+                story.append(self._safe_paragraph(f"<b>Why:</b> {self._clean_text(sections['WHY'])}", self.styles[style_name]))
+                story.append(Spacer(1, 3))
+            if 'HOW' in sections:
+                story.append(self._safe_paragraph(f"<b>How:</b> {self._clean_text(sections['HOW'])}", self.styles[style_name]))
+                story.append(Spacer(1, 3))
+            if 'EXAMPLE' in sections:
+                # Format code examples with monospace
+                example_text = self._clean_text(sections['EXAMPLE'])
+                story.append(self._safe_paragraph(f"<b>Example:</b> {example_text}", self.styles[style_name]))
+            
+            story.append(Spacer(1, 8))
+        else:
+            # No structure, just add as normal paragraph
+            clean_text = self._clean_text(text)
+            if clean_text:
+                story.append(self._safe_paragraph(clean_text, self.styles[style_name]))
+    
     def _clean_text(self, text: str) -> str:
         """Clean text for PDF generation - remove internal AI dialog and formatting"""
         if not isinstance(text, str):
@@ -80,12 +172,31 @@ class PDFReportGenerator:
         for pattern in internal_patterns:
             text = re.sub(pattern, '', text, flags=re.IGNORECASE | re.DOTALL)
         
-        # Replace bullet point characters with hyphens (preserve word spacing)
-        bullet_chars = r'[■▪▫●○]'
-        text = re.sub(bullet_chars, '-', text)
+        # Remove ALL problematic Unicode characters that cause black squares
+        # This must happen BEFORE any PDF rendering
+        removals = ['■', '▪', '▫', '●', '○', '•', '✓', '✔', '✅', '❌', '⚠', '⚠️']
+        for char in removals:
+            text = text.replace(char, '')
         
-        # Remove emojis (but not bullet points - already handled)
-        emoji_pattern = r'[📋📈🗂️📦🔍📚✅❌🔧💭📝👍⚠️🤔💡🎯📊🔍]'
+        # Replace arrows and quotes with safe alternatives
+        replacements = {
+            '→': '->',
+            '←': '<-',
+            '↑': '^',
+            '↓': 'v',
+            ''': "'",
+            ''': "'",
+            '"': '"',
+            '"': '"',
+            '–': '-',
+            '—': '-',
+        }
+        
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+        
+        # Remove any remaining emojis
+        emoji_pattern = r'[📋📈🗂️📦🔍📚🔧💭📝👍🤔💡🎯📊🚀⚡🎉🔥💪🎓]'
         text = re.sub(emoji_pattern, '', text)
         
         # Remove markdown formatting
@@ -191,15 +302,14 @@ class PDFReportGenerator:
             r"Make sure.*?(?=\n|$)",
             r"Ensure.*?(?=\n|$)",
             r"- \".*?\"",  # Remove quoted items
-            r"■",  # Remove special characters
         ]
         
         clean_comments = comments
         for pattern in prompt_patterns:
             clean_comments = re.sub(pattern, '', clean_comments, flags=re.IGNORECASE | re.DOTALL)
         
-        # Clean up whitespace
-        clean_comments = re.sub(r'\s+', ' ', clean_comments).strip()
+        # NOW call _clean_text to handle Unicode characters
+        clean_comments = self._clean_text(clean_comments)
         
         # If too short after cleaning, return empty (don't use fallback)
         if len(clean_comments) < 50:
@@ -712,7 +822,7 @@ class PDFReportGenerator:
             clean_comments = self._clean_instructor_comments_thoroughly(raw_comments)
             
             if clean_comments and len(clean_comments) > 30:
-                story.append(Paragraph(clean_comments, self.styles['Normal']))
+                story.append(self._safe_paragraph(clean_comments, self.styles['Normal']))
             else:
                 logger.warning("Instructor comments too short or missing - AI needs to generate more verbose feedback")
                 story.append(Paragraph("Instructor feedback not available - please regenerate with more verbose AI model settings.", self.styles['Normal']))
@@ -818,22 +928,16 @@ class PDFReportGenerator:
                 
                 story.append(Spacer(1, 15))
             
-            # Areas for Development - PARAGRAPH FORMAT
+            # Areas for Development - STRUCTURED FORMAT
             if 'areas_for_development' in detailed and detailed['areas_for_development']:
                 story.append(Paragraph("Areas for Development", self.styles['CustomHeading']))
                 
-                clean_items = []
                 for item in detailed['areas_for_development']:
                     if isinstance(item, str) and len(item) > 15:
-                        clean_item = self._clean_text(item)
-                        if clean_item and len(clean_item) > 15:
-                            clean_items.append(clean_item)
+                        # Use structured formatter for WHAT/WHY/HOW/EXAMPLE
+                        self._format_structured_feedback(item, story, 'Normal')
                 
-                # Convert bullets to paragraph - USE ALL ITEMS
-                if clean_items:
-                    paragraph_text = " ".join(clean_items)  # Combine ALL items
-                    story.append(Paragraph(paragraph_text, self.styles['Normal']))
-                else:
+                if not detailed['areas_for_development']:
                     story.append(Paragraph("Continue developing analytical depth and technical documentation skills to strengthen future work.", self.styles['Normal']))
                 
                 story.append(Spacer(1, 15))
@@ -1000,8 +1104,9 @@ class PDFReportGenerator:
             )
             
             for item in technical_analysis['code_suggestions']:
-                clean_item = self._clean_text(item)
-                story.append(Paragraph(f"• {clean_item}", self.styles['CustomBullet']))
+                if isinstance(item, str) and len(item) > 15:
+                    # Use structured formatter for WHAT/WHY/HOW/EXAMPLE
+                    self._format_structured_feedback(item, story, 'Normal')
                 
                 # Add code examples for common suggestions
                 if 'complete.cases()' in item:

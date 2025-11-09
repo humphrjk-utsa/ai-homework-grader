@@ -1,162 +1,157 @@
 #!/usr/bin/env python3
 """
 Disaggregated Inference Client for AI Homework Grader
-Uses Ollama on both DGX (prefill) and Mac (decode) with KV cache passing
+Calls Flask wrapper servers that use Ollama on DGX (prefill) and Mac (decode)
 """
 import requests
 import time
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
+import json
 
 logger = logging.getLogger(__name__)
 
 
 class DisaggregatedClient:
-    """Client for disaggregated inference (DGX prefill + Mac decode) using Ollama"""
+    """Client for disaggregated inference (DGX prefill + Mac decode) via Flask wrappers"""
     
-    def __init__(self, prefill_url: str, decode_url: str, model_name: str):
-        self.prefill_url = prefill_url
-        self.decode_url = decode_url
-        self.model_name = model_name
+    def __init__(self, config_path: str = "disaggregated_inference/config_current.json"):
+        """Initialize client with configuration"""
+        with open(config_path, 'r') as f:
+            self.config = json.load(f)
+        
+        self.prefill_servers = {s['model']: s for s in self.config['prefill_servers']}
+        self.decode_servers = {s['model']: s for s in self.config['decode_servers']}
+        
+        logger.info(f"Initialized disaggregated client with {len(self.prefill_servers)} prefill and {len(self.decode_servers)} decode servers")
     
-    def generate(self, prompt: str, max_tokens: int = 2000, temperature: float = 0.3) -> Dict:
+    def _get_server_url(self, server: Dict, endpoint: str) -> str:
+        """Get server URL, using localhost if it's the local machine"""
+        import socket
+        host = server['host']
+        port = server['port']
+        
+        # Check if this is a local IP by trying to bind to it
+        # If we can't reach it via external IP, use localhost
+        try:
+            # Get local IPs
+            hostname = socket.gethostname()
+            local_ips = [socket.gethostbyname(hostname)]
+            # Also check common local IPs
+            local_ips.extend(['127.0.0.1', 'localhost'])
+            
+            # If the server host matches a local IP, use localhost
+            if host in local_ips or host.startswith('169.254.150.101'):
+                host = 'localhost'
+        except:
+            pass
+        
+        return f"http://{host}:{port}{endpoint}"
+    
+    def generate(self, model: str, prompt: str, max_tokens: int = 2000) -> Tuple[str, Dict]:
         """
-        Generate text using disaggregated inference with Ollama
+        Generate text using disaggregated inference
         
         Args:
+            model: Model name (e.g., "qwen3-coder:30b" or "gpt-oss:120b")
             prompt: Input prompt
             max_tokens: Maximum tokens to generate
-            temperature: Sampling temperature
             
         Returns:
-            Dict with 'response', 'prefill_time', 'decode_time', 'total_time', 'metrics'
+            Tuple of (response_text, metrics_dict)
         """
         start_time = time.time()
         
+        # Determine model type
+        if 'qwen' in model.lower() or 'coder' in model.lower():
+            model_key = 'qwen'
+        else:
+            model_key = 'gpt-oss'
+        
+        # Get servers
+        prefill_server = self.prefill_servers.get(model_key)
+        decode_server = self.decode_servers.get(model_key)
+        
+        if not prefill_server or not decode_server:
+            raise ValueError(f"No servers configured for model type: {model_key}")
+        
+        logger.info(f"Using {model_key}: prefill={prefill_server['host']}:{prefill_server['port']}, decode={decode_server['host']}:{decode_server['port']}")
+        
         try:
-            # Step 1: Prefill on DGX (Ollama)
-            logger.info(f"🚀 Prefill on DGX: {self.prefill_url} ({self.model_name})")
+            # Step 1: Prefill on DGX via Flask wrapper
+            prefill_url = self._get_server_url(prefill_server, '/prefill')
+            logger.info(f"🚀 Prefill on DGX: {prefill_url}")
             prefill_start = time.time()
             
             response = requests.post(
-                f"{self.prefill_url}/api/generate",
-                json={
-                    'model': self.model_name,
-                    'prompt': prompt,
-                    'stream': False,
-                    'options': {
-                        'num_predict': 1  # Just prefill, minimal generation
-                    }
-                },
+                prefill_url,
+                json={'prompt': prompt},
                 timeout=60
             )
             
             if response.status_code != 200:
-                raise Exception(f"Prefill failed: {response.status_code}")
+                raise Exception(f"Prefill failed: {response.status_code} - {response.text}")
             
             prefill_result = response.json()
             prefill_time = time.time() - prefill_start
             
             # Extract prefill metrics
-            prompt_eval_count = prefill_result.get('prompt_eval_count', 0)
-            prompt_eval_duration = prefill_result.get('prompt_eval_duration', 0)
+            prefill_metrics = prefill_result.get('metrics', {})
+            prompt_tokens = prefill_metrics.get('prompt_eval_count', 0)
+            prefill_tokens_per_sec = prefill_metrics.get('prompt_tokens_per_sec', 0)
             
-            logger.info(f"✅ Prefill completed in {prefill_time:.3f}s ({prompt_eval_count} tokens)")
+            logger.info(f"✅ Prefill completed in {prefill_time:.3f}s ({prompt_tokens} tokens, {prefill_tokens_per_sec:.1f} tok/s)")
             
-            # Step 2: Decode on Mac (Ollama with context)
-            logger.info(f"🚀 Decode on Mac: {self.decode_url}")
+            # Step 2: Decode on Mac via Flask wrapper
+            decode_url = self._get_server_url(decode_server, '/decode')
+            logger.info(f"🚀 Decode on Mac: {decode_url}")
             decode_start = time.time()
             
             response = requests.post(
-                f"{self.decode_url}/api/generate",
+                decode_url,
                 json={
-                    'model': self.model_name,
+                    'context': prefill_result.get('context', prompt),
                     'prompt': prompt,
-                    'context': prefill_result.get('context', []),  # Pass KV cache from prefill
-                    'stream': False,
-                    'options': {
-                        'num_predict': max_tokens,
-                        'temperature': temperature
-                    }
+                    'max_new_tokens': max_tokens,
+                    'temperature': 0.2
                 },
                 timeout=180
             )
             
             if response.status_code != 200:
-                raise Exception(f"Decode failed: {response.status_code}")
+                raise Exception(f"Decode failed: {response.status_code} - {response.text}")
             
             decode_result = response.json()
             decode_time = time.time() - decode_start
             total_time = time.time() - start_time
             
             # Extract decode metrics
-            eval_count = decode_result.get('eval_count', 0)
-            eval_duration = decode_result.get('eval_duration', 0)
-            tokens_per_sec = (eval_count / (eval_duration / 1e9)) if eval_duration > 0 else 0
+            decode_metrics = decode_result.get('metrics', {})
+            tokens_generated = decode_metrics.get('eval_count', decode_result.get('tokens_generated', 0))
+            decode_tokens_per_sec = decode_metrics.get('tokens_per_sec', decode_result.get('tokens_per_sec', 0))
             
-            logger.info(f"✅ Decode completed in {decode_time:.3f}s ({eval_count} tokens, {tokens_per_sec:.1f} tok/s)")
+            logger.info(f"✅ Decode completed in {decode_time:.3f}s ({tokens_generated} tokens, {decode_tokens_per_sec:.1f} tok/s)")
             logger.info(f"⏱️ Total time: {total_time:.3f}s")
             
-            return {
-                'response': decode_result.get('response', ''),
+            response_text = decode_result.get('generated_text', '')
+            
+            metrics = {
                 'prefill_time': prefill_time,
                 'decode_time': decode_time,
                 'total_time': total_time,
-                'tokens_per_sec': tokens_per_sec,
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': tokens_generated,
+                'total_tokens': prompt_tokens + tokens_generated,
+                'prefill_speed': prefill_tokens_per_sec,
+                'decode_speed': decode_tokens_per_sec,
                 'method': 'disaggregated_ollama',
-                'metrics': {
-                    'prefill': {
-                        'time_s': prefill_time,
-                        'prompt_tokens': prompt_eval_count,
-                        'tokens_per_sec': (prompt_eval_count / (prompt_eval_duration / 1e9)) if prompt_eval_duration > 0 else 0,
-                        'duration_ns': prompt_eval_duration
-                    },
-                    'decode': {
-                        'time_s': decode_time,
-                        'tokens_generated': eval_count,
-                        'tokens_per_sec': tokens_per_sec,
-                        'eval_duration_ns': eval_duration,
-                        'total_duration_ns': decode_result.get('total_duration', 0)
-                    },
-                    'total': {
-                        'time_s': total_time,
-                        'prompt_tokens': prompt_eval_count,
-                        'generated_tokens': eval_count,
-                        'total_tokens': prompt_eval_count + eval_count,
-                        'overall_tokens_per_sec': (prompt_eval_count + eval_count) / total_time if total_time > 0 else 0
-                    }
-                }
+                'prefill_server': f"{prefill_server['host']}:{prefill_server['port']}",
+                'decode_server': f"{decode_server['host']}:{decode_server['port']}"
             }
+            
+            return response_text, metrics
             
         except Exception as e:
             logger.error(f"❌ Disaggregated inference failed: {e}")
             raise
 
-
-def create_disaggregated_client(model_name: str, model_config: Dict) -> Optional[DisaggregatedClient]:
-    """
-    Create a disaggregated client if the model is configured for it
-    
-    Args:
-        model_name: Name of the model (e.g., "disaggregated:qwen3-coder:30b")
-        model_config: Configuration dict from model_config.py
-        
-    Returns:
-        DisaggregatedClient if model supports it, None otherwise
-    """
-    if not model_name.startswith('disaggregated:'):
-        return None
-    
-    prefill_url = model_config.get('prefill_url')
-    decode_url = model_config.get('decode_url')
-    ollama_model_name = model_config.get('model_name')
-    
-    if not prefill_url or not decode_url or not ollama_model_name:
-        logger.warning(f"Model {model_name} missing prefill_url, decode_url, or model_name")
-        return None
-    
-    logger.info(f"✅ Creating disaggregated client for {model_name}")
-    logger.info(f"   Prefill: {prefill_url} ({ollama_model_name})")
-    logger.info(f"   Decode: {decode_url} ({ollama_model_name})")
-    
-    return DisaggregatedClient(prefill_url, decode_url, ollama_model_name)

@@ -370,6 +370,74 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
         with col4:
             st.metric("Communication", f"{component_scores['communication_points']:.1f}/7.5")
         
+        # Show performance metrics if available
+        if 'performance_diagnostics' in result:
+            st.subheader("⚡ Performance Metrics")
+            perf = result['performance_diagnostics']
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if 'qwen_performance' in perf:
+                    qwen = perf['qwen_performance']
+                    st.metric(
+                        "🔧 Code Analysis", 
+                        f"{qwen.get('tokens_per_second', 0):.1f} tok/s",
+                        f"{qwen.get('generation_time_seconds', 0):.1f}s"
+                    )
+            
+            with col2:
+                if 'gemma_performance' in perf:
+                    gemma = perf['gemma_performance']
+                    st.metric(
+                        "📝 Feedback Generation", 
+                        f"{gemma.get('tokens_per_second', 0):.1f} tok/s",
+                        f"{gemma.get('generation_time_seconds', 0):.1f}s"
+                    )
+            
+            with col3:
+                if 'combined_metrics' in perf:
+                    combined = perf['combined_metrics']
+                    st.metric(
+                        "🚀 Combined Throughput", 
+                        f"{combined.get('combined_throughput_tokens_per_second', 0):.1f} tok/s",
+                        f"{combined.get('parallel_efficiency', 0):.1f}x efficiency"
+                    )
+            
+            # Show detailed breakdown in expander (safe - won't break UI if data missing)
+            with st.expander("📊 Detailed Performance Breakdown"):
+                # Check if we have the detailed metrics from grading_stats
+                if 'grading_stats' in result:
+                    stats = result['grading_stats']
+                    
+                    # Qwen metrics
+                    if 'qwen_metrics' in stats:
+                        st.write("**🔧 Qwen (Code Analysis):**")
+                        qwen_m = stats['qwen_metrics']
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            prefill = qwen_m.get('prefill_speed', 0)
+                            if prefill > 0:
+                                st.write(f"• Prefill: {prefill:.1f} tok/s")
+                        with col_b:
+                            decode = qwen_m.get('decode_speed', 0)
+                            if decode > 0:
+                                st.write(f"• Decode: {decode:.1f} tok/s")
+                    
+                    # Gemma/GPT-OSS metrics
+                    if 'gemma_metrics' in stats:
+                        st.write("**📝 GPT-OSS (Feedback):**")
+                        gemma_m = stats['gemma_metrics']
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            prefill = gemma_m.get('prefill_speed', 0)
+                            if prefill > 0:
+                                st.write(f"• Prefill: {prefill:.1f} tok/s")
+                        with col_b:
+                            decode = gemma_m.get('decode_speed', 0)
+                            if decode > 0:
+                                st.write(f"• Decode: {decode:.1f} tok/s")
+        
         # Show comprehensive feedback
         if 'comprehensive_feedback' in result:
             st.subheader("💬 Detailed Feedback")
@@ -871,6 +939,29 @@ def save_grading_result(grader, submission_id, result):
         'grading_stats': result.get('grading_stats', {}),
         'preprocessing': result.get('preprocessing', {})  # Include preprocessing info
     }
+    
+    # Clean Unicode characters from all text fields before storing
+    def clean_unicode(obj):
+        """Recursively clean Unicode characters from strings in nested dict/list"""
+        if isinstance(obj, dict):
+            return {k: clean_unicode(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [clean_unicode(item) for item in obj]
+        elif isinstance(obj, str):
+            # Replace non-breaking hyphens with regular hyphens
+            cleaned = obj.replace('\u2011', '-')  # Non-breaking hyphen
+            cleaned = cleaned.replace('\u2010', '-')  # Hyphen
+            cleaned = cleaned.replace('\u2013', '-')  # En dash
+            cleaned = cleaned.replace('\u2014', '-')  # Em dash
+            
+            # Remove problematic Unicode characters
+            for char in ['■', '▪', '▫', '●', '○', '•', '✓', '✔', '✅', '❌', '⚠', '⚠️']:
+                cleaned = cleaned.replace(char, '')
+            return cleaned
+        else:
+            return obj
+    
+    feedback_data = clean_unicode(feedback_data)
     
     # Filter AI feedback to remove internal monologue before storing
     filtered_feedback = filter_ai_feedback_for_storage(feedback_data)

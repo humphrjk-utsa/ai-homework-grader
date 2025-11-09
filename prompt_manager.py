@@ -19,11 +19,13 @@ class PromptManager:
         self.prompt_templates_dir = Path("prompt_templates")
         self.assignment_prompts_dir = Path("assignment_prompts")
         self.rubrics_dir = Path("rubrics")
+        self.ollama_prompts_dir = Path("prompt_templates/ollama")
         
         # Create directories if they don't exist
         self.prompt_templates_dir.mkdir(exist_ok=True)
         self.assignment_prompts_dir.mkdir(exist_ok=True)
         self.rubrics_dir.mkdir(exist_ok=True)
+        self.ollama_prompts_dir.mkdir(exist_ok=True)
     
     def load_general_prompt(self, prompt_type: str) -> str:
         """Load general prompt template"""
@@ -58,6 +60,54 @@ class PromptManager:
         
         with open(prompt_file, 'w') as f:
             f.write(content)
+    
+    def get_ollama_prompt(self, prompt_type: str, validation_results: Dict = None, **kwargs) -> str:
+        """Get Ollama-optimized prompt with validation context"""
+        # Load Ollama-specific prompt
+        prompt_file = self.ollama_prompts_dir / f"{prompt_type}_prompt.txt"
+        
+        if not prompt_file.exists():
+            # Fallback to general prompt
+            return self.get_combined_prompt(kwargs.get('assignment_name', 'Unknown'), prompt_type, **kwargs)
+        
+        with open(prompt_file, 'r') as f:
+            prompt_template = f.read()
+        
+        # Build validation context string
+        if validation_results:
+            sys_result = validation_results.get('systematic_results', {})
+            output_result = validation_results.get('output_results', {})
+            
+            var_check = sys_result.get('variable_check', {})
+            found_vars = var_check.get('found', 0)
+            total_vars = var_check.get('total_required', 0)
+            
+            output_match = output_result.get('overall_match', 0) * 100 if output_result else 0
+            passed_checks = output_result.get('passed_checks', 0) if output_result else 0
+            total_checks = output_result.get('total_checks', 0) if output_result else 0
+            
+            validation_context = f"""
+Variables Found: {found_vars}/{total_vars} required variables present
+Output Accuracy: {output_match:.0f}% ({passed_checks}/{total_checks} checks passed)
+Base Score: {validation_results.get('base_score', 0):.0f}%
+Adjusted Score: {validation_results.get('adjusted_score', 0):.0f}%
+
+This means the student HAS completed work. Focus on quality and approach, not completion.
+"""
+        else:
+            validation_context = "No validation results available."
+        
+        kwargs['validation_context'] = validation_context
+        
+        # Format the prompt
+        try:
+            return prompt_template.format(**kwargs)
+        except KeyError as e:
+            print(f"⚠️ Missing variable in Ollama prompt: {e}")
+            # Return with partial formatting
+            for key, value in kwargs.items():
+                prompt_template = prompt_template.replace(f"{{{key}}}", str(value))
+            return prompt_template
     
     def get_combined_prompt(self, assignment_name: str, prompt_type: str, **kwargs) -> str:
         """Get combined prompt (general + assignment-specific + correction learning)"""

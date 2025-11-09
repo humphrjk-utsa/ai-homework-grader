@@ -236,8 +236,13 @@ class RubricDrivenValidator:
         # Variable completion score
         variable_score = variable_check['completion_rate'] * 100
         
-        # Weighted average (sections 80%, variables 20%)
-        overall_score = (section_score * 0.8) + (variable_score * 0.2)
+        # Weighted average - if no sections defined, use 100% variable score
+        if total_section_points == 0:
+            # No sections in rubric, use variable completion as primary score
+            overall_score = variable_score
+        else:
+            # Weighted average (sections 80%, variables 20%)
+            overall_score = (section_score * 0.8) + (variable_score * 0.2)
         
         return {
             'overall_score': overall_score,

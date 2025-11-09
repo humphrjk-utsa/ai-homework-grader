@@ -27,7 +27,7 @@ class BusinessAnalyticsGraderV2:
     - Layer 1: Systematic validation (variables, sections, execution)
     - Layer 2: Smart output validation (compare with solution)
     - Layer 3: AI code analysis (Qwen Coder)
-    - Layer 4: AI feedback synthesis (GPT-OSS 120B)
+    - Layer 4: AI feedback synthesis (GPT-OSS/Gemma)
     """
     
     def __init__(self, 
@@ -79,26 +79,7 @@ class BusinessAnalyticsGraderV2:
         else:
             print(f"⚠️ No rubric path provided, using legacy validator")
         
-        # Check for disaggregated inference system (DGX prefill + Mac decode)
-        self.use_disaggregated = False
-        self.disaggregated_client = None
-        
-        if os.path.exists('disaggregated_inference/config_current.json'):
-            try:
-                from disaggregated_client import DisaggregatedClient
-                self.disaggregated_client = DisaggregatedClient()
-                self.use_disaggregated = True
-                print(f"🚀 Using Disaggregated Inference System:")
-                print(f"   DGX Sparks (prefill) + Mac Studios (decode)")
-                print(f"   Qwen: DGX Spark 1 → Mac Studio 2")
-                print(f"   GPT-OSS: DGX Spark 2 → Mac Studio 1")
-            except Exception as e:
-                print(f"⚠️ Disaggregated system failed to load: {e}")
-                import traceback
-                traceback.print_exc()
-                self.use_disaggregated = False
-        
-        # Check for distributed MLX system (fallback)
+        # Check for distributed MLX system
         self.use_distributed_mlx = False
         self.distributed_client = None
         
@@ -370,29 +351,14 @@ class BusinessAnalyticsGraderV2:
                     raise RuntimeError(f"Distributed MLX generation failed: {result['error']}")
                 
                 # Parse the responses
-                code_analysis = self._parse_code_analysis_response(result['code_analysis'])
-                comprehensive_feedback = self._parse_feedback_response(result['feedback'])
+                from business_analytics_grader import BusinessAnalyticsGrader
+                temp_grader = BusinessAnalyticsGrader()
+                code_analysis = temp_grader._parse_code_analysis_response(result['code_analysis'])
+                comprehensive_feedback = temp_grader._parse_feedback_response(result['feedback'])
                 
-                # Update timing stats with detailed metrics
+                # Update timing stats
                 self.grading_stats['code_analysis_time'] = result.get('qwen_time', 0)
                 self.grading_stats['feedback_generation_time'] = result.get('gemma_time', 0)
-                
-                # Extract detailed performance metrics if available
-                if 'qwen_metrics' in result:
-                    qwen_metrics = result['qwen_metrics']
-                    self.grading_stats['qwen_tokens_per_second'] = qwen_metrics.get('tokens_per_second', 0)
-                    self.grading_stats['qwen_total_tokens'] = qwen_metrics.get('total_tokens', 0)
-                    self.grading_stats['qwen_prompt_eval_time'] = qwen_metrics.get('prompt_eval_time', 0)
-                
-                if 'gemma_metrics' in result:
-                    gemma_metrics = result['gemma_metrics']
-                    self.grading_stats['gemma_tokens_per_second'] = gemma_metrics.get('tokens_per_second', 0)
-                    self.grading_stats['gemma_total_tokens'] = gemma_metrics.get('total_tokens', 0)
-                    self.grading_stats['gemma_prompt_eval_time'] = gemma_metrics.get('prompt_eval_time', 0)
-                
-                # Store parallel efficiency
-                if 'parallel_efficiency' in result:
-                    self.grading_stats['parallel_efficiency'] = result['parallel_efficiency']
                 
                 print(f"✅ AI analysis completed")
                 print(f"   🔧 Qwen: {result.get('qwen_time', 0):.1f}s")
@@ -404,18 +370,21 @@ class BusinessAnalyticsGraderV2:
                 code_analysis = None
                 comprehensive_feedback = None
         else:
-            # Use Ollama system (fallback)
+            # Use Ollama system
             print("🤖 Using Ollama for AI analysis...")
             try:
-                # Submit both tasks simultaneously with validation context
+                from business_analytics_grader import BusinessAnalyticsGrader
+                temp_grader = BusinessAnalyticsGrader()
+                
+                # Submit both tasks simultaneously
                 future_code = self.executor.submit(
-                    self._execute_ollama_code_analysis, 
-                    student_code, template_code, solution_code, assignment_info, validation_results
+                    temp_grader._execute_business_code_analysis, 
+                    student_code, template_code, solution_code, assignment_info
                 )
                 
                 future_feedback = self.executor.submit(
-                    self._execute_ollama_feedback_generation,
-                    student_code, student_markdown, assignment_info, validation_results
+                    temp_grader._execute_business_feedback_generation,
+                    student_code, student_markdown, assignment_info
                 )
                 
                 # Wait for both results
@@ -444,31 +413,6 @@ class BusinessAnalyticsGraderV2:
         
         total_time = time.time() - start_time
         self.grading_stats['total_time'] = total_time
-        
-        # Add performance diagnostics if using disaggregated system
-        if self.use_disaggregated and 'qwen_metrics' in self.grading_stats and 'gemma_metrics' in self.grading_stats:
-            qwen_m = self.grading_stats['qwen_metrics']
-            gemma_m = self.grading_stats['gemma_metrics']
-            
-            structured_feedback['performance_diagnostics'] = {
-                'qwen_performance': {
-                    'tokens_per_second': qwen_m.get('decode_speed', 0),
-                    'generation_time_seconds': self.grading_stats.get('code_analysis_time', 0),
-                    'model': 'Disaggregated (DGX+Mac)'
-                },
-                'gemma_performance': {
-                    'tokens_per_second': gemma_m.get('decode_speed', 0),
-                    'generation_time_seconds': self.grading_stats.get('feedback_generation_time', 0),
-                    'model': 'Disaggregated (DGX+Mac)'
-                },
-                'combined_metrics': {
-                    'parallel_efficiency': self.grading_stats.get('parallel_efficiency', 0),
-                    'combined_throughput_tokens_per_second': (
-                        qwen_m.get('completion_tokens', 0) + gemma_m.get('completion_tokens', 0)
-                    ) / parallel_time if parallel_time > 0 else 0
-                }
-            }
-            structured_feedback['grading_stats'] = self.grading_stats
         
         print(f"\n✅ Grading completed in {total_time:.1f}s")
         
@@ -530,12 +474,12 @@ class BusinessAnalyticsGraderV2:
         # Build comprehensive feedback
         instructor_comments = self._generate_instructor_comments(validation_results)
         
-        # Calculate component scores for backward compatibility with explicit max caps
+        # Calculate component scores for backward compatibility
         # Use default weights: Technical 40%, Analysis 40%, Business 10%, Communication 10%
-        technical_points = min((final_score / 100) * (37.5 * 0.40), 15.0)  # Max 15
-        analysis_points = min((final_score / 100) * (37.5 * 0.40), 15.0)   # Max 15
-        business_points = min((final_score / 100) * (37.5 * 0.10), 3.75)   # Max 3.75
-        communication_points = min((final_score / 100) * (37.5 * 0.10), 3.75)  # Max 3.75
+        technical_points = (final_score / 100) * (37.5 * 0.40)
+        analysis_points = (final_score / 100) * (37.5 * 0.40)
+        business_points = (final_score / 100) * (37.5 * 0.10)
+        communication_points = (final_score / 100) * (37.5 * 0.10)
         
         return {
             "final_score": round(final_score_37_5, 1),
@@ -597,11 +541,11 @@ class BusinessAnalyticsGraderV2:
         final_score = validation_results['adjusted_score']
         final_score_37_5 = (final_score / 100) * 37.5
         
-        # Calculate component scores with explicit max caps
-        technical_points = min((final_score / 100) * (37.5 * 0.40), 15.0)  # Max 15
-        analysis_points = min((final_score / 100) * (37.5 * 0.40), 15.0)   # Max 15
-        business_points = min((final_score / 100) * (37.5 * 0.10), 3.75)   # Max 3.75
-        communication_points = min((final_score / 100) * (37.5 * 0.10), 3.75)  # Max 3.75
+        # Calculate component scores
+        technical_points = (final_score / 100) * (37.5 * 0.40)
+        analysis_points = (final_score / 100) * (37.5 * 0.40)
+        business_points = (final_score / 100) * (37.5 * 0.10)
+        communication_points = (final_score / 100) * (37.5 * 0.10)
         
         # Merge code strengths from AI and validation
         code_strengths = []
@@ -868,210 +812,6 @@ EXAMPLES:
         comments += "Review the detailed feedback below for specific areas to improve."
         
         return comments
-    
-    def _execute_ollama_code_analysis(self, student_code: str, template_code: str, 
-                                     solution_code: str, assignment_info: Dict, 
-                                     validation_results: Dict = None) -> Dict[str, Any]:
-        """Execute code analysis using Ollama"""
-        start_time = time.time()
-        
-        print(f"🔧 [CODE] Analyzing with Ollama...")
-        
-        assignment_name = assignment_info.get('name', assignment_info.get('title', 'Unknown'))
-        
-        # Use Ollama-specific prompts if using disaggregated
-        if self.use_disaggregated:
-            prompt = self.prompt_manager.get_ollama_prompt(
-                "code_analysis",
-                validation_results=validation_results,
-                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
-                assignment_name=assignment_name,
-                template_code=template_code if template_code else "# No template provided",
-                student_code=student_code,
-                solution_code=solution_code
-            )
-        else:
-            prompt = self.prompt_manager.get_combined_prompt(
-                assignment_name,
-                "code_analysis",
-                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
-                template_code=template_code if template_code else "# No template provided",
-                student_code=student_code,
-                solution_code=solution_code
-            )
-        
-        response = self._generate_with_ollama(self.code_model, prompt, max_tokens=3000)
-        
-        analysis_time = time.time() - start_time
-        self.grading_stats['code_analysis_time'] = analysis_time
-        
-        print(f"✅ [CODE] Analysis complete ({analysis_time:.1f}s)")
-        
-        if not response:
-            return {"error": "Code analysis failed", "technical_score": 85}
-        
-        return self._parse_code_analysis_response(response)
-    
-    def _execute_ollama_feedback_generation(self, student_code: str, student_markdown: str,
-                                           assignment_info: Dict, validation_results: Dict = None) -> Dict[str, Any]:
-        """Execute feedback generation using Ollama"""
-        start_time = time.time()
-        
-        print(f"📝 [FEEDBACK] Generating with Ollama...")
-        
-        assignment_name = assignment_info.get('name', assignment_info.get('title', 'Unknown'))
-        
-        # Use Ollama-specific prompts if using disaggregated
-        if self.use_disaggregated:
-            prompt = self.prompt_manager.get_ollama_prompt(
-                "feedback",
-                validation_results=validation_results,
-                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
-                assignment_name=assignment_name,
-                student_markdown=student_markdown,
-                student_code_summary=student_code[:800]
-            )
-        else:
-            prompt = self.prompt_manager.get_combined_prompt(
-                assignment_name,
-                "feedback",
-                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
-                student_markdown=student_markdown,
-                student_code_summary=student_code[:800]
-            )
-        
-        response = self._generate_with_ollama(self.feedback_model, prompt, max_tokens=3500)
-        
-        feedback_time = time.time() - start_time
-        self.grading_stats['feedback_generation_time'] = feedback_time
-        
-        print(f"✅ [FEEDBACK] Generation complete ({feedback_time:.1f}s)")
-        
-        if not response:
-            return {"error": "Feedback generation failed", "overall_score": 85}
-        
-        return self._parse_feedback_response(response)
-    
-    def _generate_with_ollama(self, model: str, prompt: str, max_tokens: int = 2000) -> Optional[str]:
-        """Generate response using Ollama (disaggregated or local) and capture metrics"""
-        try:
-            # Use disaggregated system if available
-            if self.use_disaggregated and self.disaggregated_client:
-                response_text, metrics = self.disaggregated_client.generate(model, prompt, max_tokens)
-                
-                # Store metrics
-                model_key = 'qwen' if 'qwen' in model.lower() or 'coder' in model.lower() else 'gpt-oss'
-                self.grading_stats[f'{model_key}_metrics'] = metrics
-                
-                # Ollama sometimes echoes the prompt - remove it
-                if response_text and response_text.startswith(prompt):
-                    response_text = response_text[len(prompt):].strip()
-                
-                return response_text
-            
-            # Fallback to direct Ollama
-            payload = {
-                "model": model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "num_predict": max_tokens,
-                    "temperature": 0.2,
-                    "top_p": 0.9
-                }
-            }
-            
-            response = requests.post(self.api_url, json=payload, timeout=300)
-            
-            if response.status_code == 200:
-                result = response.json()
-                
-                # Capture performance metrics
-                if 'prompt_eval_count' in result or 'eval_count' in result:
-                    metrics = {
-                        'prompt_tokens': result.get('prompt_eval_count', 0),
-                        'completion_tokens': result.get('eval_count', 0),
-                        'total_tokens': result.get('prompt_eval_count', 0) + result.get('eval_count', 0),
-                        'prompt_eval_duration_ms': result.get('prompt_eval_duration', 0) / 1_000_000,
-                        'eval_duration_ms': result.get('eval_duration', 0) / 1_000_000,
-                        'total_duration_ms': result.get('total_duration', 0) / 1_000_000,
-                    }
-                    
-                    # Calculate tokens per second
-                    if metrics['eval_duration_ms'] > 0:
-                        metrics['decode_tokens_per_second'] = (metrics['completion_tokens'] / metrics['eval_duration_ms']) * 1000
-                    else:
-                        metrics['decode_tokens_per_second'] = 0
-                    
-                    if metrics['prompt_eval_duration_ms'] > 0:
-                        metrics['prefill_tokens_per_second'] = (metrics['prompt_tokens'] / metrics['prompt_eval_duration_ms']) * 1000
-                    else:
-                        metrics['prefill_tokens_per_second'] = 0
-                    
-                    # Store metrics
-                    model_key = 'qwen' if 'qwen' in model.lower() or 'coder' in model.lower() else 'gemma'
-                    self.grading_stats[f'{model_key}_metrics'] = metrics
-                
-                return result.get('response', '')
-            else:
-                return None
-                
-        except Exception as e:
-            print(f"⚠️ Ollama generation failed: {e}")
-            return None
-    
-    def _parse_code_analysis_response(self, response: str) -> Dict[str, Any]:
-        """Parse code analysis response"""
-        try:
-            if "```json" in response:
-                json_part = response.split("```json")[1].split("```")[0].strip()
-                result = json.loads(json_part)
-                return result
-            elif "{" in response and "}" in response:
-                start = response.find("{")
-                end = response.rfind("}") + 1
-                json_part = response[start:end]
-                result = json.loads(json_part)
-                return result
-        except:
-            pass
-        
-        # Fallback parsing
-        return {
-            "technical_score": 85,
-            "code_strengths": ["Code analysis completed"],
-            "code_suggestions": ["Review feedback for details"],
-            "technical_observations": [response[:200]]
-        }
-    
-    def _parse_feedback_response(self, response: str) -> Dict[str, Any]:
-        """Parse feedback response"""
-        try:
-            if "```json" in response:
-                json_part = response.split("```json")[1].split("```")[0].strip()
-                result = json.loads(json_part)
-                return result
-            elif "{" in response and "}" in response:
-                start = response.find("{")
-                end = response.rfind("}") + 1
-                json_part = response[start:end]
-                result = json.loads(json_part)
-                return result
-        except:
-            pass
-        
-        # Fallback parsing
-        return {
-            "overall_score": 85,
-            "instructor_comments": response[:500] if response else "Feedback generated",
-            "detailed_feedback": {
-                "reflection_assessment": ["Review submission"],
-                "analytical_strengths": ["Analysis completed"],
-                "business_application": ["Business context considered"],
-                "areas_for_development": ["See detailed feedback"],
-                "recommendations": ["Continue practicing"]
-            }
-        }
 
 
 # Convenience function
