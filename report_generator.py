@@ -88,7 +88,7 @@ class PDFReportGenerator:
         return Paragraph(safe_text, style)
     
     def _format_structured_feedback(self, text: str, story, style_name='Normal'):
-        """Format feedback with WHAT/WHY/HOW/EXAMPLE structure into separate sections"""
+        """Format feedback with WHAT/WHY/HOW/EXAMPLE structure into separate highlighted sections"""
         if not text or not isinstance(text, str):
             return
         
@@ -101,26 +101,31 @@ class PDFReportGenerator:
             
             for line in text.split('\n'):
                 line = line.strip()
-                if line.startswith('WHAT:'):
+                if line.startswith('WHAT:') or line.startswith('• WHAT:'):
                     if current_section and current_text:
                         sections[current_section] = ' '.join(current_text)
                     current_section = 'WHAT'
-                    current_text = [line[5:].strip()]
-                elif line.startswith('WHY:'):
+                    # Remove bullet and label
+                    content = line.replace('• WHAT:', '').replace('WHAT:', '').strip()
+                    current_text = [content] if content else []
+                elif line.startswith('WHY:') or line.startswith('• WHY:'):
                     if current_section and current_text:
                         sections[current_section] = ' '.join(current_text)
                     current_section = 'WHY'
-                    current_text = [line[4:].strip()]
-                elif line.startswith('HOW:'):
+                    content = line.replace('• WHY:', '').replace('WHY:', '').strip()
+                    current_text = [content] if content else []
+                elif line.startswith('HOW:') or line.startswith('• HOW:'):
                     if current_section and current_text:
                         sections[current_section] = ' '.join(current_text)
                     current_section = 'HOW'
-                    current_text = [line[4:].strip()]
-                elif line.startswith('EXAMPLE:'):
+                    content = line.replace('• HOW:', '').replace('HOW:', '').strip()
+                    current_text = [content] if content else []
+                elif line.startswith('EXAMPLE:') or line.startswith('• EXAMPLE:'):
                     if current_section and current_text:
                         sections[current_section] = ' '.join(current_text)
                     current_section = 'EXAMPLE'
-                    current_text = [line[8:].strip()]
+                    content = line.replace('• EXAMPLE:', '').replace('EXAMPLE:', '').strip()
+                    current_text = [content] if content else []
                 elif line and current_section:
                     current_text.append(line)
             
@@ -128,22 +133,66 @@ class PDFReportGenerator:
             if current_section and current_text:
                 sections[current_section] = ' '.join(current_text)
             
-            # Format each section on separate lines with bold labels
-            if 'WHAT' in sections:
-                story.append(self._safe_paragraph(f"<b>What:</b> {self._clean_text(sections['WHAT'])}", self.styles[style_name]))
-                story.append(Spacer(1, 3))
-            if 'WHY' in sections:
-                story.append(self._safe_paragraph(f"<b>Why:</b> {self._clean_text(sections['WHY'])}", self.styles[style_name]))
-                story.append(Spacer(1, 3))
-            if 'HOW' in sections:
-                story.append(self._safe_paragraph(f"<b>How:</b> {self._clean_text(sections['HOW'])}", self.styles[style_name]))
-                story.append(Spacer(1, 3))
-            if 'EXAMPLE' in sections:
-                # Format code examples with monospace
-                example_text = self._clean_text(sections['EXAMPLE'])
-                story.append(self._safe_paragraph(f"<b>Example:</b> {example_text}", self.styles[style_name]))
+            # Create highlighted style for section headers
+            header_style = ParagraphStyle(
+                name='SectionHeader',
+                parent=self.styles['Normal'],
+                fontSize=11,
+                textColor=colors.HexColor('#1a5490'),
+                spaceAfter=4,
+                spaceBefore=6,
+                leftIndent=10
+            )
             
-            story.append(Spacer(1, 8))
+            content_style = ParagraphStyle(
+                name='SectionContent',
+                parent=self.styles['Normal'],
+                fontSize=10,
+                leftIndent=20,
+                spaceAfter=6
+            )
+            
+            code_style = ParagraphStyle(
+                name='CodeExample',
+                parent=self.styles['Normal'],
+                fontName='Courier',
+                fontSize=9,
+                leftIndent=30,
+                backgroundColor=colors.HexColor('#f5f5f5'),
+                borderWidth=1,
+                borderColor=colors.grey,
+                spaceAfter=6,
+                spaceBefore=3
+            )
+            
+            # Format each section with clear visual separation
+            if 'WHAT' in sections:
+                story.append(self._safe_paragraph("<b>WHAT:</b>", header_style))
+                story.append(self._safe_paragraph(self._clean_text(sections['WHAT']), content_style))
+            
+            if 'WHY' in sections:
+                story.append(self._safe_paragraph("<b>WHY:</b>", header_style))
+                story.append(self._safe_paragraph(self._clean_text(sections['WHY']), content_style))
+            
+            if 'HOW' in sections:
+                story.append(self._safe_paragraph("<b>HOW:</b>", header_style))
+                story.append(self._safe_paragraph(self._clean_text(sections['HOW']), content_style))
+            
+            if 'EXAMPLE' in sections:
+                story.append(self._safe_paragraph("<b>EXAMPLE:</b>", header_style))
+                # Format code examples with monospace and background
+                example_text = self._clean_text(sections['EXAMPLE'])
+                # Check if it looks like code (has R syntax)
+                if any(keyword in example_text for keyword in ['<-', 'library(', 'read_', 'df$', 'function(', '%>%']):
+                    # Split into lines for better code formatting
+                    for code_line in example_text.split(';'):
+                        code_line = code_line.strip()
+                        if code_line:
+                            story.append(self._safe_paragraph(code_line, code_style))
+                else:
+                    story.append(self._safe_paragraph(example_text, content_style))
+            
+            story.append(Spacer(1, 12))
         else:
             # No structure, just add as normal paragraph
             clean_text = self._clean_text(text)
@@ -1106,46 +1155,8 @@ class PDFReportGenerator:
             for item in technical_analysis['code_suggestions']:
                 if isinstance(item, str) and len(item) > 15:
                     # Use structured formatter for WHAT/WHY/HOW/EXAMPLE
+                    # This will show the AI-generated assignment-specific examples
                     self._format_structured_feedback(item, story, 'Normal')
-                
-                # Add code examples for common suggestions
-                if 'complete.cases()' in item:
-                    story.append(Paragraph("Example:", self.styles['Normal']))
-                    story.append(Paragraph("# Remove rows with missing values", code_style))
-                    story.append(Paragraph("clean_data <- sales_df[complete.cases(sales_df), ]", code_style))
-                    story.append(Paragraph("# Or check for missing values first", code_style))
-                    story.append(Paragraph("sum(is.na(sales_df))", code_style))
-                
-                elif 'cut()' in item:
-                    story.append(Paragraph("Example:", self.styles['Normal']))
-                    story.append(Paragraph("# Create categorical variables from continuous data", code_style))
-                    story.append(Paragraph("sales_df$amount_category <- cut(sales_df$amount,", code_style))
-                    story.append(Paragraph("    breaks = c(0, 100, 500, 1000, Inf),", code_style))
-                    story.append(Paragraph("    labels = c('Low', 'Medium', 'High', 'Very High'))", code_style))
-                
-                elif 'cor()' in item:
-                    story.append(Paragraph("Example:", self.styles['Normal']))
-                    story.append(Paragraph("# Calculate correlation between numeric variables", code_style))
-                    story.append(Paragraph("cor(sales_df$amount, sales_df$rating, use = 'complete.obs')", code_style))
-                    story.append(Paragraph("# Or correlation matrix", code_style))
-                    story.append(Paragraph("cor(sales_df[, c('amount', 'rating', 'quantity')])", code_style))
-                
-                elif 'standard deviation' in item or 'quartiles' in item:
-                    story.append(Paragraph("Example:", self.styles['Normal']))
-                    story.append(Paragraph("# Additional summary statistics", code_style))
-                    story.append(Paragraph("sd(sales_df$amount, na.rm = TRUE)  # Standard deviation", code_style))
-                    story.append(Paragraph("quantile(sales_df$amount, na.rm = TRUE)  # Quartiles", code_style))
-                    story.append(Paragraph("IQR(sales_df$amount, na.rm = TRUE)  # Interquartile range", code_style))
-                
-                elif 'read_csv()' in item or 'portable' in item:
-                    story.append(Paragraph("Example:", self.styles['Normal']))
-                    story.append(Paragraph("# More portable approach (no setwd needed)", code_style))
-                    story.append(Paragraph("library(here)", code_style))
-                    story.append(Paragraph("sales_df <- read_csv(here('data', 'sales_data.csv'))", code_style))
-                    story.append(Paragraph("# Or use relative paths", code_style))
-                    story.append(Paragraph("sales_df <- read_csv('data/sales_data.csv')", code_style))
-                
-                story.append(Spacer(1, 8))
             
             story.append(Spacer(1, 12))
         
@@ -1156,41 +1167,8 @@ class PDFReportGenerator:
                 clean_item = self._clean_text(item)
                 story.append(Paragraph(f"• {clean_item}", self.styles['CustomBullet']))
             story.append(Spacer(1, 12))
-        
-        # Add general code improvement examples
-        story.append(Paragraph("Additional Code Enhancement Examples:", self.styles['Heading2']))
-        
-        code_style = ParagraphStyle(
-            name='CodeExample',
-            parent=self.styles['Normal'],
-            fontName='Courier',
-            fontSize=9,
-            leftIndent=30,
-            backgroundColor=colors.lightgrey,
-            borderWidth=1,
-            borderColor=colors.grey,
-            spaceAfter=6
-        )
-        
-        story.append(Paragraph("**Data Exploration Enhancement:**", self.styles['Normal']))
-        story.append(Paragraph("# More comprehensive data inspection", code_style))
-        story.append(Paragraph("glimpse(sales_df)  # dplyr alternative to str()", code_style))
-        story.append(Paragraph("skimr::skim(sales_df)  # Detailed summary statistics", code_style))
-        story.append(Paragraph("DataExplorer::plot_missing(sales_df)  # Visualize missing data", code_style))
-        story.append(Spacer(1, 8))
-        
-        story.append(Paragraph("**Data Visualization:**", self.styles['Normal']))
-        story.append(Paragraph("# Basic plots for data exploration", code_style))
-        story.append(Paragraph("ggplot(sales_df, aes(x = amount)) + geom_histogram()", code_style))
-        story.append(Paragraph("ggplot(sales_df, aes(x = category, y = amount)) + geom_boxplot()", code_style))
-        story.append(Spacer(1, 8))
-        
-        story.append(Paragraph("**Data Cleaning:**", self.styles['Normal']))
-        story.append(Paragraph("# Handle missing values", code_style))
-        story.append(Paragraph("sales_df <- sales_df %>%", code_style))
-        story.append(Paragraph("  filter(!is.na(amount)) %>%", code_style))
-        story.append(Paragraph("  mutate(amount = ifelse(amount < 0, 0, amount))", code_style))
-        
+        # Note: Generic code examples removed - AI generates assignment-specific examples
+        # with actual variable names from the student's code
         story.append(Spacer(1, 20))
     
     def _add_recommendations(self, story, analysis_result: Dict[str, Any]):
