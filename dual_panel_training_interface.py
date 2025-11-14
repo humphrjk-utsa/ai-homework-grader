@@ -449,7 +449,7 @@ class DualPanelTrainingInterface:
         
         if notebook_path and os.path.exists(notebook_path):
             try:
-                with open(notebook_path, 'r') as f:
+                with open(notebook_path, 'r', encoding='utf-8') as f:
                     nb = nbformat.read(f, as_version=4)
                 
                 st.info(f"Notebook: {os.path.basename(notebook_path)}")
