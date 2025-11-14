@@ -8,7 +8,7 @@ import json
 import nbformat
 
 # Read the template notebook
-with open('data/raw/homework_lesson_3_data_transformation.ipynb', 'r') as f:
+with open('data/raw/homework_lesson_3_data_transformation.ipynb', 'r', encoding='utf-8') as f:
     nb = nbformat.read(f, as_version=4)
 
 # Update student name in first cell

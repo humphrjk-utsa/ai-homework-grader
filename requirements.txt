@@ -1,4 +1,4 @@
-# Homework Grader Requirements
+# Homework Grader Requirements - RTX 6000 Edition
 streamlit>=1.25.0
 pandas>=2.0.0
 numpy>=1.24.0
@@ -10,3 +10,10 @@ requests>=2.31.0
 pickle-mixin>=1.0.2
 pathlib2>=2.3.7
 reportlab>=4.0.0
+
+# RTX 6000 / Ollama specific
+ollama>=0.1.0
+httpx>=0.24.0
+
+# Encoding detection
+chardet>=5.0.0

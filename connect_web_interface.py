@@ -17,6 +17,7 @@ from ai_grader import filter_ai_feedback_for_storage
 from anonymization_utils import anonymize_name
 from notebook_executor import NotebookExecutor
 from submission_preprocessor import SubmissionPreprocessor
+from encoding_utils import read_notebook_safe, validate_notebook_file
 
 def grade_submissions_page(grader):
     """Enhanced grade submissions page using our business analytics grader"""
@@ -166,9 +167,15 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
             elif exec_info['execution_attempted']:
                 st.warning(f"⚠️ Execution failed: {exec_info['error_message']}. Using original notebook.")
         
-        # Read notebook (either executed or original)
-        with open(notebook_to_use, 'r', encoding='utf-8') as f:
-            nb = nbformat.read(f, as_version=4)
+        # Read notebook (either executed or original) with safe encoding
+        # Validate notebook first
+        is_valid, validation_error = validate_notebook_file(notebook_to_use, max_size_mb=10.0)
+        if not is_valid:
+            raise Exception(validation_error)
+        
+        nb, read_error = read_notebook_safe(notebook_to_use)
+        if read_error:
+            raise Exception(read_error)
         
         # Extract code and markdown (including outputs for code cells)
         student_code = ""
@@ -236,8 +243,9 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
         
         if assignment_row.get('template_notebook') and os.path.exists(assignment_row['template_notebook']):
             try:
-                with open(assignment_row['template_notebook'], 'r', encoding='utf-8') as f:
-                    template_nb = nbformat.read(f, as_version=4)
+                template_nb, template_error = read_notebook_safe(assignment_row['template_notebook'])
+                if template_error:
+                    raise Exception(f"Template notebook error: {template_error}")
                 
                 # Extract code from template
                 for cell in template_nb.cells:
@@ -254,8 +262,9 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
         
         if assignment_row['solution_notebook'] and os.path.exists(assignment_row['solution_notebook']):
             try:
-                with open(assignment_row['solution_notebook'], 'r', encoding='utf-8') as f:
-                    solution_nb = nbformat.read(f, as_version=4)
+                solution_nb, solution_error = read_notebook_safe(assignment_row['solution_notebook'])
+                if solution_error:
+                    raise Exception(f"Solution notebook error: {solution_error}")
                 
                 # Extract code and markdown from solution
                 for cell in solution_nb.cells:
@@ -726,8 +735,9 @@ def grade_submission_internal(business_grader, submission, assignment_id, grader
     template_code = ""
     if assignment_row.get('template_notebook') and os.path.exists(assignment_row['template_notebook']):
         try:
-            with open(assignment_row['template_notebook'], 'r', encoding='utf-8') as f:
-                template_nb = nbformat.read(f, as_version=4)
+            template_nb, template_error = read_notebook_safe(assignment_row['template_notebook'])
+            if template_error:
+                raise Exception(f"Template notebook error: {template_error}")
             
             # Extract code from template
             for cell in template_nb.cells:
@@ -744,8 +754,9 @@ def grade_submission_internal(business_grader, submission, assignment_id, grader
     
     if assignment_row['solution_notebook'] and os.path.exists(assignment_row['solution_notebook']):
         try:
-            with open(assignment_row['solution_notebook'], 'r', encoding='utf-8') as f:
-                solution_nb = nbformat.read(f, as_version=4)
+            solution_nb, solution_error = read_notebook_safe(assignment_row['solution_notebook'])
+            if solution_error:
+                raise Exception(f"Solution notebook error: {solution_error}")
             
             # Extract code and markdown from solution
             for cell in solution_nb.cells:
@@ -767,8 +778,8 @@ def grade_submission_internal(business_grader, submission, assignment_id, grader
     if assignment_row['solution_notebook'] and os.path.exists(assignment_row['solution_notebook']):
         try:
             print("📊 Comparing outputs to solution...")
-            from output_comparator import compare_notebook_outputs
-            output_comparison = compare_notebook_outputs(notebook_to_use, assignment_row['solution_notebook'])
+            from output_comparator import compare_and_generate_prompt
+            output_comparison = compare_and_generate_prompt(notebook_to_use, assignment_row['solution_notebook'])
             print(f"   Match rate: {output_comparison['match_rate']:.1f}% ({output_comparison['matches']}/{output_comparison['total_comparisons']})")
         except Exception as e:
             print(f"⚠️ Output comparison failed: {e}")
