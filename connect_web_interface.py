@@ -10,7 +10,7 @@ import json
 import os
 import time
 import nbformat
-from business_analytics_grader import BusinessAnalyticsGrader
+from business_analytics_grader_v2 import BusinessAnalyticsGrader
 from grading_validator import GradingValidator
 from report_generator import PDFReportGenerator
 from ai_grader import filter_ai_feedback_for_storage

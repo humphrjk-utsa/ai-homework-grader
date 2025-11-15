@@ -1,0 +1,242 @@
+ASSIGNMENT 5 - DATA RESHAPING WITH TIDYR - SPECIFIC GRADING INSTRUCTIONS
+
+=== ASSIGNMENT OVERVIEW ===
+This assignment focuses on data reshaping using pivot_longer() and pivot_wider() functions from the tidyr package.
+Students work with three datasets: quarterly sales (wide), survey responses (long), and employee skills (wide).
+
+=== KEY LEARNING OBJECTIVES ===
+1. Master pivot_longer() for wide-to-long transformations
+2. Master pivot_wider() for long-to-wide transformations  
+3. Understand when to use each format for different analyses
+4. Implement proper data validation after transformations
+5. Apply reshaping to real business scenarios
+
+=== CRITICAL GRADING POINTS ===
+
+1. REQUIRED VARIABLES (Must be created):
+   - quarterly_sales_wide (imported)
+   - survey_responses_long (imported)
+   - employee_skills_wide (imported)
+   - quarterly_sales_long (Task 2.1)
+   - quarterly_sales_parsed (Task 2.2)
+   - employee_skills_long (Task 2.3)
+   - survey_responses_wide (Task 3.1)
+   - sales_by_region_wide (Task 3.2)
+   - skills_matrix (Task 3.3)
+
+2. CORE RESHAPING TASKS (40% of grade):
+   Part 2: Wide to Long (12 points)
+   - Task 2.1: Basic pivot_longer with starts_with()
+   - Task 2.2: Name parsing with names_sep
+   - Task 2.3: Employee skills transformation
+   
+   Part 3: Long to Wide (12 points)
+   - Task 3.1: Survey responses with names_from/values_from
+   - Task 3.2: Regional sales comparison matrix
+   - Task 3.3: Skills matrix creation
+
+3. DATA VALIDATION (15% of grade):
+   Students must validate:
+   - Data totals preserved after transformation
+   - Record counts match expectations
+   - No unexpected missing values
+   - Data types remain correct
+   - Business logic consistency
+
+4. REFLECTION QUESTIONS (20% of grade):
+   Five questions requiring 150-200 words each.
+   
+   IMPORTANT: Grade based on THEMES and UNDERSTANDING, not specific answers.
+   Accept any reasonable response that demonstrates:
+   - Understanding of when/why to use different formats
+   - Recognition of business impact and stakeholder needs
+   - Critical thinking about data structure decisions
+   - Ability to apply concepts to new situations
+   
+   Question Themes:
+   - Question 1: Understanding format selection for business scenarios
+   - Question 2: Recognizing importance of data validation
+   - Question 3: Reflecting on learning and efficiency improvements
+   - Question 4: Adapting communication for different audiences
+   - Question 5: Transferring knowledge to future applications
+
+=== COMMON STUDENT ERRORS TO CHECK ===
+
+1. FILE PATH ISSUES:
+   - Students may use incorrect paths to data files
+   - Check if data imports successfully
+   - Deduct heavily if data cannot be loaded
+
+2. HARDCODED COLUMN NAMES:
+   - Students may hardcode specific column names that don't exist
+   - Example: Score_Service_Quality instead of using dynamic selection
+   - This causes errors - check for c_across() or dynamic methods
+
+3. MISSING VALIDATION:
+   - Many students skip validation checks
+   - Look for: sum comparisons, nrow checks, identical() tests
+   - No validation = 0 points for validation component
+
+4. INCOMPLETE REFLECTION:
+   - Students may leave template text "[Write your response here]"
+   - Check word counts (minimum 150-200 words per question)
+   - Generic answers without specific examples = low scores
+
+5. SYNTAX ERRORS:
+   - Common: Missing commas in pivot_longer/wider
+   - Common: Incorrect use of names_to vs names_from
+   - Common: Forgetting to assign results to variables
+   - Code that doesn't run = 0 points for that section
+
+=== SPECIFIC FUNCTION USAGE TO VERIFY ===
+
+pivot_longer() must include:
+- cols parameter (what to reshape)
+- names_to parameter (new column name)
+- values_to parameter (values column name)
+- Optional: names_sep, names_pattern for parsing
+
+pivot_wider() must include:
+- names_from parameter (column to spread)
+- values_from parameter (values to fill)
+- Optional: names_prefix, values_fill
+
+=== VALIDATION CHECKS TO LOOK FOR ===
+
+Students should demonstrate:
+1. Comparing totals before/after transformation
+2. Checking record counts (nrow before vs after)
+3. Verifying no unexpected NAs
+4. Confirming data types preserved
+5. Testing business logic (e.g., growth trends positive)
+
+Example validation code to look for:
+- sum(original_data) == sum(transformed_data)
+- nrow(wide) * n_columns == nrow(long)
+- identical(distribution_before, distribution_after)
+
+=== BUSINESS CONTEXT EVALUATION ===
+
+Look for UNDERSTANDING OF CONCEPTS, not specific examples.
+
+Students should demonstrate understanding of:
+
+1. FORMAT SELECTION REASONING (accept any valid reasoning):
+   - Why certain formats work better for certain tasks
+   - How format affects analysis workflow
+   - Trade-offs between formats
+   - Stakeholder needs and preferences
+   
+   Examples of valid reasoning (not exhaustive):
+   - Long format for: time series, grouping, statistical models, visualizations
+   - Wide format for: comparisons, reports, correlations, human readability
+
+2. BUSINESS IMPACT AWARENESS (accept any reasonable impact):
+   - Efficiency and time savings
+   - Better decision-making
+   - Improved communication
+   - Reduced errors
+   - Stakeholder satisfaction
+   
+3. CRITICAL THINKING (key indicator):
+   - Can explain WHY, not just WHAT
+   - Connects technical choices to business outcomes
+   - Considers multiple perspectives
+   - Shows learning and growth
+
+=== GRADING WORKFLOW ===
+
+Step 1: Check Technical Execution (25 points)
+- Does code run without errors?
+- Are all required variables created?
+- Is pipe operator used properly?
+- Are outputs visible?
+
+Step 2: Evaluate Data Reshaping (40 points)
+- Part 2 tasks (12 points): Check each pivot_longer task
+- Part 3 tasks (12 points): Check each pivot_wider task
+- Parts 4-6 (16 points): Complex scenarios, business analysis, validation
+
+Step 3: Assess Validation (15 points)
+- Are validation checks present?
+- Do they actually verify data integrity?
+- Are results documented?
+
+Step 4: Review Reflections (20 points)
+- Are all 5 questions answered?
+- Do answers meet word count minimums?
+- Are examples specific and relevant?
+- Is critical thinking demonstrated?
+
+=== RED FLAGS (Automatic Low Scores) ===
+
+- Template code unchanged = 0 points
+- No outputs visible = 0 points for that section
+- Data files not loaded = Cannot grade, major deduction
+- Reflection questions blank = 0 points for reflection
+- Code with syntax errors = 0 points for that section
+- Missing required variables = 10% deduction each
+
+=== EXCELLENCE INDICATORS (High Scores) ===
+
+Technical:
+- All code runs perfectly with outputs
+- All 9 required variables created correctly
+- Comprehensive validation throughout
+- Clean, well-commented code
+- Proper use of tidyverse style
+
+Reflection (focus on DEPTH, not specific content):
+- Demonstrates clear understanding of concepts
+- Provides specific examples (any reasonable examples)
+- Shows critical thinking and reasoning
+- Connects technical skills to business value
+- Reflects on personal learning journey
+- Meets or exceeds word count requirements
+
+=== PARTIAL CREDIT GUIDELINES ===
+
+- Code present but no output = 50% of section points
+- Validation attempted but incomplete = 50-75% of validation points
+- Reflection answers under word count = 50% of question points
+- Correct approach but minor errors = 75-90% of section points
+
+=== GRADING REFLECTION QUESTIONS - IMPORTANT ===
+
+DO NOT grade based on matching specific examples or scenarios.
+DO grade based on:
+
+1. UNDERSTANDING OF CONCEPTS:
+   - Does the student understand when/why to use different formats?
+   - Can they explain the reasoning behind format choices?
+   - Do they recognize business implications?
+
+2. DEPTH OF THINKING:
+   - Are answers thoughtful and detailed?
+   - Do they provide specific examples (any reasonable examples)?
+   - Do they show critical thinking?
+
+3. LEARNING DEMONSTRATED:
+   - Does the student show growth in understanding?
+   - Can they apply concepts to new situations?
+   - Do they connect technical skills to business value?
+
+4. COMMUNICATION:
+   - Are answers clear and well-organized?
+   - Do they meet word count requirements?
+   - Are examples relevant to the question?
+
+ACCEPT DIVERSE ANSWERS:
+- Different business scenarios are equally valid
+- Different stakeholder examples are fine
+- Different efficiency estimates are acceptable
+- Different future applications are valid
+- Focus on the QUALITY OF REASONING, not the specific content
+
+=== FINAL NOTES ===
+
+This assignment tests both technical skills (reshaping) and strategic thinking (when/why to reshape).
+Weight the technical execution heavily but don't ignore the reflection component.
+Students who demonstrate understanding of business applications deserve higher scores.
+Look for evidence of learning and growth, not just correct answers.
+Grade reflection questions based on understanding and reasoning, not matching specific examples.
