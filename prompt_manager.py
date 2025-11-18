@@ -94,6 +94,10 @@ Adjusted Score: {validation_results.get('adjusted_score', 0):.0f}%
 
 This means the student HAS completed work. Focus on quality and approach, not completion.
 """
+            
+            # Add reflection comparison if available
+            if validation_results.get('reflection_comparison'):
+                validation_context += f"\n{validation_results['reflection_comparison']}"
         else:
             validation_context = "No validation results available."
         

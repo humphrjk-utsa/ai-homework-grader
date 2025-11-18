@@ -345,6 +345,8 @@ class TabbedReviewPanel:
     def render_submission_header(self, submission: Dict[str, Any]):
         """Render header with submission information - this goes in the right panel header"""
         
+        max_score = submission.get('max_score', 37.5)
+        
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                     color: white; padding: 1rem; border-radius: 6px; margin: -1rem -1rem 0 -1rem;">
@@ -360,7 +362,7 @@ class TabbedReviewPanel:
                 </div>
                 <div style="text-align: right;">
                     <div style="font-size: 1.8em; font-weight: bold;">
-                        {submission['final_score']:.1f}/37.5
+                        {submission['final_score']:.1f}/{max_score:.1f}
                     </div>
                     <div style="font-size: 0.8em; opacity: 0.9;">
                         {submission['score_status']}
@@ -414,23 +416,24 @@ class TabbedReviewPanel:
         ai_score = submission.get('ai_score', 0)
         human_score = submission.get('human_score')
         final_score = submission.get('final_score', 0)
+        max_score = submission.get('max_score', 37.5)
         
         st.markdown(f"""
         <div class="score-metrics">
             <div class="score-metric">
-                <div class="score-metric-value">{ai_score:.1f}</div>
+                <div class="score-metric-value">{ai_score:.1f}/{max_score:.1f}</div>
                 <div class="score-metric-label">AI Score</div>
             </div>
             <div class="score-metric">
-                <div class="score-metric-value">{human_score:.1f if human_score else 'N/A'}</div>
+                <div class="score-metric-value">{human_score:.1f if human_score else 'N/A'}/{max_score:.1f}</div>
                 <div class="score-metric-label">Human Score</div>
             </div>
             <div class="score-metric">
-                <div class="score-metric-value">{final_score:.1f}</div>
+                <div class="score-metric-value">{final_score:.1f}/{max_score:.1f}</div>
                 <div class="score-metric-label">Final Score</div>
             </div>
             <div class="score-metric">
-                <div class="score-metric-value">{(final_score/37.5*100):.1f}%</div>
+                <div class="score-metric-value">{(final_score/max_score*100):.1f}%</div>
                 <div class="score-metric-label">Percentage</div>
             </div>
         </div>
@@ -643,11 +646,13 @@ class TabbedReviewPanel:
             st.markdown("#### 📊 Score Assessment")
             col1, col2 = st.columns(2)
             
+            max_score = submission.get('max_score', 37.5)
+            
             with col1:
                 human_score = st.number_input(
-                    "Human Score (0-37.5)",
+                    f"Human Score (0-{max_score:.1f})",
                     min_value=0.0,
-                    max_value=37.5,
+                    max_value=float(max_score),
                     value=float(existing_feedback['score'] if existing_feedback else submission['ai_score']),
                     step=0.5,
                     help="Enter your assessment of this submission"

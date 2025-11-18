@@ -39,6 +39,9 @@ class RubricDrivenValidator:
         print(f"✅ Loaded rubric-driven validator")
         print(f"   Required variables: {len(self.required_variables)}")
         print(f"   Sections to check: {len(self.sections)}")
+        print(f"   DEBUG: autograder_checks keys: {list(self.checks.keys())}")
+        if self.sections:
+            print(f"   DEBUG: Section IDs: {list(self.sections.keys())}")
     
     def validate_notebook(self, notebook_path: str) -> Dict[str, Any]:
         """
@@ -138,12 +141,26 @@ class RubricDrivenValidator:
                     else:
                         result['missing_items'].append(f"Variable: {var}")
                 
-                # Check functions
+                # Check functions (with equivalents support)
                 required_funcs = section_info.get('functions', [])
+                function_equivalents = section_info.get('function_equivalents', {})
+                
                 for func in required_funcs:
-                    if re.search(rf'{func}\s*\(', code):
+                    # Check for the function itself
+                    found = bool(re.search(rf'{func}\s*\(', code))
+                    
+                    # If not found, check for equivalents
+                    if not found and func in function_equivalents:
+                        equivalents = function_equivalents[func]
+                        for equiv in equivalents:
+                            if re.search(equiv, code, re.IGNORECASE):
+                                found = True
+                                result['found_items'].append(f"Function: {func}() (via equivalent: {equiv})")
+                                break
+                    
+                    if found and func not in [item.split('(')[0].split(':')[1].strip() for item in result['found_items'] if 'Function:' in item]:
                         result['found_items'].append(f"Function: {func}()")
-                    else:
+                    elif not found:
                         result['missing_items'].append(f"Function: {func}()")
                 
                 # Check required columns
@@ -181,30 +198,76 @@ class RubricDrivenValidator:
     def _check_reflections(self, nb, section_info: Dict) -> Dict:
         """Check reflection questions in markdown cells"""
         markdown_cells = [cell for cell in nb.cells if cell.cell_type == 'markdown']
-        all_markdown = '\n'.join(cell.source for cell in markdown_cells)
         
         # Count reflection questions
         expected_questions = section_info.get('reflection_questions', 0)
+        min_words = section_info.get('min_words_per_question', 30)
         
-        # Look for placeholder text
-        placeholders = [
-            '[YOUR ANSWER HERE]',
-            '[Enter your',
-            'Your answer here:',
-            'TODO'
-        ]
+        # Find cells with "Question" in them
+        question_cells = [cell for cell in markdown_cells if 'Question' in cell.source]
         
-        placeholder_count = sum(1 for p in placeholders if p in all_markdown)
+        answered = 0
+        unanswered_questions = []
         
-        # Estimate answered questions
-        # If there are fewer placeholders, more questions are answered
-        answered = max(0, expected_questions - placeholder_count)
+        for cell in question_cells:
+            source = cell.source
+            
+            # Check if this cell has substantial content (not just the question)
+            # Look for answer indicators
+            answer_indicators = ['Your answer here:', 'Answer:', 'Response:']
+            
+            has_answer_section = any(ind in source for ind in answer_indicators)
+            
+            if has_answer_section:
+                # Extract the answer part (after the indicator)
+                for indicator in answer_indicators:
+                    if indicator in source:
+                        answer_text = source.split(indicator, 1)[1]
+                        break
+                
+                # Clean up the answer text
+                answer_text = answer_text.strip()
+                
+                # Remove common placeholders
+                real_placeholders = [
+                    '[YOUR ANSWER HERE]',
+                    '[Enter your answer]',
+                    '[Write your response]',
+                    'TODO',
+                    '[...]'
+                ]
+                
+                # Check if answer is just a placeholder
+                is_placeholder = any(p in answer_text for p in real_placeholders)
+                
+                # Count words in answer
+                word_count = len(answer_text.split())
+                
+                # Consider it answered if:
+                # 1. Not a placeholder
+                # 2. Has minimum word count
+                if not is_placeholder and word_count >= min_words:
+                    answered += 1
+                elif word_count < min_words and word_count > 5:
+                    # Has some answer but too short
+                    answered += 0.5
+                    unanswered_questions.append(f"Question needs more detail ({word_count} words, need {min_words})")
+                else:
+                    unanswered_questions.append(f"Question unanswered or placeholder only")
+            else:
+                # No answer section found
+                word_count = len(source.split())
+                if word_count > 100:  # Might have answer without indicator
+                    answered += 1
+                else:
+                    unanswered_questions.append(f"Question missing answer")
         
+        # Calculate completion
         completion = answered / expected_questions if expected_questions > 0 else 1.0
         
         result = {
-            'found_items': [f"Answered {answered}/{expected_questions} reflection questions"],
-            'missing_items': [] if completion >= 0.8 else [f"{expected_questions - answered} questions unanswered"],
+            'found_items': [f"Answered {int(answered)}/{expected_questions} reflection questions"],
+            'missing_items': unanswered_questions if completion < 0.8 else [],
             'status': 'complete' if completion >= 0.8 else 'partial' if completion >= 0.5 else 'incomplete',
             'score': section_info.get('points', 0) * completion
         }

@@ -91,11 +91,25 @@ class OutputComparator:
             'Unknown or uninitialised column',  # Warning, not critical
         ]
         
+        # Messages to ignore (not errors, just informational)
+        ignore_messages = [
+            'Attaching core tidyverse packages',
+            'tidyverse_conflicts()',
+            'Use the conflicted package',
+            'masks stats::',
+            'Current working directory:',
+            'Packages loaded successfully',
+            'working directory',  # Any working directory message
+        ]
+        
+        # Check if this is just informational output
+        is_informational = any(msg in text for msg in ignore_messages)
+        
         # Check if error should be ignored
         has_real_error = False
         if 'Error:' in text or 'error' in text.lower():
-            # Check if it's an ignorable error
-            has_real_error = not any(ignore in text for ignore in ignore_errors)
+            # Check if it's an ignorable error or just informational
+            has_real_error = not any(ignore in text for ignore in ignore_errors) and not is_informational
         
         metrics = {
             'numbers': set(re.findall(r'\d+\.?\d*', text)),
@@ -103,7 +117,8 @@ class OutputComparator:
             'column_counts': set(re.findall(r'(\d+)\s+columns?', text.lower())),
             'has_tibble': '# A tibble:' in text or 'tibble' in text.lower(),
             'has_dataframe': 'data.frame' in text.lower() or 'DataFrame' in text,
-            'has_error': has_real_error  # Only count real errors
+            'has_error': has_real_error,  # Only count real errors
+            'is_informational': is_informational  # Flag for setup/loading messages
         }
         return metrics
     
@@ -115,6 +130,26 @@ class OutputComparator:
         # Extract metrics from both outputs
         student_metrics = self.extract_key_metrics(student_out)
         solution_metrics = self.extract_key_metrics(solution_out)
+        
+        # If both are informational (setup/loading messages), consider them matching
+        if student_metrics['is_informational'] and solution_metrics['is_informational']:
+            # Both are just setup messages - check if they have the same success indicator
+            student_clean = student_out.lower().replace('\x1b', '').replace('[', '').replace(']', '')
+            solution_clean = solution_out.lower().replace('\x1b', '').replace('[', '').replace(']', '')
+            
+            # Look for success indicators or common setup messages
+            success_indicators = ['successfully', 'loaded', 'complete', '✅', 'done', 'working directory']
+            student_success = any(ind in student_clean for ind in success_indicators)
+            solution_success = any(ind in solution_clean for ind in success_indicators)
+            
+            if student_success and solution_success:
+                return (0.95, True, "Both outputs indicate successful setup")
+        
+        # If only one is informational but both are about setup, still match
+        if student_metrics['is_informational'] or solution_metrics['is_informational']:
+            # Check if both mention working directory or similar setup
+            if 'working directory' in student_out.lower() and 'working directory' in solution_out.lower():
+                return (0.95, True, "Both show working directory (paths differ but both work)")
         
         # If student has error but solution doesn't, it's a mismatch
         if student_metrics['has_error'] and not solution_metrics['has_error']:
@@ -225,9 +260,12 @@ class OutputComparator:
             'student_cells': len(student_cells),
             'solution_cells': len(solution_cells),
             'matching_cells': matching_count,
+            'matches': matching_count,  # Alias for compatibility
+            'total_comparisons': max_cells,  # Alias for compatibility
             'match_rate': match_rate,
             'accuracy_score': accuracy,
-            'comparisons': comparisons
+            'comparisons': comparisons,
+            'cell_comparisons': comparisons  # Alias for compatibility
         }
 
     def generate_comparison_report(self) -> str:
@@ -325,7 +363,7 @@ def compare_notebook_outputs(student_notebook_path: str, solution_notebook_path:
     """
     try:
         comparator = OutputComparator(student_notebook_path, solution_notebook_path)
-        comparison = comparator.compare_all_outputs()
+        comparison = comparator.compare_outputs()
         
         # Calculate match rate
         total = comparison['total_comparisons']

@@ -335,7 +335,8 @@ def view_results_page(grader):
                     # Score display
                     col1, col2 = st.columns(2)
                     with col1:
-                        st.metric("AI Score", f"{selected_submission['ai_score']:.1f}/37.5")
+                        max_score = selected_submission.get('max_score', 37.5)
+                        st.metric("AI Score", f"{selected_submission['ai_score']:.1f}/{max_score:.1f}")
                     with col2:
                         if pd.notna(selected_submission['final_score']):
                             st.metric("Final Score", f"{selected_submission['final_score']:.1f}/37.5")
@@ -815,7 +816,7 @@ def view_submission_detail(grader):
     # Get submission details
     conn = sqlite3.connect(grader.db_path)
     submission = pd.read_sql_query("""
-        SELECT s.*, st.name as student_name, a.name as assignment_name
+        SELECT s.*, st.name as student_name, a.name as assignment_name, a.total_points as max_score
         FROM submissions s
         LEFT JOIN students st ON s.student_id = st.id
         JOIN assignments a ON s.assignment_id = a.id
@@ -834,7 +835,8 @@ def view_submission_detail(grader):
     
     with col2:
         if pd.notna(submission['ai_score']):
-            st.write(f"**AI Score:** {submission['ai_score']:.1f}")
+            max_score = submission.get('max_score', 37.5)
+            st.write(f"**AI Score:** {submission['ai_score']:.1f}/{max_score:.1f}")
         if pd.notna(submission['human_score']):
             st.write(f"**Human Score:** {submission['human_score']:.1f}")
         if pd.notna(submission['final_score']):
@@ -1000,7 +1002,8 @@ def manual_grading_interface(grader):
     
     # Show AI score and feedback for reference
     if pd.notna(submission['ai_score']):
-        st.info(f"AI suggested score: {submission['ai_score']:.1f}")
+        max_score = submission.get('max_score', 37.5)
+        st.info(f"AI suggested score: {submission['ai_score']:.1f}/{max_score:.1f}")
         
         if pd.notna(submission['ai_feedback']):
             with st.expander("AI Feedback"):

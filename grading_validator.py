@@ -124,13 +124,17 @@ class GradingValidator:
     def fix_calculation_errors(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Attempt to fix calculation errors in a grading result"""
         
+        print(f"🔧 VALIDATOR FIX: Input final_score = {result.get('final_score')}")
+        print(f"🔧 VALIDATOR FIX: self.max_points = {self.max_points}")
+        
         # Recalculate component scores from percentages
         component_percentages = result.get('component_percentages', {})
         
-        technical_points = (component_percentages.get('technical_score', 0) / 100) * 9.375
-        business_points = (component_percentages.get('business_understanding', 0) / 100) * 11.25
-        analysis_points = (component_percentages.get('data_interpretation', 0) / 100) * 9.375
-        communication_points = (component_percentages.get('communication_clarity', 0) / 100) * 7.5
+        # Use dynamic weights based on max_points
+        technical_points = (component_percentages.get('technical_score', 0) / 100) * (self.max_points * 0.25)
+        business_points = (component_percentages.get('business_understanding', 0) / 100) * (self.max_points * 0.30)
+        analysis_points = (component_percentages.get('data_interpretation', 0) / 100) * (self.max_points * 0.25)
+        communication_points = (component_percentages.get('communication_clarity', 0) / 100) * (self.max_points * 0.20)
         
         # Keep existing bonus points
         bonus_points = result.get('component_scores', {}).get('bonus_points', 0)
@@ -145,6 +149,8 @@ class GradingValidator:
         # Update result
         result['final_score'] = round(final_score, 1)
         result['final_score_percentage'] = round(final_percentage, 1)
+        
+        print(f"🔧 VALIDATOR FIX: Output final_score = {result['final_score']}")
         result['component_scores'] = {
             'technical_points': round(technical_points, 1),
             'business_points': round(business_points, 1),

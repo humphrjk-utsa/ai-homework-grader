@@ -4,6 +4,8 @@ Business Analytics Grading System V2
 Integrates 4-layer validation system with structured feedback generation
 """
 
+print("🔄 LOADING business_analytics_grader_v2.py - CODE UPDATED")
+
 import json
 import time
 import requests
@@ -15,8 +17,7 @@ from notebook_validation import NotebookValidator
 from score_validator import validate_and_adjust_scores
 from output_comparator import OutputComparator, compare_and_generate_prompt
 
-# Import new validators
-from validators.assignment_6_systematic_validator import Assignment6SystematicValidator
+# Import validators
 from validators.rubric_driven_validator import RubricDrivenValidator
 from validators.smart_output_validator import SmartOutputValidator
 
@@ -42,34 +43,42 @@ class BusinessAnalyticsGraderV2:
         self.feedback_model = feedback_model
         self.ollama_url = ollama_url
         self.api_url = f"{ollama_url}/api/generate"
+        self.solution_path = solution_path  # Store for output comparison
+        self.rubric_path = rubric_path  # Store for reflection grading
         
         # Initialize prompt manager
         self.prompt_manager = PromptManager()
         
         # Initialize validators
-        self.legacy_validator = NotebookValidator()  # Fallback
-        
-        # Initialize new validators if paths provided
         self.systematic_validator = None
         self.output_validator = None
+        self.max_points = 37.5  # Default for homework assignments
         
         if rubric_path and os.path.exists(rubric_path):
             print(f"📋 Loading systematic validator with rubric: {rubric_path}")
-            # Try to use rubric-driven validator first (works for any assignment with autograder_checks)
+            
+            # Load rubric to get total_points
+            try:
+                with open(rubric_path, 'r') as f:
+                    rubric_data = json.load(f)
+                    self.max_points = rubric_data.get('assignment_info', {}).get('total_points', 37.5)
+                    print(f"📊 Assignment max points: {self.max_points}")
+            except Exception as e:
+                print(f"⚠️ Could not read total_points from rubric: {e}")
+                self.max_points = 37.5
+            
+            # Use rubric-driven validator (works for any assignment with autograder_checks)
             try:
                 self.systematic_validator = RubricDrivenValidator(rubric_path)
-                print(f"✅ Using RubricDrivenValidator (generic)")
+                print(f"✅ Using RubricDrivenValidator")
             except (ValueError, KeyError) as e:
-                # Fallback to Assignment 6 validator if rubric doesn't have autograder_checks
-                print(f"⚠️ Rubric missing autograder_checks: {e}")
-                print(f"⚠️ Falling back to Assignment6SystematicValidator")
-                self.systematic_validator = Assignment6SystematicValidator(rubric_path)
+                # Rubric must have autograder_checks section
+                raise ValueError(f"Rubric missing required 'autograder_checks' section: {e}")
             except Exception as e:
                 print(f"❌ Error loading RubricDrivenValidator: {e}")
-                print(f"⚠️ Falling back to Assignment6SystematicValidator")
                 import traceback
                 traceback.print_exc()
-                self.systematic_validator = Assignment6SystematicValidator(rubric_path)
+                raise
             
             if solution_path and os.path.exists(solution_path):
                 print(f"📊 Loading output validator with solution: {solution_path}")
@@ -77,7 +86,7 @@ class BusinessAnalyticsGraderV2:
             else:
                 print(f"⚠️ No solution path provided, output validation disabled")
         else:
-            print(f"⚠️ No rubric path provided, using legacy validator")
+            raise ValueError("Rubric path is required - cannot grade without a rubric")
         
         # Check for disaggregated inference system (DGX prefill + Mac decode)
         self.use_disaggregated = False
@@ -164,22 +173,93 @@ class BusinessAnalyticsGraderV2:
         print(f"✅ Execution Rate: {sys_result['cell_stats']['execution_rate']*100:.1f}%")
         print(f"✅ Base Score: {sys_result['final_score']:.1f}/100")
         
-        # LAYER 2: Smart Output Validation
+        # LAYER 2: Output Comparison (cell-by-cell)
         output_result = None
-        if self.output_validator:
-            print(f"\n[LAYER 2: SMART OUTPUT VALIDATION]")
+        if self.solution_path and os.path.exists(self.solution_path):
+            print(f"\n[LAYER 2: OUTPUT COMPARISON]")
             print("-"*80)
-            output_result = self.output_validator.validate_student_outputs(notebook_path)
-            
-            print(f"✅ Output Match: {output_result['overall_match']*100:.1f}%")
-            print(f"✅ Checks Passed: {output_result['passed_checks']}/{output_result['total_checks']}")
-            print(f"✅ Discrepancies: {len(output_result['discrepancies'])}")
-            print(f"✅ Score Adjustment: {output_result['score_adjustment']:+.1f} points")
-            
-            if output_result['discrepancies']:
-                print(f"\nKey Discrepancies:")
-                for disc in output_result['discrepancies'][:5]:  # Show first 5
-                    print(f"  ❌ {disc['variable']}: {disc['issue']}")
+            try:
+                from output_comparator import OutputComparator
+                print(f"🔍 Comparing: {notebook_path}")
+                print(f"🔍 Against: {self.solution_path}")
+                comparator = OutputComparator(notebook_path, self.solution_path)
+                comparison = comparator.compare_outputs()
+                print(f"🔍 Raw comparison result: matches={comparison.get('matches')}, total={comparison.get('total_comparisons')}")
+                
+                # Convert to format expected by rest of system
+                match_rate = comparison['match_rate'] / 100  # Convert to 0-1
+                
+                # Calculate output score as percentage (0-100)
+                output_score = comparison['match_rate']  # Already a percentage
+                
+                output_result = {
+                    'overall_match': match_rate,
+                    'total_checks': comparison['total_comparisons'],
+                    'passed_checks': comparison['matches'],
+                    'discrepancies': [c for c in comparison['comparisons'] if not c['match']],
+                    'output_score': output_score,  # Store as percentage for merging
+                    'score_adjustment': 0  # Deprecated - use output_score instead
+                }
+                
+                print(f"✅ Output Match: {comparison['match_rate']:.1f}%")
+                print(f"✅ Cells Matched: {comparison['matches']}/{comparison['total_comparisons']}")
+                print(f"✅ Accuracy Score: {comparison['accuracy_score']:.1f}%")
+                
+                mismatches = [c for c in comparison['comparisons'] if not c['match']]
+                if mismatches:
+                    print(f"\nMismatched Cells: {len(mismatches)}")
+                    for i, cell in enumerate(mismatches[:3]):  # Show first 3
+                        print(f"  ❌ Cell {cell['cell_index']}: {cell['reason'][:60]}")
+            except Exception as e:
+                print(f"⚠️ Output comparison failed: {e}")
+                output_result = None
+        
+        # LAYER 2.5: Reflection Grading (if applicable)
+        reflection_grading = None
+        if self.solution_path and os.path.exists(self.solution_path):
+            try:
+                from reflection_extractor import ReflectionExtractor
+                from reflection_grader import ReflectionGrader
+                
+                # Check if there's a reflection section in the rubric
+                has_reflection_section = False
+                for section_id, section_data in sys_result.get('section_breakdown', {}).items():
+                    if 'reflection' in section_data.get('name', '').lower():
+                        has_reflection_section = True
+                        break
+                
+                if has_reflection_section:
+                    print(f"\n[LAYER 2.5: REFLECTION GRADING]")
+                    print("-"*80)
+                    
+                    grader = ReflectionGrader(self.ollama_url)
+                    
+                    # Get max points for reflections from rubric
+                    reflection_max_points = 5.0  # Default
+                    try:
+                        with open(self.rubric_path if hasattr(self, 'rubric_path') else '', 'r') as f:
+                            rubric = json.load(f)
+                            sections = rubric.get('autograder_checks', {}).get('sections', {})
+                            
+                            # Find the reflection section
+                            for section_id, section_data in sections.items():
+                                if section_data.get('check_type') == 'markdown' or 'reflection' in section_data.get('name', '').lower():
+                                    reflection_max_points = section_data.get('points', 5.0)
+                                    print(f"   Found reflection section: {section_data.get('name')} ({reflection_max_points} points)")
+                                    break
+                    except Exception as e:
+                        print(f"   Using default reflection points: {reflection_max_points}")
+                    
+                    reflection_grading = grader.grade_reflections(notebook_path, self.solution_path, reflection_max_points)
+                    
+                    print(f"✅ Reflection Score: {reflection_grading['reflection_score']:.1f}/{reflection_max_points}")
+                    print(f"✅ Reflection Quality: {reflection_grading['reflection_percentage']:.0f}%")
+                    
+            except Exception as e:
+                print(f"⚠️ Could not grade reflections: {e}")
+                import traceback
+                traceback.print_exc()
+                reflection_grading = None
         
         validation_time = time.time() - validation_start
         self.grading_stats['validation_time'] = validation_time
@@ -188,32 +268,75 @@ class BusinessAnalyticsGraderV2:
         print("="*80 + "\n")
         
         # Merge results
-        return self._merge_validation_results(sys_result, output_result)
+        return self._merge_validation_results(sys_result, output_result, reflection_grading)
     
-    def _merge_validation_results(self, sys_result: Dict, output_result: Optional[Dict]) -> Dict[str, Any]:
-        """Merge systematic and output validation into comprehensive results"""
+    def _merge_validation_results(self, sys_result: Dict, output_result: Optional[Dict], 
+                                  reflection_grading: Optional[Dict] = None) -> Dict[str, Any]:
+        """Merge systematic, output, and reflection validation into comprehensive results"""
         
-        # Calculate adjusted score
+        # Calculate adjusted score by combining systematic and output scores
         base_score = sys_result['final_score']
-        if output_result:
-            # Smart penalty application:
-            # - If base_score is already low (< 30%), don't apply output penalties
-            #   (missing outputs are already reflected in the base score)
-            # - If base_score is decent (>= 30%), apply penalties for wrong outputs
-            #   (student did the work but got wrong answers)
-            if base_score < 30:
-                # Student hasn't done much work - don't double-penalize for missing outputs
-                adjusted_score = base_score
-            else:
-                # Student did substantial work - penalize for incorrect outputs
-                # But cap penalty to not exceed base score
-                if output_result['score_adjustment'] < 0:
-                    max_penalty = min(abs(output_result['score_adjustment']), base_score * 0.5)  # Max 50% penalty
-                    adjusted_score = max(0, base_score - max_penalty)
+        
+        # If we have AI-graded reflections, replace the simple completion score
+        if reflection_grading:
+            # Find the reflection section (could be any part number)
+            reflection_section_id = None
+            for section_id, section_data in sys_result.get('section_breakdown', {}).items():
+                # Check if this section is marked as reflection type
+                if 'reflection' in section_data.get('name', '').lower():
+                    reflection_section_id = section_id
+                    break
+            
+            if reflection_section_id:
+                # Get the reflection section
+                reflection_section = sys_result['section_breakdown'][reflection_section_id]
+                old_score = reflection_section.get('score', 0)
+                new_score = reflection_grading['reflection_score']
+                
+                # Update the section score
+                reflection_section['score'] = new_score
+                reflection_section['ai_graded'] = True
+                reflection_section['reflection_percentage'] = reflection_grading['reflection_percentage']
+                
+                # Recalculate base_score with new reflection score
+                total_section_points = sum(s.get('points', 0) for s in sys_result['section_breakdown'].values())
+                earned_section_points = sum(s.get('score', 0) for s in sys_result['section_breakdown'].values())
+                
+                if total_section_points > 0:
+                    section_score = (earned_section_points / total_section_points * 100)
                 else:
-                    adjusted_score = base_score + output_result['score_adjustment']
+                    section_score = 0
+                
+                # Recalculate base score (80% sections, 20% variables)
+                variable_score = sys_result['variable_check']['completion_rate'] * 100
+                base_score = (section_score * 0.8) + (variable_score * 0.2)
+                
+                section_name = reflection_section.get('name', 'Reflection Section')
+                print(f"\n🎯 REFLECTION ADJUSTMENT:")
+                print(f"  Section: {section_name}")
+                print(f"  Old score: {old_score:.1f} (completion-based)")
+                print(f"  New score: {new_score:.1f} (AI-graded quality)")
+                print(f"  Adjusted base score: {base_score:.1f}%")
+            else:
+                print(f"\n⚠️ Reflection grading available but no reflection section found in rubric")
+        
+        if output_result and output_result.get('total_checks', 0) > 0:
+            # We have output comparison results - blend the scores
+            output_score = output_result.get('output_score', 0)
+            
+            print(f"🔍 SCORE MERGE:")
+            print(f"  Base score (systematic): {base_score:.1f}%")
+            print(f"  Output score (comparison): {output_score:.1f}%")
+            
+            # Weighted blend: 50% systematic, 50% output accuracy
+            # This ensures both code structure AND correct outputs matter
+            adjusted_score = (base_score * 0.5) + (output_score * 0.5)
+            
+            print(f"  Adjusted score (50/50 blend): {adjusted_score:.1f}%")
         else:
+            # No output validation or it failed - use base score only
             adjusted_score = base_score
+            print(f"🔍 SCORE: Using base score only: {adjusted_score:.1f}%")
         
         # Build issue list for AI analysis
         issues = []
@@ -231,7 +354,11 @@ class BusinessAnalyticsGraderV2:
         # Add output discrepancy issues
         if output_result and output_result['discrepancies']:
             for disc in output_result['discrepancies']:
-                issues.append(f"Output mismatch for {disc['variable']}: {disc['issue']}")
+                # Handle both SmartOutputValidator format (variable/issue) and OutputComparator format (cell_index/reason)
+                if 'variable' in disc:
+                    issues.append(f"Output mismatch for {disc['variable']}: {disc['issue']}")
+                elif 'cell_index' in disc:
+                    issues.append(f"Cell {disc['cell_index']} output mismatch: {disc.get('reason', 'differs from solution')}")
         
         # Calculate penalty
         penalty_percent = max(0, 100 - adjusted_score)
@@ -299,12 +426,12 @@ class BusinessAnalyticsGraderV2:
         print("🎓 Starting Enhanced Business Analytics Grading...")
         
         # Run validation (Layer 1 & 2)
-        if self.systematic_validator and notebook_path:
-            validation_results = self._run_4layer_validation(notebook_path)
-        else:
-            # Fallback to legacy validator
-            print("⚠️ Using legacy validator (4-layer system not available)")
-            validation_results = self.legacy_validator.validate_notebook(notebook_path)
+        if not self.systematic_validator:
+            raise ValueError("No systematic validator available - rubric is required for grading")
+        if not notebook_path:
+            raise ValueError("Notebook path is required for grading")
+        
+        validation_results = self._run_4layer_validation(notebook_path)
         
         # Layer 3 & 4: AI Code Analysis and Feedback Generation
         print("\n[LAYER 3 & 4: AI ANALYSIS AND FEEDBACK GENERATION]")
@@ -312,6 +439,17 @@ class BusinessAnalyticsGraderV2:
         
         # Identify what code the student actually wrote (vs template)
         student_changes = self._identify_student_changes(student_code, template_code, solution_code)
+        
+        # Extract reflection questions for AI context (already graded in validation)
+        reflection_comparison = ""
+        if self.solution_path and os.path.exists(self.solution_path):
+            try:
+                from reflection_extractor import ReflectionExtractor
+                extractor = ReflectionExtractor(notebook_path, self.solution_path)
+                reflection_comparison = extractor.generate_ai_prompt_section()
+            except Exception as e:
+                print(f"⚠️ Could not extract reflections for AI context: {e}")
+                reflection_comparison = ""
         
         # Prepare prompts with validation context
         validation_summary = validation_results.get('validation_summary', '')
@@ -339,8 +477,10 @@ class BusinessAnalyticsGraderV2:
             # Use distributed MLX system
             print("🖥️ Using Distributed MLX System for AI analysis...")
             
-            # Build enhanced context with student changes analysis
+            # Build enhanced context with student changes analysis and reflections
             enhanced_context = f"{student_changes['ai_context']}\n\n{validation_summary}"
+            if reflection_comparison:
+                enhanced_context += f"\n\n{reflection_comparison}"
             
             code_prompt = self.prompt_manager.get_combined_prompt(
                 assignment_name,
@@ -360,7 +500,8 @@ class BusinessAnalyticsGraderV2:
                 student_markdown=student_markdown,
                 student_code_summary=student_code[:800],
                 rubric_criteria=rubric_summary,
-                validation_context=enhanced_context
+                validation_context=enhanced_context,
+                reflection_comparison=reflection_comparison
             )
             
             try:
@@ -407,6 +548,10 @@ class BusinessAnalyticsGraderV2:
             # Use Ollama system (fallback)
             print("🤖 Using Ollama for AI analysis...")
             try:
+                # Add reflection comparison to validation results for Ollama
+                if reflection_comparison:
+                    validation_results['reflection_comparison'] = reflection_comparison
+                
                 # Submit both tasks simultaneously with validation context
                 future_code = self.executor.submit(
                     self._execute_ollama_code_analysis, 
@@ -438,9 +583,11 @@ class BusinessAnalyticsGraderV2:
             structured_feedback = self._merge_ai_and_validation_feedback(
                 validation_results, code_analysis, comprehensive_feedback
             )
+            print(f"📦 AFTER MERGE: structured_feedback['final_score'] = {structured_feedback.get('final_score', 'NOT SET')}")
         else:
             # Fallback to validation-only feedback
             structured_feedback = self._create_structured_feedback_from_validation(validation_results)
+            print(f"📦 FALLBACK: structured_feedback['final_score'] = {structured_feedback.get('final_score', 'NOT SET')}")
         
         total_time = time.time() - start_time
         self.grading_stats['total_time'] = total_time
@@ -485,7 +632,10 @@ class BusinessAnalyticsGraderV2:
         
         # Calculate scores
         final_score = validation_results['adjusted_score']
-        final_score_37_5 = (final_score / 100) * 37.5
+        print(f"DEBUG: final_score (percentage) = {final_score}")
+        print(f"DEBUG: self.max_points = {self.max_points}")
+        final_score_points = (final_score / 100) * self.max_points
+        print(f"DEBUG: final_score_points = {final_score_points}")
         
         # Build code strengths from completed sections
         code_strengths = []
@@ -532,15 +682,15 @@ class BusinessAnalyticsGraderV2:
         
         # Calculate component scores for backward compatibility with explicit max caps
         # Use default weights: Technical 40%, Analysis 40%, Business 10%, Communication 10%
-        technical_points = min((final_score / 100) * (37.5 * 0.40), 15.0)  # Max 15
-        analysis_points = min((final_score / 100) * (37.5 * 0.40), 15.0)   # Max 15
-        business_points = min((final_score / 100) * (37.5 * 0.10), 3.75)   # Max 3.75
-        communication_points = min((final_score / 100) * (37.5 * 0.10), 3.75)  # Max 3.75
+        technical_points = min((final_score / 100) * (self.max_points * 0.40), self.max_points * 0.40)
+        analysis_points = min((final_score / 100) * (self.max_points * 0.40), self.max_points * 0.40)
+        business_points = min((final_score / 100) * (self.max_points * 0.10), self.max_points * 0.10)
+        communication_points = min((final_score / 100) * (self.max_points * 0.10), self.max_points * 0.10)
         
         return {
-            "final_score": round(final_score_37_5, 1),
+            "final_score": round(final_score_points, 1),
             "final_score_percentage": round(final_score, 1),
-            "max_points": 37.5,
+            "max_points": self.max_points,
             "component_scores": {
                 "technical_points": round(technical_points, 1),
                 "business_points": round(business_points, 1),
@@ -590,18 +740,27 @@ class BusinessAnalyticsGraderV2:
                                           comprehensive_feedback: Dict) -> Dict[str, Any]:
         """Merge AI-generated feedback with validation results"""
         
-        sys_result = validation_results['systematic_results']
-        output_result = validation_results.get('output_results')
+        # Handle case where validation_results doesn't have systematic_results
+        if 'systematic_results' not in validation_results:
+            print("⚠️ Warning: validation_results missing 'systematic_results', using validation_results directly")
+            sys_result = validation_results
+            output_result = None
+        else:
+            sys_result = validation_results['systematic_results']
+            output_result = validation_results.get('output_results')
         
         # Use validation score as base
         final_score = validation_results['adjusted_score']
-        final_score_37_5 = (final_score / 100) * 37.5
+        print(f"🔍 MERGE DEBUG: final_score (percentage) = {final_score}")
+        print(f"🔍 MERGE DEBUG: self.max_points = {self.max_points}")
+        final_score_points = (final_score / 100) * self.max_points
+        print(f"🔍 MERGE DEBUG: final_score_points = {final_score_points}")
         
         # Calculate component scores with explicit max caps
-        technical_points = min((final_score / 100) * (37.5 * 0.40), 15.0)  # Max 15
-        analysis_points = min((final_score / 100) * (37.5 * 0.40), 15.0)   # Max 15
-        business_points = min((final_score / 100) * (37.5 * 0.10), 3.75)   # Max 3.75
-        communication_points = min((final_score / 100) * (37.5 * 0.10), 3.75)  # Max 3.75
+        technical_points = min((final_score / 100) * (self.max_points * 0.40), self.max_points * 0.40)
+        analysis_points = min((final_score / 100) * (self.max_points * 0.40), self.max_points * 0.40)
+        business_points = min((final_score / 100) * (self.max_points * 0.10), self.max_points * 0.10)
+        communication_points = min((final_score / 100) * (self.max_points * 0.10), self.max_points * 0.10)
         
         # Merge code strengths from AI and validation
         code_strengths = []
@@ -691,9 +850,9 @@ class BusinessAnalyticsGraderV2:
             instructor_comments = self._generate_instructor_comments(validation_results)
         
         return {
-            "final_score": round(final_score_37_5, 1),
+            "final_score": round(final_score_points, 1),
             "final_score_percentage": round(final_score, 1),
-            "max_points": 37.5,
+            "max_points": self.max_points,
             "component_scores": {
                 "technical_points": round(technical_points, 1),
                 "business_points": round(business_points, 1),

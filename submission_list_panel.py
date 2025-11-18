@@ -327,8 +327,8 @@ class SubmissionListPanel:
                     <div class="student-id">ID: {submission.get('student_id', 'N/A')}</div>
                 </div>
                 <div class="score-display">
-                    <div class="score-value">{final_score:.1f}/37.5</div>
-                    <div class="score-percentage">{(final_score/37.5*100):.1f}%</div>
+                    <div class="score-value">{final_score:.1f}/{submission.get('max_score', 37.5):.1f}</div>
+                    <div class="score-percentage">{(final_score/submission.get('max_score', 37.5)*100):.1f}%</div>
                 </div>
             </div>
         </div>
@@ -365,7 +365,7 @@ class SubmissionListPanel:
                 new_score = st.number_input(
                     "Score",
                     min_value=0.0,
-                    max_value=37.5,
+                    max_value=float(submission.get('max_score', 37.5)),
                     value=float(current_score),
                     step=0.5,
                     key=f"score_input_{submission['id']}",

@@ -49,9 +49,11 @@ class EnhancedTrainingInterface:
                 COUNT(*) as total,
                 SUM(CASE WHEN human_score IS NOT NULL THEN 1 ELSE 0 END) as reviewed,
                 AVG(ai_score) as avg_ai,
-                AVG(CASE WHEN human_score IS NOT NULL THEN human_score ELSE NULL END) as avg_human
-            FROM submissions
-            WHERE assignment_id = ?
+                AVG(CASE WHEN human_score IS NOT NULL THEN human_score ELSE NULL END) as avg_human,
+                a.total_points as max_score
+            FROM submissions s
+            JOIN assignments a ON s.assignment_id = a.id
+            WHERE s.assignment_id = ?
         """, (assignment_id,))
         
         row = cursor.fetchone()
@@ -61,9 +63,10 @@ class EnhancedTrainingInterface:
         reviewed = row[1] or 0
         avg_ai = row[2] or 0
         avg_human = row[3] or 0
+        max_score = row[4] or 37.5
         
         review_pct = (reviewed / total * 100) if total > 0 else 0
-        accuracy_pct = 100 - abs(avg_ai - avg_human) / 37.5 * 100 if avg_human > 0 else 0
+        accuracy_pct = 100 - abs(avg_ai - avg_human) / max_score * 100 if avg_human > 0 else 0
         
         return {
             'total_submissions': total,
@@ -71,7 +74,8 @@ class EnhancedTrainingInterface:
             'review_percentage': round(review_pct, 1),
             'avg_ai_score': round(avg_ai, 1),
             'avg_human_score': round(avg_human, 1),
-            'ai_accuracy_percentage': round(accuracy_pct, 1)
+            'ai_accuracy_percentage': round(accuracy_pct, 1),
+            'max_score': max_score
         }
     
     def get_submissions(self, assignment_id, filters=None):
@@ -92,10 +96,12 @@ class EnhancedTrainingInterface:
                 s.final_score,
                 s.graded_date,
                 s.submission_date,
+                COALESCE(s.max_score, a.total_points, 37.5) as max_score,
                 COALESCE(s.final_score, s.ai_score) as display_score,
                 st.name as student_name
             FROM submissions s
             LEFT JOIN students st ON s.student_id = st.id
+            LEFT JOIN assignments a ON s.assignment_id = a.id
             WHERE s.assignment_id = ?
         """
         params = [assignment_id]
@@ -128,7 +134,8 @@ class EnhancedTrainingInterface:
             # Use actual student name from students table, fallback to student_id if not found
             if not sub.get('student_name'):
                 sub['student_name'] = f"Student {sub['student_id']}"
-            sub['ai_percentage'] = (sub['ai_score'] / 37.5 * 100) if sub['ai_score'] else 0
+            max_score = sub.get('max_score', 37.5)
+            sub['ai_percentage'] = (sub['ai_score'] / max_score * 100) if sub['ai_score'] and max_score > 0 else 0
             sub['grade_indicator'] = '✅' if sub['human_score'] is not None else '🤖'
             sub['score_status'] = f"AI: {sub['ai_score']:.1f}" + (f" → Human: {sub['human_score']:.1f}" if sub['human_score'] else "")
             sub['grading_method'] = 'Human' if sub['human_score'] is not None else 'AI'

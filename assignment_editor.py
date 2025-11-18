@@ -129,10 +129,10 @@ def create_assignment_with_upload(grader):
                             st.write(f"- **{element['name']}**: {element['points']} points - {element['description']}")
                     else:
                         st.error(summary)
-                    
-                    # Show full JSON in collapsible section
-                    with st.expander("🔍 Full JSON Structure"):
-                        st.json(rubric_data)
+                
+                # Show full JSON outside the expander to avoid nesting
+                with st.expander("🔍 Full JSON Structure"):
+                    st.json(rubric_data)
         else:
             rubric_text = st.text_area(
                 "Rubric (JSON format)",

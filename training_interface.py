@@ -313,7 +313,8 @@ class TrainingInterface:
     def _render_ai_feedback_tab(self, submission):
         """Render AI feedback in a tab"""
         st.markdown("**AI Assessment:**")
-        st.metric("AI Score", f"{abs(submission['ai_score']):.1f}/37.5")
+        max_score = submission.get('max_score', 37.5)
+        st.metric("AI Score", f"{abs(submission['ai_score']):.1f}/{max_score:.1f}")
         
         if submission['ai_feedback']:
             try:
@@ -376,10 +377,11 @@ class TrainingInterface:
         
         # Correction form
         with st.form(f"correction_{submission['id']}"):
+            max_score = submission.get('max_score', 37.5)
             corrected_score = st.number_input(
-                "Corrected Score (out of 37.5)",
+                f"Corrected Score (out of {max_score:.1f})",
                 min_value=0.0,
-                max_value=37.5,
+                max_value=float(max_score),
                 value=float(abs(submission['human_score'])) if submission['human_score'] else float(abs(submission['ai_score'])),
                 step=0.5,
                 key=f"score_{submission['id']}"
@@ -480,7 +482,8 @@ class TrainingInterface:
             
             with col1:
                 st.markdown("**AI Assessment:**")
-                st.write(f"Score: {abs(submission['ai_score'])}/37.5")
+                max_score = submission.get('max_score', 37.5)
+                st.write(f"Score: {abs(submission['ai_score'])}/{max_score:.1f}")
                 if submission['ai_feedback']:
                     st.write("Feedback:")
                     try:
@@ -545,10 +548,11 @@ class TrainingInterface:
                 
                 # Correction form
                 with st.form(f"correction_{submission['id']}"):
+                    max_score = submission.get('max_score', 37.5)
                     corrected_score = st.number_input(
-                        "Corrected Score (out of 37.5)",
+                        f"Corrected Score (out of {max_score:.1f})",
                         min_value=0.0,
-                        max_value=37.5,
+                        max_value=float(max_score),
                         value=float(submission['human_score']) if submission['human_score'] else float(submission['ai_score']),
                         step=0.5,
                         key=f"score_{submission['id']}"

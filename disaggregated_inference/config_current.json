@@ -1,5 +1,5 @@
 {
-  "comment": "Current working configuration using Thunderbolt IPs - CORRECTED MODEL ASSIGNMENTS",
+  "comment": "Grading uses Sparks 1&2 only - Sparks 3&4 reserved for other processes",
   "prefill_servers": [
     {
       "host": "169.254.150.103",

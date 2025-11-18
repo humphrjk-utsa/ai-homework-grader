@@ -1,0 +1,44 @@
+{
+  "assignment_info": {
+    "name": "test_assignment",
+    "title": "Test Assignment with Part 6 Reflections",
+    "total_points": 50
+  },
+  "autograder_checks": {
+    "required_variables": ["data", "result"],
+    "sections": {
+      "part1_intro": {
+        "name": "Part 1: Introduction",
+        "points": 10,
+        "variables": ["data"]
+      },
+      "part2_analysis": {
+        "name": "Part 2: Analysis",
+        "points": 15,
+        "variables": ["result"]
+      },
+      "part3_visualization": {
+        "name": "Part 3: Visualization",
+        "points": 10,
+        "variables": []
+      },
+      "part4_interpretation": {
+        "name": "Part 4: Interpretation",
+        "points": 10,
+        "variables": []
+      },
+      "part5_conclusion": {
+        "name": "Part 5: Conclusion",
+        "points": 5,
+        "variables": []
+      },
+      "part6_reflections": {
+        "name": "Part 6: Reflection Questions",
+        "points": 10,
+        "check_type": "markdown",
+        "reflection_questions": 3,
+        "min_words_per_question": 50
+      }
+    }
+  }
+}

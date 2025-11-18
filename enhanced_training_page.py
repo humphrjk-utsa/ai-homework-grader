@@ -88,7 +88,8 @@ def enhanced_training_page():
     with col2:
         st.metric("Human Reviewed", f"{stats['human_reviewed']} ({stats['review_percentage']}%)")
     with col3:
-        st.metric("Avg AI Score", f"{stats['avg_ai_score']}/37.5")
+        max_score = stats.get('max_score', 37.5)
+        st.metric("Avg AI Score", f"{stats['avg_ai_score']}/{max_score:.1f}")
     with col4:
         st.metric("AI Accuracy", f"{stats['ai_accuracy_percentage']}%")
     with col5:
@@ -144,7 +145,9 @@ def enhanced_training_page():
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                score_range = st.slider("Score Range", 0.0, 37.5, (0.0, 37.5), step=0.5)
+                # Use max score from stats (which comes from assignment)
+                max_score_for_filter = stats.get('max_score', 37.5)
+                score_range = st.slider("Score Range", 0.0, float(max_score_for_filter), (0.0, float(max_score_for_filter)), step=0.5)
             
             with col2:
                 review_status = st.selectbox("Review Status", [
@@ -290,7 +293,7 @@ def enhanced_training_page():
                         new_score = st.number_input(
                             "Score", 
                             min_value=0.0, 
-                            max_value=37.5, 
+                            max_value=float(submission.get('max_score', 37.5)), 
                             value=float(current_score),
                             step=0.5,
                             key=f"score_{submission['id']}",
@@ -337,7 +340,7 @@ def enhanced_training_page():
                                 
                                 analysis_result = {
                                     'total_score': submission.get('final_score', submission.get('ai_score', 0)),
-                                    'max_score': 37.5,
+                                    'max_score': submission.get('max_score', 37.5),
                                     'element_scores': {
                                         'technical_execution': feedback_data.get('component_scores', {}).get('technical_points', 0),
                                         'business_thinking': feedback_data.get('component_scores', {}).get('business_points', 0),
@@ -418,7 +421,8 @@ def enhanced_training_page():
             # Score metrics
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("AI Score", f"{selected_submission['ai_score']}/37.5")
+                max_score = selected_submission.get('max_score', 37.5)
+                st.metric("AI Score", f"{selected_submission['ai_score']}/{max_score:.1f}")
             with col2:
                 st.metric("Percentage", f"{selected_submission['ai_percentage']:.1f}%")
             with col3:
@@ -619,10 +623,11 @@ def enhanced_training_page():
             
             with st.form("human_review_form"):
                 # Score input
+                max_score = selected_submission.get('max_score', 37.5)
                 human_score = st.number_input(
-                    "Human Score (0-37.5)",
+                    f"Human Score (0-{max_score:.1f})",
                     min_value=0.0,
-                    max_value=37.5,
+                    max_value=float(max_score),
                     value=float(existing_feedback['score'] if existing_feedback else selected_submission['ai_score']),
                     step=0.5
                 )
@@ -721,7 +726,7 @@ def enhanced_training_page():
                             analysis_result = {}
                         
                         analysis_result['total_score'] = submission['ai_score']
-                        analysis_result['max_score'] = 37.5
+                        analysis_result['max_score'] = submission.get('max_score', 37.5)
                         
                         display_name = anonymize_name(submission['student_name'], submission['student_id'])
                         pdf_path = report_gen.generate_report(
@@ -780,9 +785,9 @@ def enhanced_training_page():
                     'AI Score': submission['ai_score'],
                     'Human Score': submission['human_score'] if submission['human_score'] else '',
                     'Final Score': submission['final_score'],
-                    'Max Score': 37.5,
+                    'Max Score': submission.get('max_score', 37.5),
                     'AI Percentage': f"{submission['ai_percentage']:.1f}%",
-                    'Final Percentage': f"{(submission['final_score'] / 37.5 * 100):.1f}%",
+                    'Final Percentage': f"{(submission['final_score'] / submission.get('max_score', 37.5) * 100):.1f}%",
                     'Status': submission['score_status'],
                     'Grade': submission['grade_category'],
                     'Submission Date': submission['submission_date'],

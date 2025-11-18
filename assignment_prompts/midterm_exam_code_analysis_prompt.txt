@@ -1,0 +1,95 @@
+MIDTERM EXAM - COMPREHENSIVE R DATA WRANGLING ASSESSMENT
+
+This is a comprehensive midterm exam covering ALL material from Lessons 1-8. Students have 4 hours to complete.
+
+ASSIGNMENT CONTEXT:
+- Retail company analysis scenario
+- 5 datasets: sales_data, customers, products, orders, order_items
+- Tests ALL R data wrangling skills learned in the course
+- 9 parts covering 8 lessons + reflection questions
+
+CRITICAL GRADING REQUIREMENTS:
+
+1. VARIABLE NAMES MUST BE EXACT:
+   - sales_data, customers, products, orders, order_items (imports)
+   - sales_clean, missing_summary, outlier_analysis (cleaning)
+   - sales_summary, high_revenue_sales, top_sales, regional_top_sales (transformation 1)
+   - sales_enhanced, overall_summary, regional_summary, category_summary (transformation 2)
+   - region_category_revenue, revenue_wide, revenue_long (reshaping)
+   - customer_orders, orders_with_items (joins)
+   - business_kpis (advanced)
+   
+   ANY deviation from these names = points deducted
+
+2. REQUIRED FUNCTIONS BY PART:
+   Part 1: setwd(), library(), read_csv()
+   Part 2: is.na(), colSums(), na.omit(), quantile()
+   Part 3: select(), filter(), arrange(), %>%
+   Part 4: mutate(), summarize(), group_by()
+   Part 5: pivot_wider(), pivot_longer()
+   Part 6: left_join(), inner_join()
+   Part 7: str_trim(), str_to_title(), mdy(), month(), wday()
+   Part 8: case_when()
+
+3. SPECIFIC CALCULATIONS REQUIRED:
+   - Outlier detection: MUST use IQR method (Q1 - 1.5*IQR, Q3 + 1.5*IQR)
+   - revenue_per_unit: Revenue / Units_Sold
+   - high_value: "Yes" if Revenue > 20000, else "No"
+   - performance_tier: "High" (>25000), "Medium" (>15000), "Low" (otherwise)
+   - high_value_pct: percentage calculation with n()
+
+4. DATA STRUCTURE REQUIREMENTS:
+   - outlier_analysis: Must be data.frame with Metric and Value columns
+   - revenue_wide: Product categories as columns, regions as rows
+   - revenue_long: Must have Region, Product_Category, revenue columns
+   - All summaries: Must include total_revenue, avg_revenue, transaction_count
+
+5. COMMON STUDENT MISTAKES TO CHECK:
+   ❌ Using wrong variable names (e.g., "sales" instead of "sales_data")
+   ❌ Not using pipe operator consistently
+   ❌ Incorrect outlier formula (using wrong multiplier or bounds)
+   ❌ Wrong join types (inner_join instead of left_join or vice versa)
+   ❌ Not handling missing values before analysis
+   ❌ Using wrong date parsing function (ymd instead of mdy)
+   ❌ Incorrect case_when logic or missing TRUE condition
+   ❌ Not creating required calculated columns
+
+6. CODE EXAMPLES MUST USE ACTUAL VARIABLES:
+   ✅ CORRECT: sales_clean %>% filter(Revenue > 20000)
+   ✅ CORRECT: sales_enhanced %>% mutate(revenue_per_unit = Revenue / Units_Sold)
+   ✅ CORRECT: Q1 <- quantile(sales_clean$Revenue, 0.25)
+   
+   ❌ WRONG: Generic examples like "df %>% filter(value > 100)"
+   ❌ WRONG: Using variable names not in the assignment
+
+7. LESSON-SPECIFIC FEEDBACK:
+   - Lesson 1: Check if working directory set, packages loaded, all 5 datasets imported
+   - Lesson 2: Verify missing value handling AND outlier detection with IQR
+   - Lesson 3: Confirm pipe operator used, correct filtering/sorting logic
+   - Lesson 4: Check mutate creates correct columns, group_by used properly
+   - Lesson 5: Verify pivot operations preserve data, correct format
+   - Lesson 6: Confirm correct join types and join keys
+   - Lesson 7: Check string cleaning AND date parsing with component extraction
+   - Lesson 8: Verify case_when logic and KPI calculations
+
+8. SCORING GUIDANCE:
+   - No output = 0 points for that section
+   - Template only (with TODOs) = 0 points
+   - Wrong variable names = deduct 1 point per error
+   - Missing required function = deduct points for that task
+   - Incorrect calculation = partial credit if logic is close
+   - Working code with minor issues = 80-90% credit
+
+9. WHAT/WHY/HOW/EXAMPLE FORMAT:
+   WHAT: Specific issue with exact variable name
+   WHY: Impact on analysis or business understanding
+   HOW: Step-by-step fix using actual assignment variables
+   EXAMPLE: Working code using sales_clean, sales_enhanced, etc.
+
+10. REFLECTION QUESTIONS (Part 9):
+    - Must answer all 5 questions
+    - Minimum 30 words per question
+    - Must demonstrate understanding of concepts
+    - Generic answers = reduced credit
+
+REMEMBER: This is a comprehensive exam. Students should demonstrate mastery of ALL concepts from Lessons 1-8. Be thorough but fair in assessment.

@@ -156,10 +156,23 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
         
         # Try to find rubric JSON file
         if assignment_row.get('rubric'):
-            # Check if rubric is a file path or JSON string
             rubric_str = assignment_row['rubric']
+            
+            # Check if it's a file path or JSON content
             if rubric_str.endswith('.json') and os.path.exists(rubric_str):
+                # It's a file path
                 rubric_path = rubric_str
+            elif rubric_str.startswith('{'):
+                # It's JSON content - write to temp file
+                assignment_name = assignment_row['name'].lower().replace(' ', '_')
+                temp_rubric_path = f"rubrics/{assignment_name}_rubric.json"
+                
+                # Write JSON content to file
+                with open(temp_rubric_path, 'w') as f:
+                    f.write(rubric_str)
+                print(f"📝 Created rubric file from database: {temp_rubric_path}")
+                
+                rubric_path = temp_rubric_path
             else:
                 # Try to find rubric file based on assignment name
                 assignment_name = assignment_row['name'].lower().replace(' ', '_')
@@ -167,9 +180,12 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
                 if os.path.exists(potential_rubric):
                     rubric_path = potential_rubric
                 else:
-                    # Try assignment_6_rubric.json as fallback
-                    if os.path.exists("rubrics/assignment_6_rubric.json"):
-                        rubric_path = "rubrics/assignment_6_rubric.json"
+                    # Try with _comprehensive suffix
+                    potential_rubric_comp = f"rubrics/{assignment_name}_rubric_comprehensive.json"
+                    if os.path.exists(potential_rubric_comp):
+                        rubric_path = potential_rubric_comp
+                    else:
+                        print(f"⚠️ Warning: No rubric found for {assignment_name}")
         
         # Get solution notebook path
         if assignment_row.get('solution_notebook') and os.path.exists(assignment_row['solution_notebook']):
@@ -312,7 +328,10 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
             
             # Validate if requested
             if use_validation:
-                validator = GradingValidator()
+                max_points = result.get('max_points', 37.5)
+                print(f"🔍 CREATING VALIDATOR: max_points from result = {max_points}")
+                print(f"🔍 CREATING VALIDATOR: result keys = {list(result.keys())}")
+                validator = GradingValidator(max_points=max_points)
                 is_valid, errors = validator.validate_grading_result(result)
                 
                 if not is_valid:
@@ -333,7 +352,8 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
         col1, col2 = st.columns(2)
         
         with col1:
-            st.metric("Final Score", f"{result['final_score']}/37.5")
+            max_score = result.get('max_points', 37.5)
+            st.metric("Final Score", f"{result['final_score']}/{max_score}")
             st.metric("Percentage", f"{result['final_score_percentage']:.1f}%")
         
         with col2:
@@ -542,13 +562,14 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
 
 def grade_batch_submissions(grader, submissions, assignment_id, use_validation=True):
     """Grade multiple submissions in batch with performance metrics tracking"""
+    print("🔄 BATCH GRADING FUNCTION LOADED - CODE UPDATED")
     
     total_submissions = len(submissions)
     
     # Get assignment info for rubric and solution paths
     conn = sqlite3.connect(grader.db_path)
     assignment_info_df = pd.read_sql_query("""
-        SELECT name, rubric, solution_notebook FROM assignments WHERE id = ?
+        SELECT name, rubric, solution_notebook, total_points FROM assignments WHERE id = ?
     """, conn, params=(assignment_id,))
     conn.close()
     
@@ -561,15 +582,35 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
         # Try to find rubric JSON file
         if assignment_row.get('rubric'):
             rubric_str = assignment_row['rubric']
+            
+            # Check if it's a file path or JSON content
             if rubric_str.endswith('.json') and os.path.exists(rubric_str):
+                # It's a file path
                 rubric_path = rubric_str
+            elif rubric_str.startswith('{'):
+                # It's JSON content - write to temp file
+                assignment_name = assignment_row['name'].lower().replace(' ', '_')
+                temp_rubric_path = f"rubrics/{assignment_name}_rubric.json"
+                
+                # Write JSON content to file
+                with open(temp_rubric_path, 'w') as f:
+                    f.write(rubric_str)
+                print(f"📝 Created rubric file from database: {temp_rubric_path}")
+                
+                rubric_path = temp_rubric_path
             else:
+                # Try to find rubric file by assignment name
                 assignment_name = assignment_row['name'].lower().replace(' ', '_')
                 potential_rubric = f"rubrics/{assignment_name}_rubric.json"
                 if os.path.exists(potential_rubric):
                     rubric_path = potential_rubric
-                elif os.path.exists("rubrics/assignment_6_rubric.json"):
-                    rubric_path = "rubrics/assignment_6_rubric.json"
+                else:
+                    # Try with _comprehensive suffix
+                    potential_rubric_comp = f"rubrics/{assignment_name}_rubric_comprehensive.json"
+                    if os.path.exists(potential_rubric_comp):
+                        rubric_path = potential_rubric_comp
+                    else:
+                        print(f"⚠️ Warning: No rubric found for {assignment_name}")
         
         # Get solution notebook path
         if assignment_row.get('solution_notebook') and os.path.exists(assignment_row['solution_notebook']):
@@ -580,7 +621,14 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
         rubric_path=rubric_path,
         solution_path=solution_path
     )
-    validator = GradingValidator() if use_validation else None
+    
+    # Get max_points from assignment for validator
+    max_points_for_validator = 37.5  # default
+    if not assignment_info_df.empty:
+        max_points_for_validator = assignment_info_df.iloc[0].get('total_points', 37.5)
+    
+    validator = GradingValidator(max_points=max_points_for_validator) if use_validation else None
+    print(f"🔍 BATCH VALIDATOR: Created with max_points = {max_points_for_validator}")
     
     if rubric_path and solution_path:
         st.info("🤖 **Enhanced 4-Layer Grading System**: Systematic Validation + Output Comparison + AI Analysis")
@@ -671,18 +719,20 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
                     efficiency_metric.metric("⚡ Efficiency", f"{avg_efficiency:.1f}x")
                     throughput_metric.metric("🚀 Throughput", f"{avg_throughput:.1f} tok/s")
             
-            # Validate if requested
+            # Validate if requested (but don't fix - causes score corruption)
             if validator:
                 is_valid, errors = validator.validate_grading_result(result)
                 if not is_valid:
-                    result = validator.fix_calculation_errors(result)
+                    print(f"⚠️ Validation errors: {errors} (NOT fixing to preserve correct scores)")
+                    # result = validator.fix_calculation_errors(result)  # DISABLED
             
             # Save result
             save_grading_result(grader, submission['id'], result)
             
             # Show progress
             with results_container:
-                st.success(f"✅ {display_name}: {result['final_score']:.1f}/37.5 ({result['final_score_percentage']:.1f}%) - {submission_time:.1f}s")
+                max_score = result.get('max_points', 37.5)
+                st.success(f"✅ {display_name}: {result['final_score']:.1f}/{max_score} ({result['final_score_percentage']:.1f}%) - {submission_time:.1f}s")
             
             graded_count += 1
             
@@ -926,6 +976,9 @@ def grade_submission_internal(business_grader, submission, assignment_id, grader
 def save_grading_result(grader, submission_id, result):
     """Save grading result to database"""
     
+    print(f"💾 SAVE DEBUG: result['final_score'] = {result['final_score']}")
+    print(f"💾 SAVE DEBUG: result['max_points'] = {result.get('max_points', 'NOT SET')}")
+    
     conn = sqlite3.connect(grader.db_path)
     cursor = conn.cursor()
     
@@ -969,13 +1022,14 @@ def save_grading_result(grader, submission_id, result):
     # Update submission
     cursor.execute("""
         UPDATE submissions 
-        SET ai_score = ?, ai_feedback = ?, final_score = ?, graded_date = ?
+        SET ai_score = ?, ai_feedback = ?, final_score = ?, graded_date = ?, max_score = ?
         WHERE id = ?
     """, (
         result['final_score'],
         json.dumps(filtered_feedback),
         result['final_score'],
         result.get('grading_timestamp'),
+        result.get('max_points', 37.5),  # Use max_points from grader result
         submission_id
     ))
     
@@ -989,7 +1043,7 @@ def generate_pdf_report(student_name, assignment_title, result):
         # Convert result to format expected by report generator with comprehensive feedback
         analysis_result = {
             'total_score': result['final_score'],
-            'max_score': 37.5,
+            'max_score': result.get('max_points', 37.5),
             'element_scores': {
                 'technical_execution': result['component_scores']['technical_points'],
                 'business_thinking': result['component_scores']['business_points'],
@@ -1064,7 +1118,8 @@ def show_manual_review_interface(grader, assignment_id, graded_submissions):
         
         with col1:
             st.subheader("Current AI Grade")
-            st.metric("Score", f"{submission['ai_score']:.1f}/37.5")
+            max_score = float(submission.get('max_score', 37.5))
+            st.metric("Score", f"{submission['ai_score']:.1f}/{max_score}")
             
             # Show AI feedback if available
             if submission['ai_feedback']:
@@ -1105,10 +1160,13 @@ def show_manual_review_interface(grader, assignment_id, graded_submissions):
             
             # Correction form
             with st.form(f"correction_{submission['id']}"):
+                # Get max_score from submission (dynamically set based on assignment)
+                max_score = float(submission.get('max_score', 37.5))
+                
                 corrected_score = st.number_input(
                     "Corrected Score",
                     min_value=0.0,
-                    max_value=37.5,
+                    max_value=max_score,
                     value=float(submission['human_score']) if submission['human_score'] else float(submission['ai_score']),
                     step=0.5
                 )
