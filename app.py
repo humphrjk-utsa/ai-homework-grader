@@ -25,6 +25,7 @@ from connect_web_interface import grade_submissions_page
 from grading_interface import view_results_page
 from prompt_manager import render_prompt_manager_ui
 from model_status_display import show_two_model_status
+from system_health_check import SystemHealthCheck
 
 # Configure page
 st.set_page_config(
@@ -43,6 +44,10 @@ if 'grading_data' not in st.session_state:
     st.session_state.grading_data = {}
 if 'page' not in st.session_state:
     st.session_state.page = None
+if 'system_health' not in st.session_state:
+    st.session_state.system_health = None
+if 'health_check_done' not in st.session_state:
+    st.session_state.health_check_done = False
 
 class HomeworkGrader:
     def __init__(self):
@@ -153,6 +158,64 @@ class HomeworkGrader:
 
 def main():
     st.title("📚 AI-Powered Homework Grader")
+    
+    # System Health Check - Run once on startup
+    if not st.session_state.health_check_done:
+        with st.spinner("🔍 Checking system health and starting services..."):
+            try:
+                checker = SystemHealthCheck()
+                result = checker.run_full_check(auto_start=True)
+                st.session_state.system_health = result
+                st.session_state.health_check_done = True
+            except Exception as e:
+                st.error(f"❌ Health check failed: {e}")
+                st.session_state.system_health = None
+    
+    # Display System Status Banner
+    if st.session_state.system_health:
+        summary = st.session_state.system_health['summary']
+        
+        if summary['ready_for_grading']:
+            st.success("✅ **System Ready** - All inference servers are healthy and loaded")
+        else:
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                prefill_pct = summary['prefill']['percentage']
+                if prefill_pct == 100:
+                    st.success(f"✅ Prefill: {summary['prefill']['healthy']}/{summary['prefill']['total']}")
+                else:
+                    st.warning(f"⚠️ Prefill: {summary['prefill']['healthy']}/{summary['prefill']['total']}")
+            
+            with col2:
+                decode_pct = summary['decode']['percentage']
+                if decode_pct == 100:
+                    st.success(f"✅ Decode: {summary['decode']['healthy']}/{summary['decode']['total']}")
+                else:
+                    st.warning(f"⚠️ Decode: {summary['decode']['healthy']}/{summary['decode']['total']}")
+            
+            with col3:
+                if st.button("🔄 Refresh Status"):
+                    st.session_state.health_check_done = False
+                    st.rerun()
+        
+        # Show detailed status in expander
+        with st.expander("📊 Detailed System Status"):
+            status = st.session_state.system_health['status']
+            
+            st.subheader("Prefill Servers (DGX Sparks)")
+            for name, health in status['prefill'].items():
+                if health.get('status') == 'healthy':
+                    st.success(f"✅ {name}: {health.get('model', 'unknown')}")
+                else:
+                    st.error(f"❌ {name}: {health.get('error', 'Not responding')}")
+            
+            st.subheader("Decode Servers (Mac Studios)")
+            for name, health in status['decode'].items():
+                if health.get('status') == 'healthy':
+                    st.success(f"✅ {name}: {health.get('model', 'unknown')}")
+                else:
+                    st.error(f"❌ {name}: {health.get('error', 'Not responding')}")
+    
     st.markdown("---")
     
     grader = HomeworkGrader()

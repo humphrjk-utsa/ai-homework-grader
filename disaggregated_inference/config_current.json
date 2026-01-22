@@ -1,17 +1,17 @@
 {
-  "comment": "Grading uses Sparks 1&2 only - Sparks 3&4 reserved for other processes",
+  "comment": "All machines on Ethernet 169.254.150.x network - DGX Sparks at .105/.106",
   "prefill_servers": [
     {
-      "host": "169.254.150.103",
+      "host": "169.254.150.105",
       "port": 8000,
       "model": "qwen",
-      "name": "DGX Spark 1"
+      "name": "DGX Spark 3"
     },
     {
-      "host": "169.254.150.104",
+      "host": "169.254.150.106",
       "port": 8000,
       "model": "gpt-oss",
-      "name": "DGX Spark 2"
+      "name": "DGX Spark 4"
     }
   ],
   "decode_servers": [
@@ -30,5 +30,5 @@
       "comment": "Has gpt-oss:120b"
     }
   ],
-  "note": "Mac Studios have swapped models: Studio 1 (101) = GPT-OSS, Studio 2 (102) = Qwen"
+  "note": "Using DGX Sparks 3&4 (at .105 and .106) for prefill. Mac Studios for decode."
 }
