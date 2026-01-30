@@ -114,7 +114,7 @@ def prefill():
                         'num_predict': 0  # No generation, just prompt processing
                     }
                 },
-                timeout=10
+                timeout=120
             )
             
             if response.status_code == 200:

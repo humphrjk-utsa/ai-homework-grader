@@ -154,15 +154,15 @@ class SystemHealthCheck:
             logger.info(f"🌀 Starting Macs Fan Control on {host}...")
             
             # Check if already running
-            check_cmd = ['ssh', host, "ps aux | grep 'Macs Fan Control' | grep -v grep"]
+            check_cmd = ['ssh', f'humphrjk@{host}', "ps aux | grep 'Macs Fan Control' | grep -v grep"]
             result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=5)
             
             if result.returncode == 0:
                 logger.info(f"✅ Macs Fan Control already running on {host}")
                 return True
             
-            # Call the helper script on the remote machine
-            cmd = ['ssh', host, '~/start_macs_fan.sh']
+            # Try to open the app directly
+            cmd = ['ssh', f'humphrjk@{host}', 'open -a "Macs Fan Control" 2>/dev/null || ~/start_macs_fan.sh 2>/dev/null']
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
             
             time.sleep(2)
@@ -216,11 +216,11 @@ class SystemHealthCheck:
             
             # Find the correct path on remote machine
             find_cmd = [
-                'ssh', host,
+                'ssh', f'humphrjk@{host}',
                 'find ~ -name "decode_server_ollama.py" -path "*/disaggregated_inference/*" 2>/dev/null | head -1'
             ]
             
-            result = subprocess.run(find_cmd, capture_output=True, text=True, timeout=5)
+            result = subprocess.run(find_cmd, capture_output=True, text=True, timeout=10)
             remote_script = result.stdout.strip()
             
             if not remote_script:
@@ -231,14 +231,14 @@ class SystemHealthCheck:
             
             # SSH command to start server in background
             cmd = [
-                'ssh', host,
+                'ssh', f'humphrjk@{host}',
                 f'cd {os.path.dirname(remote_dir)} && '
                 f'nohup python3 {remote_script} '
                 f'--model {model} --port {port} --host 0.0.0.0 '
                 f'> /tmp/decode_{port}.log 2>&1 &'
             ]
             
-            subprocess.run(cmd, timeout=5, check=True)
+            subprocess.run(cmd, timeout=10, check=True)
             
             # Wait for server to start
             logger.info(f"⏳ Waiting for remote decode server to initialize...")
@@ -289,13 +289,79 @@ class SystemHealthCheck:
         
         return self.status
     
+    def start_prefill_server_remote(self, host: str, model: str, port: int) -> bool:
+        """Start prefill server on remote DGX machine via SSH"""
+        try:
+            logger.info(f"🚀 Starting remote prefill server on {host} for {model}")
+            
+            # Find the correct path on remote machine
+            find_cmd = [
+                'ssh', f'humphrjk@{host}',
+                'find ~ -name "prefill_server_ollama.py" 2>/dev/null | head -1'
+            ]
+            
+            result = subprocess.run(find_cmd, capture_output=True, text=True, timeout=10)
+            remote_script = result.stdout.strip()
+            
+            if not remote_script:
+                logger.error(f"❌ Could not find prefill_server_ollama.py on {host}")
+                return False
+            
+            remote_dir = os.path.dirname(remote_script)
+            
+            # SSH command to start server in background
+            cmd = [
+                'ssh', f'humphrjk@{host}',
+                f'cd {remote_dir} && '
+                f'nohup python3 {remote_script} '
+                f'--model {model} --port {port} --host 0.0.0.0 '
+                f'> ~/prefill_{port}.log 2>&1 &'
+            ]
+            
+            subprocess.run(cmd, timeout=10, check=True)
+            
+            # Wait for server to start
+            logger.info(f"⏳ Waiting for remote prefill server to initialize...")
+            time.sleep(5)
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to start remote prefill server: {e}")
+            return False
+    
     def auto_start_missing_services(self) -> bool:
-        """Auto-start any missing decode servers, Ollama, and Macs Fan Control"""
+        """Auto-start any missing prefill servers, decode servers, Ollama, and Macs Fan Control"""
         logger.info("🔧 Auto-starting missing services...")
         
         started_any = False
         
-        # First, start Macs Fan Control on all Mac machines
+        # First, start prefill servers on DGX Sparks
+        logger.info("🖥️  Checking prefill servers...")
+        for server in self.prefill_servers:
+            name = server['name']
+            host = server['host']
+            port = server['port']
+            model_key = server['model']
+            
+            # Get expected model name
+            if 'qwen' in model_key.lower():
+                model = 'hopephoto/qwen3-coder-30b-a3b-instruct_q8:latest'
+            else:
+                model = 'gpt-oss:120b'
+            
+            health = self.status['prefill'].get(name, {})
+            
+            if health.get('status') != 'healthy':
+                logger.info(f"  Starting {name} prefill server...")
+                success = self.start_prefill_server_remote(host, model, port)
+                
+                if success:
+                    logger.info(f"    ✅ Started {name}")
+                    started_any = True
+                else:
+                    logger.error(f"    ❌ Failed to start {name}")
+        
+        # Second, start Macs Fan Control on all Mac machines
         logger.info("🌀 Starting Macs Fan Control on all Macs...")
         
         # Start locally
