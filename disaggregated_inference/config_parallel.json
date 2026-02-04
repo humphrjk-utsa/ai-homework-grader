@@ -1,0 +1,36 @@
+{
+  "comment": "Parallel grading configuration - all 4 servers (2 DGX + 2 Mac)",
+  "prefill_servers": [
+    {
+      "host": "169.254.150.105",
+      "port": 8080,
+      "model": "qwen",
+      "name": "DGX Spark 3",
+      "comment": "qwen3-coder:30b prefill"
+    },
+    {
+      "host": "169.254.150.106",
+      "port": 8080,
+      "model": "gpt-oss",
+      "name": "DGX Spark 4",
+      "comment": "gpt-oss:120b prefill"
+    }
+  ],
+  "decode_servers": [
+    {
+      "host": "169.254.150.102",
+      "port": 8081,
+      "model": "qwen",
+      "name": "Mac Studio 2",
+      "comment": "qwen3-coder:30b decode"
+    },
+    {
+      "host": "169.254.150.101",
+      "port": 8081,
+      "model": "gpt-oss",
+      "name": "Mac Studio 1",
+      "comment": "gpt-oss:120b decode"
+    }
+  ],
+  "note": "Parallel batch processing: up to 2 prefill (DGX) + 2 decode (Mac) = 4 concurrent submissions"
+}

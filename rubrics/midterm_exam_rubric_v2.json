@@ -1,0 +1,212 @@
+
+  }
+} solutions"ally correctr partidit fopartial creard "Awedit": ial_cr
+    "part mdy()",) note ymd(t, should usmaforD MM-Dn YYYY-te is i": "Sale_Date_parsing",
+    "daordingexact wng, not ndiunderstar "Look fo_answers": "reflection",
+    ghtlyary sliay vr but milasimbe ues should Output valons": "tiia"output_var",
+    sltct resuorreces c that produent codeept equivals": "Acciation"code_var     paths",
+fferent for dienalizeot p ns - dopath own s set theirStudentectory": "diring_"work {
+    _notes":ding"gra},
+  
+    }
+     }e
+   xt": truconte_business_ok_for"lo
+        ": 50,swers_per_aninimum_word "m     ue,
+   trnswers":thoughtful_afor_eck_ch     "": {
+   ation"valid      ,
+    }tion"
+  egraills intq9_5": "Sk     "ts",
+   ning dataseJoi4": "      "q9_",
+  seurpog pshapinData re3": "      "q9_
+  value",alysis "Grouped an"q9_2":      
+   impact",ning "Data clea_1":     "q9s": {
+    question
+      "": 10,ints      "poons",
+ion Questilectrt 9: RefPa "me":
+      "na {ctions":_refle "part9 },
+    }
+   
+     truen_usage": eck_case_whech        "is"],
+usiness_kp"b [":lesriab_va   "check  "],
+   ce_tier"performanns": [eck_colum   "ch     ": {
+on"validati    ,
+       }
+ s KPIs" busines"Calculatek_8_2":  "tas    hen",
+   ith case_wce tiers wmanreate perfork_8_1": "C      "tas": {
+  ks
+      "tass": 10, "pointe",
+     nc Intellige& Businessgling anced Wran 8: Advme": "Part    "na": {
+  _advancedpart8   "},
+   }
+    at"
+    data formon ing dependy() r dm), mdy(), od(se ymy uparsing mate ": "Da"notee,
+        tions": truiasing_varlow_date_par      "al
+  "],ale_weekday", "sle_monthsed", "sa"date_parclean", egory_", "catann_cle"regiolumns": ["check_co      ": {
+  nvalidatio},
+      ""
+      ponentsct coms and extrase date": "Par"task_7_2    ,
+    to_title"d str_ anh str_trimitta wdalean text 7_1": "Ctask_     "   s": {
+task   "12,
+   nts":      "poie",
+ /TimDateon & tig Manipula7: Strine": "Part 
+      "nam": {rings_datesart7_st  "p  },
+        }
+  ": 400
+items_rowswith_s_ed_order   "expect00,
+     ws": 2_roer_ordersd_customxpecte   "e     
+rue,n_types": tjoik_chec "     ],
+  h_items""orders_witorders", omer_: ["cust_variables""check      n": {
+  alidatio   "v
+   
+      },ms"rder_iters and oin orde: "Inner jo2""task_6_   
+     ders",omers and orft join cust1": "Le"task_6_    ": {
+        "tasks
+  10,points": 
+      " Datasets",biningrt 6: Comame": "Pa"n": {
+      oins"part6_j  
+  
+    },     }
+ rue": tonsnctit_fu"check_pivo
+        ue_long"],"revenwide",  "revenue_venue",category_reregion_": ["variablesk_    "chec  n": {
+  atio    "valid  },
+  "
+    rmatg foonback to lot ": "Piv"task_5_3        ,
+ide format"o wvot t": "Pi5_2sk_"ta,
+        ry summary"gion-categoate rere1": "C"task_5_       ks": {
+ "tas0,
+      ": 1  "pointsg",
+    apinData Resh5: e": "Part   "nam: {
+    "5_reshaping"part   },
+        }
+ : true
+  by_usage"heck_group_ "c
+       ,ry"]umma"category_sry", summa"regional_mmary", ll_sura", "oveedles_enhancsa: ["variables"   "check_{
+     lidation":   "va   
+ "
+      },sislyry anact catego "Produ":4_4"task_
+        ",ysisce analperformanl nagioRek_4_3": ""tas ,
+       ry"ummate overall s"Calcula_4_2": task      "  s",
+lumnted coulaCreate calc4_1": "sk_  "ta   ": {
+      "tasks: 14,
+   ints"     "pot 2",
+ rmation ParfoData Trans: "Part 4: "name"     ": {
+ n2sformatioart4_tran},
+    "p   }
+     true
+   age":usheck_pipe_   "c   les"],
+  al_top_saon "regiles",, "top_sa_sales"evenue"high_r", maryles_sum: ["sas"ablevari"check_
+        on": {lidati"va    },
+        
+ions"erat opiplen mult: "Chai_3_4"      "task  evenue",
+ort by r"Sk_3_3": as       "tes",
+ e salnu revehighilter "F _2":task_3        "ns",
+cific columSelect spe"3_1":  "task_{
+       s":      "task,
+ ": 12oints   "p,
+    Part 1"ansformationData TrPart 3: "name": "    n1": {
+  nsformatiort3_tra    "pa,
+ }     }
+ : true
+   lations"r_calcuoutliek_     "checis"],
+   alys"outlier_an", an"sales_clery", sing_summa"mis": [iablesheck_var  "c: {
+      alidation""v  },
+        method"
+  sing IQR s utlier ou"Detect": task_2_3        "",
+ean datasetles_clte sa": "Crea2_2     "task_
+   alues",or missing v"Check f":  "task_2_1
+       ": {"tasks     2,
+ ": 1nts
+      "poieaning",ta ClPart 2: Da"name": ": {
+      "t2_cleaning  "par   },
+  
+  }true
+     unts": w_co"check_ro   "],
+     rder_items "ors",ordes", "uct", "prodstomersta", "cu_daales: ["sariables"_v"check{
+        ion": idat    "val },
+      
+ "tsase5 datport all _3": "Imk_1       "tase",
+ nd lubridatse ayver"Load tid": _1_2task
+        "ectory",rking dir"Set wo1":   "task_1_ {
+      sks":"ta 10,
+      "points":    ",
+  portd Data Imcs anBasit 1: R "Par "name": ": {
+     sicsart1_ba  "p{
+  : "ions"sect"
+  ],
+  _kpisss   "busine",
+ _with_items   "orders,
+ r_orders"tome"cus
+    ong",_l"revenue
+    ",wideevenue_",
+    "rry_revenueegoon_categi    "rry",
+mmagory_su
+    "catemmary",gional_su   "reummary",
+ l_s    "overalnced",
+"sales_enha   s",
+ op_sale"regional_t
+    les",op_sa"t",
+    _salesvenueigh_re   "hmmary",
+ sales_su   "lysis",
+ r_ana"outlien",
+    _clea   "sales
+ ",aryssing_summ    "mis",
+der_item    "ors",
+   "order
+ ucts", "prod   ,
+customers"
+    "ta",ales_da
+    "ses": [red_variabl
+  "requi}
+  },wers"
+    n ansul reflectiohtf "Thougption":ri   "desc5,
+   x_points": "ma    ": 0.05,
+  ght
+      "wei {":ns_questio"reflection
+    "
+    },lysisrom anaghts f insianingful"Me": cription  "des  15,
+  : _points""max    
+  ": 0.15,   "weight": {
+   _insightsnalysis },
+    "a   "
+ontextusiness cnding of b understatesraDemonstption": "   "descri0,
+   ": 2sax_point    "m
+  .20,: 0ht"   "weigg": {
+   in_understandsiness"bu
+       },de"
+ ommented co, well-can, readablen": "Clescriptio     "de,
+ ints": 20_poax   "m
+   ": 0.20,eight
+      "wy": {litde_qua"co,
+    
+    }"er executionpropness and rrect "Code coion":riptdesc      ",
+": 40ointsmax_p0,
+      "0.4eight": {
+      "w: _execution""technical    nts": {
+c_compone  "rubri
+  },
+ce"]nit_Priy", "UuantittID", "Q"ProducerID", ": ["Ordms_columns"order_ite ],
+   tal_Amount", "To"Date", "Order_"CustomerID"OrderID", mns": ["orders_colu,
+    er_ID"]ppli"Su, "Category"", ct_Name", "ProduroductIDmns": ["Pts_coluroduc"p"],
+    n_Dategistratio "Re",", "City"Email"Name", omerID", ": ["Custsumnustomers_col   "c"],
+ _DateSale "its_Sold",Un, "st"Coenue", ""Revategory", Product_Cgion", "", "Re_Rep_Name "SalessactionID","Tranmns": [olusales_data_c0,
+    "": 40_rows"order_items
+    ": 250,s"orders_row,
+     50rows":cts_  "produ100,
+  ws": ers_ro"custom   300,
+  _rows":_dataes   "sal {
+ ions":ta_expectat "da
+  },
+ ues": trnction_fu_equivalentcept"ace,
+    tness": truut_correcus_on_outp    "focue,
+: trns"iatiotyle_var_sw_code "allo  ": true,
+ stiony_variaectorrking_dirlow_wo {
+    "alion":atvalid "flexible_,
+ falsebled": nact_scoring_e
+  "stri"
+  },hours"4 ": imit_lime,
+    "t": 100ntsotal_poi    "tng",
+d wranglidvance and adates,, trings, joins, sapingn, reshrmatioransfo, teaning data cls,-8: R basicsons 1 of Les assessmentensiveomprehption": "C    "descrint",
+ AssessmeanglingWrData hensive R - Compre Exam ": "Midtermtle"ti",
+    xam_eerm"midt": "name
+    : {info"ent_gnm{
+  "assi

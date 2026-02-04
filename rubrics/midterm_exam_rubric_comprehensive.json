@@ -1,0 +1,171 @@
+{
+  "assignment_info": {
+    "name": "midterm_exam_comprehensive",
+    "title": "Midterm Exam - Comprehensive R Data Wrangling Assessment",
+    "description": "Comprehensive assessment of Lessons 1-8: R basics, data cleaning, transformation, reshaping, joins, strings, dates, and advanced wrangling",
+    "total_points": 125,
+    "time_limit": "4 hours",
+    "data_location": "data/"
+  },
+  "strict_scoring_enabled": true,
+  "strict_scoring_rules": {
+    "no_output_no_points": true,
+    "template_only_max_percent": 10,
+    "missing_section_zero": false,
+    "wrong_output_max_credit": 60,
+    "completion_based_maximum": true,
+    "differentiation_required": true,
+    "flexible_column_names": true,
+    "accept_adaptations": true
+  },
+  "data_structure": {
+    "note": "Midterm uses 5 datasets for comprehensive assessment",
+    "sales_data_columns": ["TransactionID", "Sales_Rep_Name", "Region", "Product_Category", "Revenue", "Cost", "Units_Sold", "Sale_Date"],
+    "customers_columns": ["CustomerID", "Name", "Email", "City", "Registration_Date"],
+    "products_columns": ["ProductID", "Product_Name", "Category", "Supplier_ID"],
+    "orders_columns": ["OrderID", "CustomerID", "Order_Date", "Total_Amount"],
+    "order_items_columns": ["OrderID", "ProductID", "Quantity", "Unit_Price"],
+    "expected_rows": {
+      "sales_data": 300,
+      "customers": 100,
+      "products": 50,
+      "orders": 250,
+      "order_items": 400
+    }
+  },
+  "rubric_elements": {
+    "part1_basics_import": {
+      "weight": 0.08,
+      "max_points": 10,
+      "description": "R basics and data import"
+    },
+    "part2_data_cleaning": {
+      "weight": 0.12,
+      "max_points": 15,
+      "description": "Data cleaning operations"
+    },
+    "part3_basic_transformation": {
+      "weight": 0.12,
+      "max_points": 15,
+      "description": "Basic data transformation operations"
+    },
+    "part4_advanced_transformation": {
+      "weight": 0.12,
+      "max_points": 15,
+      "description": "Advanced transformation with mutate, summarize, group_by"
+    },
+    "part5_data_reshaping": {
+      "weight": 0.12,
+      "max_points": 15,
+      "description": "Data reshaping with pivot operations"
+    },
+    "part6_joins": {
+      "weight": 0.12,
+      "max_points": 15,
+      "description": "Combining datasets with joins"
+    },
+    "part7_strings_dates": {
+      "weight": 0.16,
+      "max_points": 20,
+      "description": "String manipulation and date/time operations"
+    },
+    "part8_advanced_wrangling": {
+      "weight": 0.12,
+      "max_points": 15,
+      "description": "Advanced wrangling with conditional logic"
+    },
+    "part9_reflections": {
+      "weight": 0.04,
+      "max_points": 5,
+      "description": "Reflection questions on data wrangling concepts"
+    }
+  }
+,
+  "autograder_checks": {
+    "required_variables": [
+      "sales_data", "customers", "products", "orders", "order_items",
+      "missing_summary", "sales_clean", "outlier_analysis",
+      "sales_summary", "high_revenue_sales", "top_sales", "regional_top_sales",
+      "sales_enhanced", "overall_summary", "regional_summary", "category_summary",
+      "region_category_revenue", "revenue_wide", "revenue_long",
+      "customer_orders", "orders_with_items", "business_kpis"
+    ],
+    "sections": {
+      "part1_basics_import": {
+        "name": "Part 1: R Basics and Data Import",
+        "points": 10,
+        "variables": ["sales_data", "customers", "products", "orders", "order_items"],
+        "functions": ["library", "read_csv", "setwd"]
+      },
+      "part2_data_cleaning": {
+        "name": "Part 2: Data Cleaning",
+        "points": 15,
+        "variables": ["missing_summary", "sales_clean", "outlier_analysis"],
+        "functions": ["colSums", "is.na", "na.omit", "drop_na", "quantile", "IQR"],
+        "function_equivalents": {
+          "drop_na": ["na.omit", "complete.cases", "filter(!is.na"],
+          "IQR": ["quantile.*0.75.*quantile.*0.25", "Q3.*Q1", "outlier"]
+        }
+      },
+      "part3_basic_transformation": {
+        "name": "Part 3: Basic Data Transformation",
+        "points": 15,
+        "variables": ["sales_summary", "high_revenue_sales", "top_sales", "regional_top_sales"],
+        "functions": ["select", "filter", "arrange", "%>%"]
+      },
+      "part4_advanced_transformation": {
+        "name": "Part 4: Advanced Transformation",
+        "points": 15,
+        "variables": ["sales_enhanced", "overall_summary", "regional_summary", "category_summary"],
+        "functions": ["mutate", "summarize", "group_by"]
+      },
+      "part5_data_reshaping": {
+        "name": "Part 5: Data Reshaping",
+        "points": 15,
+        "variables": ["region_category_revenue", "revenue_wide", "revenue_long"],
+        "functions": ["pivot_wider", "pivot_longer"]
+      },
+      "part6_joins": {
+        "name": "Part 6: Combining Datasets",
+        "points": 15,
+        "variables": ["customer_orders", "orders_with_items"],
+        "functions": ["left_join", "inner_join"]
+      },
+      "part7_strings_dates": {
+        "name": "Part 7: String Manipulation & Date/Time",
+        "points": 20,
+        "variables": ["sales_enhanced"],
+        "functions": ["str_trim", "str_to_title", "ymd", "month", "wday"],
+        "required_columns": ["region_clean", "category_clean", "date_parsed", "sale_month", "sale_weekday"]
+      },
+      "part8_advanced_wrangling": {
+        "name": "Part 8: Advanced Wrangling",
+        "points": 15,
+        "variables": ["sales_enhanced", "business_kpis"],
+        "functions": ["case_when"],
+        "required_columns": ["performance_tier"]
+      },
+      "part9_reflections": {
+        "name": "Part 9: Reflection Questions",
+        "points": 5,
+        "reflection_questions": 5,
+        "check_type": "markdown",
+        "min_words_per_question": 50
+      }
+    }
+  },
+  "grading_guidelines": {
+    "full_credit_criteria": [
+      "All code executes without critical errors",
+      "All required variables created with correct structure",
+      "Correct use of tidyverse functions",
+      "Proper use of pipe operator throughout",
+      "All reflection questions answered thoughtfully (50+ words each)"
+    ],
+    "partial_credit_scenarios": {
+      "date_parsing_variations": "Accept ymd(), mdy(), or parse_date_time() - data is in YYYY-MM-DD format",
+      "working_directory": "No penalty for different paths - students set their own",
+      "code_style_variations": "Accept equivalent code that produces correct results"
+    }
+  }
+}

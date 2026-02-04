@@ -1,0 +1,317 @@
+{
+  "assignment_info": {
+    "name": "a7",
+    "title": "Assignment 7 - String Manipulation and Date/Time Data",
+    "description": "Data cleaning and temporal analysis using stringr and lubridate for business intelligence",
+    "total_points": 100
+  },
+  "strict_scoring_enabled": true,
+  "strict_scoring_rules": {
+    "no_output_no_points": true,
+    "template_only_max_percent": 10,
+    "missing_section_zero": true,
+    "wrong_output_max_credit": 25,
+    "completion_based_maximum": true,
+    "differentiation_required": true
+  },
+  "rubric_elements": {
+    "technical_execution": {
+      "weight": 0.25,
+      "max_points": 25,
+      "description": "Code quality, syntax, execution, and proper use of stringr and lubridate functions",
+      "criteria": [
+        "All code cells executed with visible outputs",
+        "Proper use of pipe operator (%>%) throughout",
+        "Correct syntax for stringr functions (str_trim, str_detect, str_extract, etc.)",
+        "Correct syntax for lubridate functions (ymd, year, month, wday, etc.)",
+        "No errors or warnings that affect results",
+        "Data files imported successfully",
+        "All required variables created"
+      ],
+      "execution_requirements": {
+        "cells_must_be_run": true,
+        "description": "ALL code cells must be executed and show outputs",
+        "penalty": "Each unexecuted cell = 2 points deduction",
+        "note": "Students must run ALL cells before submission"
+      },
+      "deductions": {
+        "no_outputs": "Code without outputs = 0 points for that section",
+        "unexecuted_cells": "Each cell without output = 2 points deduction",
+        "no_pipes": "Not using %>% operator = 20% deduction",
+        "syntax_errors": "Each syntax error = 15% deduction",
+        "template_only": "Only template code with blanks = 0 points"
+      }
+    },
+
+    "string_manipulation": {
+      "weight": 0.30,
+      "max_points": 30,
+      "description": "String cleaning, pattern detection, and extraction using stringr",
+      "required_sections": {
+        "part2_cleaning": {
+          "points": 10,
+          "description": "String cleaning and standardization",
+          "subtasks": {
+            "task_2_1_clean_products": {
+              "points": 4,
+              "description": "Clean product names with str_trim and str_to_title",
+              "verification": [
+                "str_trim(",
+                "str_to_title(",
+                "product_name_clean"
+              ]
+            },
+            "task_2_2_clean_categories": {
+              "points": 3,
+              "description": "Standardize categories",
+              "verification": [
+                "str_to_title(",
+                "category_clean"
+              ]
+            },
+            "task_2_3_clean_feedback": {
+              "points": 3,
+              "description": "Clean feedback text",
+              "verification": [
+                "str_to_lower(",
+                "str_squish(",
+                "feedback_clean"
+              ]
+            }
+          }
+        },
+        "part3_patterns": {
+          "points": 20,
+          "description": "Pattern detection and extraction",
+          "subtasks": {
+            "task_3_1_detect_features": {
+              "points": 8,
+              "description": "Detect product features (wireless, premium, gaming)",
+              "verification": [
+                "str_detect(",
+                "is_wireless",
+                "is_premium",
+                "is_gaming"
+              ]
+            },
+            "task_3_2_extract_specs": {
+              "points": 6,
+              "description": "Extract specifications from product names",
+              "verification": [
+                "str_extract(",
+                "\\\\d+",
+                "size_number"
+              ]
+            },
+            "task_3_3_sentiment": {
+              "points": 6,
+              "description": "Sentiment analysis with str_count",
+              "verification": [
+                "str_count(",
+                "positive_words",
+                "negative_words",
+                "sentiment_score"
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    "date_time_operations": {
+      "weight": 0.30,
+      "max_points": 30,
+      "description": "Date parsing, component extraction, and temporal analysis using lubridate",
+      "required_sections": {
+        "part4_date_basics": {
+          "points": 15,
+          "description": "Date parsing and component extraction",
+          "subtasks": {
+            "task_4_1_parse_dates": {
+              "points": 5,
+              "description": "Parse transaction dates with ymd",
+              "verification": [
+                "ymd(",
+                "date_parsed"
+              ]
+            },
+            "task_4_2_extract_components": {
+              "points": 7,
+              "description": "Extract date components",
+              "verification": [
+                "year(",
+                "month(",
+                "day(",
+                "wday(",
+                "quarter(",
+                "trans_year",
+                "trans_month",
+                "trans_month_name",
+                "trans_weekday",
+                "trans_quarter"
+              ]
+            },
+            "task_4_3_weekend_flag": {
+              "points": 3,
+              "description": "Identify weekend transactions",
+              "verification": [
+                "wday(",
+                "%in% c(1, 7)",
+                "is_weekend"
+              ]
+            }
+          }
+        },
+        "part5_recency": {
+          "points": 15,
+          "description": "Date calculations and customer recency analysis",
+          "subtasks": {
+            "task_5_1_calculate_recency": {
+              "points": 7,
+              "description": "Calculate days since transaction",
+              "verification": [
+                "today(",
+                "as.numeric(",
+                "days_since"
+              ]
+            },
+            "task_5_2_categorize": {
+              "points": 8,
+              "description": "Categorize customers by recency",
+              "verification": [
+                "case_when(",
+                "recency_category",
+                "Recent",
+                "Moderate",
+                "At Risk"
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    "business_analysis": {
+      "weight": 0.15,
+      "max_points": 15,
+      "description": "Combined operations and business intelligence",
+      "required_sections": {
+        "part6_combined": {
+          "points": 10,
+          "description": "Combined string and date operations",
+          "subtasks": {
+            "task_6_1_personalization": {
+              "points": 5,
+              "description": "Extract names and create personalized messages",
+              "verification": [
+                "str_extract(",
+                "first_name",
+                "paste(",
+                "personalized_message"
+              ]
+            },
+            "task_6_2_weekday": {
+              "points": 3,
+              "description": "Weekday pattern analysis",
+              "verification": [
+                "group_by(trans_weekday)",
+                "summarize(",
+                "transaction_count"
+              ]
+            },
+            "task_6_3_monthly": {
+              "points": 2,
+              "description": "Monthly pattern analysis",
+              "verification": [
+                "group_by(",
+                "n_distinct(",
+                "unique_customers"
+              ]
+            }
+          }
+        },
+        "part7_summary": {
+          "points": 5,
+          "description": "Business intelligence dashboard",
+          "verification": [
+            "nrow(",
+            "sum(",
+            "mean(",
+            "Product Analysis",
+            "Customer Sentiment",
+            "Transaction Patterns"
+          ]
+        }
+      }
+    }
+  },
+
+  "autograder_checks": {
+    "required_variables": [
+      "feedback",
+      "transactions",
+      "products",
+      "products_clean",
+      "feedback_clean",
+      "transactions_clean",
+      "customer_outreach",
+      "weekday_patterns",
+      "monthly_patterns",
+      "top_categories"
+    ],
+    "sections": {
+      "part1_setup": {
+        "name": "Part 1: Setup and Data Import",
+        "points": 5,
+        "variables": ["feedback", "transactions", "products"],
+        "functions": ["library", "read_csv", "str", "head"]
+      },
+      "part2_string_cleaning": {
+        "name": "Part 2: String Cleaning",
+        "points": 10,
+        "variables": ["products_clean", "feedback_clean"],
+        "functions": ["str_trim", "str_to_title", "str_to_lower", "str_squish"],
+        "required_columns": ["product_name_clean", "category_clean", "feedback_clean"]
+      },
+      "part3_pattern_detection": {
+        "name": "Part 3: Pattern Detection and Extraction",
+        "points": 20,
+        "variables": ["products_clean", "feedback_clean"],
+        "functions": ["str_detect", "str_extract", "str_count"],
+        "required_columns": ["is_wireless", "is_premium", "is_gaming", "size_number", "positive_words", "negative_words", "sentiment_score"]
+      },
+      "part4_date_operations": {
+        "name": "Part 4: Date Parsing and Component Extraction",
+        "points": 20,
+        "variables": ["transactions_clean"],
+        "functions": ["ymd", "mdy", "year", "month", "day", "wday", "quarter"],
+        "required_columns": ["date_parsed", "trans_year", "trans_month", "trans_day", "trans_weekday", "trans_quarter", "is_weekend"]
+      },
+      "part5_recency_analysis": {
+        "name": "Part 5: Customer Recency Analysis",
+        "points": 15,
+        "variables": ["transactions_clean"],
+        "functions": ["today", "case_when"],
+        "required_columns": ["days_since", "recency_category"]
+      },
+      "part6_combined_operations": {
+        "name": "Part 6: Combined String and Date Operations",
+        "points": 10,
+        "variables": ["customer_outreach", "weekday_patterns", "monthly_patterns"],
+        "functions": ["str_extract", "group_by", "summarise", "n_distinct"]
+      },
+      "part7_business_intelligence": {
+        "name": "Part 7: Business Intelligence Summary",
+        "points": 10,
+        "variables": ["top_categories"],
+        "functions": ["group_by", "summarise", "arrange"]
+      },
+      "part8_reflections": {
+        "name": "Part 8: Reflection Questions",
+        "points": 10,
+        "reflection_questions": 6,
+        "check_type": "markdown"
+      }
+    }
+  }
+}

@@ -1,0 +1,371 @@
+{
+  "assignment_info": {
+    "name": "a4v2",
+    "title": "Assignment 4 - Data Transformation Part 2 (Mutate, Summarize, Group_by)",
+    "description": "Advanced data transformation using mutate(), summarize(), group_by(), and count() for business analytics",
+    "total_points": 37.5
+  },
+  "rubric_elements": {
+    "technical_execution": {
+      "weight": 0.25,
+      "max_points": 9.375,
+      "description": "Code quality, syntax, execution, and proper use of advanced dplyr functions",
+      "criteria": [
+        "All code cells executed with visible outputs",
+        "Proper use of pipe operator (%>%) throughout",
+        "Correct syntax for mutate(), summarize(), group_by(), count()",
+        "No errors or warnings that affect results",
+        "Data imported successfully with tidyverse",
+        "Proper use of case_when() and ifelse() for categorical variables"
+      ],
+      "deductions": {
+        "no_outputs": "Code without outputs = 0 points for that section",
+        "no_pipes": "Not using %>% operator = 20% deduction",
+        "syntax_errors": "Each syntax error = 10% deduction",
+        "template_only": "Only template code = 0 points",
+        "wrong_functions": "Using base R instead of dplyr = 15% deduction"
+      }
+    },
+
+    "data_analysis": {
+      "weight": 0.40,
+      "max_points": 15.0,
+      "description": "Correct implementation of data transformation operations - MOST IMPORTANT",
+      "required_sections": {
+        "part1_import": {
+          "points": 1.0,
+          "description": "Data import and initial exploration",
+          "verification": ["read_csv", "company_data <-", "str()", "summary()", "head()"]
+        },
+        "part2_mutate_financial": {
+          "points": 2.5,
+          "description": "Create 6 financial metrics (Profit, Profit_Margin, Cost_Ratio, Revenue_Per_Unit, Cost_Per_Unit, ROI)",
+          "verification": [
+            "mutate(",
+            "Profit =",
+            "Profit_Margin =",
+            "Cost_Ratio =",
+            "Revenue_Per_Unit =",
+            "Cost_Per_Unit =",
+            "ROI ="
+          ],
+          "required_calculations": 6
+        },
+        "part3_categorical": {
+          "points": 2.0,
+          "description": "Create 5 categorical variables (Performance_Category, Revenue_Size, Deal_Size, High_Value_Customer, Profitable_Deal)",
+          "verification": [
+            "case_when(",
+            "Performance_Category",
+            "Revenue_Size",
+            "Deal_Size",
+            "High_Value_Customer",
+            "Profitable_Deal"
+          ],
+          "required_categories": 5
+        },
+        "part4_summarize": {
+          "points": 2.0,
+          "description": "Overall business summary statistics",
+          "verification": [
+            "summarize(",
+            "sum(",
+            "mean(",
+            "n()",
+            "total_revenue",
+            "avg_profit_margin"
+          ]
+        },
+        "part5_group_by": {
+          "points": 3.5,
+          "description": "Grouped analysis (Regional, Product Category, Performance Category)",
+          "verification": [
+            "group_by(",
+            "Region",
+            "Product_Category",
+            "Performance_Category",
+            "arrange(desc("
+          ],
+          "required_groupings": 3
+        },
+        "part6_advanced": {
+          "points": 2.0,
+          "description": "Multi-dimensional grouping and count() operations",
+          "verification": [
+            "count(",
+            "group_by.*,.*",
+            "cross",
+            "table("
+          ]
+        },
+        "part7_dashboard": {
+          "points": 1.5,
+          "description": "Business intelligence dashboard with KPIs",
+          "verification": [
+            "cat(",
+            "KPI",
+            "total_revenue",
+            "profit_margin",
+            "top"
+          ]
+        },
+        "part8_validation": {
+          "points": 0.5,
+          "description": "Data validation and quality checks",
+          "verification": [
+            "all.equal(",
+            "is.na(",
+            "validation"
+          ]
+        }
+      },
+      "scoring_rules": {
+        "section_complete": "Working code + visible output = full points",
+        "section_partial": "Code without output = 50% of section points",
+        "section_incomplete": "No code or template only = 0 points",
+        "calculation": "(completed_sections / total_sections) × max_points"
+      }
+    },
+
+    "business_thinking": {
+      "weight": 0.20,
+      "max_points": 7.5,
+      "description": "Understanding of business applications and advanced data transformation concepts",
+      "evaluation_criteria": {
+        "financial_metrics": {
+          "points": 2.0,
+          "description": "Understanding of profit margins, ROI, and efficiency metrics",
+          "excellent": "Correctly calculates all 6 metrics with proper formulas",
+          "good": "Calculates 5-6 metrics, minor formula issues",
+          "adequate": "Calculates 3-4 metrics correctly",
+          "poor": "Fewer than 3 metrics or major errors"
+        },
+        "segmentation": {
+          "points": 2.0,
+          "description": "Proper use of categorical variables for business segmentation",
+          "excellent": "All 5 categories created with correct thresholds and logic",
+          "good": "4-5 categories with mostly correct logic",
+          "adequate": "3-4 categories with some logic issues",
+          "poor": "Fewer than 3 categories or incorrect logic"
+        },
+        "grouped_analysis": {
+          "points": 2.0,
+          "description": "Meaningful grouped analysis across business dimensions",
+          "excellent": "All 3+ groupings with revenue_share and proper sorting",
+          "good": "3 groupings with most metrics calculated",
+          "adequate": "2 groupings with basic metrics",
+          "poor": "1 or fewer groupings"
+        },
+        "insights": {
+          "points": 1.5,
+          "description": "Business intelligence dashboard shows understanding of KPIs",
+          "excellent": "Comprehensive dashboard with formatted output and insights",
+          "good": "Dashboard with most KPIs calculated",
+          "adequate": "Basic dashboard with some KPIs",
+          "poor": "Minimal or no dashboard"
+        }
+      },
+      "scoring_rules": {
+        "excellent": "90-100% of component points",
+        "good": "75-89% of component points",
+        "adequate": "60-74% of component points",
+        "poor": "40-59% of component points",
+        "fail": "0-39% of component points"
+      }
+    },
+
+    "communication": {
+      "weight": 0.15,
+      "max_points": 5.625,
+      "description": "Code comments, output clarity, and overall presentation",
+      "criteria": [
+        "Code is well-commented explaining business logic",
+        "Outputs are clearly labeled and formatted",
+        "Variable names follow business conventions",
+        "Results are interpreted with business context",
+        "Notebook is organized and professional",
+        "Dashboard output is formatted and readable"
+      ],
+      "scoring_guide": {
+        "excellent": "All criteria met, professional business presentation",
+        "good": "Most criteria met, clear communication",
+        "adequate": "Basic communication, some clarity issues",
+        "poor": "Minimal comments, unclear outputs"
+      }
+    }
+  },
+
+  "template_detection": {
+    "enabled": true,
+    "template_file": "data/raw/homework_lesson_4_data_transformation_part2.ipynb",
+    "detection_rules": {
+      "code_length_threshold": 1.3,
+      "description": "Student code must be at least 130% of template length",
+      "key_indicators": [
+        "mutate(",
+        "summarize(",
+        "group_by(",
+        "count(",
+        "case_when(",
+        "Profit =",
+        "Profit_Margin =",
+        "Performance_Category",
+        "revenue_share"
+      ],
+      "minimum_indicators": 8,
+      "penalty_if_template_only": "Score capped at 20% (7.5 points)"
+    }
+  },
+
+  "score_validation": {
+    "enabled": true,
+    "rules": {
+      "output_verification": {
+        "description": "CRITICAL: If code has visible output, section is COMPLETE",
+        "action": "Do NOT mark as incomplete if output is present",
+        "examples": [
+          "Code: company_data %>% mutate(...) + Output showing new columns = COMPLETE",
+          "Code: summarize(...) + Output showing summary = COMPLETE",
+          "Code only, no output = INCOMPLETE"
+        ]
+      },
+      "minimum_completion": {
+        "threshold": 0.5,
+        "description": "Must complete at least 50% of sections for passing grade",
+        "action": "If < 50% complete, cap score at 50%"
+      },
+      "mutate_requirement": {
+        "minimum_variables": 10,
+        "description": "Must create at least 10 new variables using mutate()",
+        "action": "If < 10 variables, deduct 20% from data_analysis score"
+      },
+      "group_by_requirement": {
+        "minimum_groupings": 3,
+        "description": "Must perform at least 3 different group_by analyses",
+        "action": "If < 3 groupings, deduct 25% from data_analysis score"
+      },
+      "output_requirement": {
+        "description": "Code without outputs counts as incomplete",
+        "action": "Sections without outputs = 0 points for that section"
+      }
+    }
+  },
+
+  "common_issues": {
+    "template_submission": {
+      "indicators": [
+        "# TODO:",
+        "Code length < 130% of template",
+        "No outputs visible",
+        "Fewer than 8 key functions used"
+      ],
+      "score_cap": 7.5,
+      "feedback": "This submission appears to be primarily template code with minimal student work."
+    },
+    "incomplete_execution": {
+      "indicators": ["Code cells without outputs", "execution_count is null"],
+      "penalty": "50% deduction per incomplete section",
+      "feedback": "Code must be executed to show outputs. Unexecuted code receives partial credit."
+    },
+    "wrong_calculations": {
+      "indicators": [
+        "Profit_Margin without * 100",
+        "ROI formula incorrect",
+        "case_when() logic reversed",
+        "Missing .groups = 'drop'"
+      ],
+      "penalty": "10% deduction per calculation error",
+      "feedback": "Review formulas: Profit_Margin = (Profit/Revenue)*100, ROI = (Profit/Cost)*100"
+    },
+    "missing_groupings": {
+      "indicators": [
+        "No group_by() usage",
+        "Fewer than 3 grouped analyses",
+        "No arrange(desc()) for sorting"
+      ],
+      "penalty": "25% deduction from data_analysis",
+      "feedback": "Must perform grouped analysis by Region, Product_Category, and Performance_Category."
+    },
+    "no_dashboard": {
+      "indicators": [
+        "No cat() statements",
+        "No KPI calculations",
+        "No formatted output"
+      ],
+      "penalty": "Lose all Part 7 points (1.5 points)",
+      "feedback": "Business intelligence dashboard is required to demonstrate understanding of KPIs."
+    }
+  },
+
+  "grading_instructions": {
+    "step_0": "CRITICAL: If you see OUTPUT after code, the section IS COMPLETE. Do NOT hallucinate missing sections!",
+    "step_1": "Check if tidyverse is loaded and company_sales_data.csv is imported",
+    "step_2": "Count new variables created with mutate() - should be 10+ (6 financial + 5 categorical)",
+    "step_3": "Verify summarize() operations calculate correct business metrics",
+    "step_4": "Count group_by() analyses - should be 3+ (Region, Product_Category, Performance_Category)",
+    "step_5": "Check for count() usage and cross-tabulation",
+    "step_6": "Evaluate business intelligence dashboard completeness",
+    "step_7": "Verify data validation section",
+    "step_8": "Calculate final score: (technical × 0.25) + (analysis × 0.40) + (business × 0.20) + (communication × 0.15)",
+    "step_9": "Apply any penalties or caps based on validation rules",
+    "step_10": "DOUBLE-CHECK: Review your incomplete list - if output is visible, remove from incomplete!"
+  },
+
+  "example_scores": {
+    "excellent_work": {
+      "description": "All 8 parts complete with outputs, 10+ variables created, 3+ groupings, comprehensive dashboard",
+      "expected_score": "34-37.5 points (90-100%)",
+      "breakdown": "Data Analysis: 14-15/15, Technical: 8-9/9.375, Business: 6.5-7.5/7.5, Communication: 5-5.625/5.625"
+    },
+    "good_work": {
+      "description": "All 8 parts complete, 10+ variables, 3 groupings, basic dashboard",
+      "expected_score": "30-33 points (80-89%)",
+      "breakdown": "Data Analysis: 13-14/15, Technical: 7-8/9.375, Business: 5.5-6.5/7.5, Communication: 4.5-5/5.625"
+    },
+    "adequate_work": {
+      "description": "6-7 parts complete, 8-9 variables, 2 groupings, minimal dashboard",
+      "expected_score": "26-29 points (70-79%)",
+      "breakdown": "Data Analysis: 10-12/15, Technical: 6-7/9.375, Business: 4.5-5.5/7.5, Communication: 4-4.5/5.625"
+    },
+    "poor_work": {
+      "description": "4-5 parts complete, fewer than 8 variables, 1 grouping, no dashboard",
+      "expected_score": "15-21 points (40-59%)",
+      "breakdown": "Data Analysis: 6-9/15, Technical: 4-5/9.375, Business: 3-4/7.5, Communication: 2-3/5.625"
+    },
+    "template_only": {
+      "description": "Minimal additions to template, no outputs, no new variables",
+      "expected_score": "0-7.5 points (0-20%)",
+      "breakdown": "Score capped at 20% due to template-only submission"
+    }
+  },
+
+  "key_learning_objectives": {
+    "mutate_mastery": "Create calculated fields for business metrics (profit, margins, ratios)",
+    "summarize_skills": "Generate aggregate statistics and KPIs",
+    "group_by_analysis": "Perform dimensional analysis across business segments",
+    "count_operations": "Conduct frequency analysis and cross-tabulations",
+    "business_intelligence": "Combine functions to create comprehensive analytics dashboards"
+  },
+
+  "critical_functions": {
+    "required": [
+      "mutate()",
+      "summarize()",
+      "group_by()",
+      "count()",
+      "case_when()",
+      "ifelse()",
+      "arrange(desc())",
+      "n()",
+      "sum()",
+      "mean()"
+    ],
+    "bonus": [
+      "pivot_wider()",
+      "table()",
+      "all.equal()",
+      "is.na()",
+      "cat()"
+    ]
+  }
+}

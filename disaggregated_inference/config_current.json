@@ -3,13 +3,13 @@
   "prefill_servers": [
     {
       "host": "169.254.150.105",
-      "port": 8000,
+      "port": 8080,
       "model": "qwen",
       "name": "DGX Spark 3"
     },
     {
       "host": "169.254.150.106",
-      "port": 8000,
+      "port": 8080,
       "model": "gpt-oss",
       "name": "DGX Spark 4"
     }
@@ -17,18 +17,18 @@
   "decode_servers": [
     {
       "host": "169.254.150.102",
-      "port": 8001,
+      "port": 8081,
       "model": "qwen",
       "name": "Mac Studio 2",
       "comment": "Has qwen3-coder:30b"
     },
     {
       "host": "169.254.150.101",
-      "port": 8001,
+      "port": 8081,
       "model": "gpt-oss",
       "name": "Mac Studio 1",
       "comment": "Has gpt-oss:120b"
     }
   ],
-  "note": "Using DGX Sparks 3&4 (at .105 and .106) for prefill. Mac Studios for decode."
+  "note": "Using llama.cpp C API for state transfer. DGX Sparks 3&4 for prefill (8080), Mac Studios for decode (8081)."
 }

@@ -1,0 +1,260 @@
+{
+  "disaggregated": [
+    [
+      "qwen",
+      {
+        "prefill_time": 0.0,
+        "prefill_tokens": 0,
+        "prefill_tokens_per_sec": 0.0,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 0.0,
+        "decode_tokens": 0,
+        "decode_tokens_per_sec": 0.0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 0.0,
+        "total_time": 0.0,
+        "total_tokens": 0,
+        "end_to_end_tokens_per_sec": 0.0,
+        "mode": "disaggregated",
+        "model_name": "Qwen3-Coder-30B-Q8"
+      }
+    ],
+    [
+      "gptoss",
+      {
+        "prefill_time": 14.515947818756104,
+        "prefill_tokens": 3970,
+        "prefill_tokens_per_sec": 273.4923030565286,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 176.94122004508972,
+        "decode_tokens": 2000,
+        "decode_tokens_per_sec": 0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 279.99946880340576,
+        "total_time": 191.45716786384583,
+        "total_tokens": 5970,
+        "end_to_end_tokens_per_sec": 31.181909074543228,
+        "mode": "disaggregated",
+        "model_name": "GPT-OSS-120B-Q8"
+      }
+    ],
+    [
+      "qwen",
+      {
+        "prefill_time": 0.0,
+        "prefill_tokens": 0,
+        "prefill_tokens_per_sec": 0.0,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 0.0,
+        "decode_tokens": 0,
+        "decode_tokens_per_sec": 0.0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 0.0,
+        "total_time": 0.0,
+        "total_tokens": 0,
+        "end_to_end_tokens_per_sec": 0.0,
+        "mode": "disaggregated",
+        "model_name": "Qwen3-Coder-30B-Q8"
+      }
+    ],
+    [
+      "gptoss",
+      {
+        "prefill_time": 10.397985219955444,
+        "prefill_tokens": 2988,
+        "prefill_tokens_per_sec": 287.36336288164136,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 34.2680869102478,
+        "decode_tokens": 19,
+        "decode_tokens_per_sec": 0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 210.9301176071167,
+        "total_time": 44.66607213020325,
+        "total_tokens": 3007,
+        "end_to_end_tokens_per_sec": 67.32179161029616,
+        "mode": "disaggregated",
+        "model_name": "GPT-OSS-120B-Q8"
+      }
+    ],
+    [
+      "qwen",
+      {
+        "prefill_time": 6.266423940658569,
+        "prefill_tokens": 3642,
+        "prefill_tokens_per_sec": 581.1927240302934,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 0.0,
+        "decode_tokens": 0,
+        "decode_tokens_per_sec": 0.0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 342.0599174499512,
+        "total_time": 0.0,
+        "total_tokens": 0,
+        "end_to_end_tokens_per_sec": 0.0,
+        "mode": "disaggregated",
+        "model_name": "Qwen3-Coder-30B-Q8"
+      }
+    ],
+    [
+      "gptoss",
+      {
+        "prefill_time": 9.98222827911377,
+        "prefill_tokens": 2841,
+        "prefill_tokens_per_sec": 284.6057934724196,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 31.797013998031616,
+        "decode_tokens": 13,
+        "decode_tokens_per_sec": 0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 200.59081554412842,
+        "total_time": 41.779242277145386,
+        "total_tokens": 2854,
+        "end_to_end_tokens_per_sec": 68.3114351636107,
+        "mode": "disaggregated",
+        "model_name": "GPT-OSS-120B-Q8"
+      }
+    ]
+  ],
+  "mac_only": [
+    [
+      "qwen",
+      {
+        "prefill_time": 0.0,
+        "prefill_tokens": 0,
+        "prefill_tokens_per_sec": 0.0,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 0.0,
+        "decode_tokens": 0,
+        "decode_tokens_per_sec": 0.0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 0.0,
+        "total_time": 15.0,
+        "total_tokens": 1000,
+        "end_to_end_tokens_per_sec": 66.66666666666667,
+        "mode": "mac-only",
+        "model_name": "Qwen3-Coder-30B-Q8"
+      }
+    ],
+    [
+      "gptoss",
+      {
+        "prefill_time": 0.0,
+        "prefill_tokens": 0,
+        "prefill_tokens_per_sec": 0.0,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 0.0,
+        "decode_tokens": 0,
+        "decode_tokens_per_sec": 0.0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 0.0,
+        "total_time": 25.0,
+        "total_tokens": 1200,
+        "end_to_end_tokens_per_sec": 48.0,
+        "mode": "mac-only",
+        "model_name": "GPT-OSS-120B-Q8"
+      }
+    ],
+    [
+      "qwen",
+      {
+        "prefill_time": 0.0,
+        "prefill_tokens": 0,
+        "prefill_tokens_per_sec": 0.0,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 0.0,
+        "decode_tokens": 0,
+        "decode_tokens_per_sec": 0.0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 0.0,
+        "total_time": 15.0,
+        "total_tokens": 1000,
+        "end_to_end_tokens_per_sec": 66.66666666666667,
+        "mode": "mac-only",
+        "model_name": "Qwen3-Coder-30B-Q8"
+      }
+    ],
+    [
+      "gptoss",
+      {
+        "prefill_time": 0.0,
+        "prefill_tokens": 0,
+        "prefill_tokens_per_sec": 0.0,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 0.0,
+        "decode_tokens": 0,
+        "decode_tokens_per_sec": 0.0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 0.0,
+        "total_time": 25.0,
+        "total_tokens": 1200,
+        "end_to_end_tokens_per_sec": 48.0,
+        "mode": "mac-only",
+        "model_name": "GPT-OSS-120B-Q8"
+      }
+    ],
+    [
+      "qwen",
+      {
+        "prefill_time": 0.0,
+        "prefill_tokens": 0,
+        "prefill_tokens_per_sec": 0.0,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 0.0,
+        "decode_tokens": 0,
+        "decode_tokens_per_sec": 0.0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 0.0,
+        "total_time": 15.0,
+        "total_tokens": 1000,
+        "end_to_end_tokens_per_sec": 66.66666666666667,
+        "mode": "mac-only",
+        "model_name": "Qwen3-Coder-30B-Q8"
+      }
+    ],
+    [
+      "gptoss",
+      {
+        "prefill_time": 0.0,
+        "prefill_tokens": 0,
+        "prefill_tokens_per_sec": 0.0,
+        "prefill_state_size_mb": 0.0,
+        "decode_time": 0.0,
+        "decode_tokens": 0,
+        "decode_tokens_per_sec": 0.0,
+        "state_transfer_time": 0.0,
+        "state_size_mb": 0.0,
+        "total_time": 25.0,
+        "total_tokens": 1200,
+        "end_to_end_tokens_per_sec": 48.0,
+        "mode": "mac-only",
+        "model_name": "GPT-OSS-120B-Q8"
+      }
+    ]
+  ],
+  "summary": {
+    "disaggregated": {
+      "qwen": {
+        "avg_time": 0,
+        "min_time": 0,
+        "max_time": 0
+      },
+      "gptoss": {
+        "avg_time": 92.63416075706482,
+        "min_time": 41.779242277145386,
+        "max_time": 191.45716786384583
+      }
+    },
+    "mac_only": {
+      "qwen": {
+        "avg_time": 15.0,
+        "min_time": 15.0,
+        "max_time": 15.0
+      },
+      "gptoss": {
+        "avg_time": 25.0,
+        "min_time": 25.0,
+        "max_time": 25.0
+      }
+    }
+  }
+}

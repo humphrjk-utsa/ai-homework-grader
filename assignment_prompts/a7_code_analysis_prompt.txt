@@ -1,0 +1,108 @@
+ASSIGNMENT 7: STRING MANIPULATION AND DATE/TIME DATA ANALYSIS
+
+This assignment focuses on data cleaning and temporal analysis using R's stringr and lubridate packages. Students work with messy real-world data including customer feedback, transaction logs, and product catalogs.
+
+REQUIRED SECTIONS (25 total):
+Part 1: Setup (3 sections)
+- Task 1.1: Load tidyverse and lubridate packages
+- Task 1.2: Import customer_feedback.csv, transaction_log.csv, product_catalog.csv
+- Task 1.3: Display structure and sample rows of all datasets
+
+Part 2: String Cleaning (3 sections)
+- Task 2.1: Clean product names with str_trim() and str_to_title()
+- Task 2.2: Standardize categories with str_trim() and str_to_title()
+- Task 2.3: Clean feedback text with str_to_lower() and str_squish()
+
+Part 3: Pattern Detection (3 sections)
+- Task 3.1: Detect features (is_wireless, is_premium, is_gaming) using str_detect()
+- Task 3.2: Extract specifications using str_extract() with regex "\\d+"
+- Task 3.3: Sentiment analysis with str_count() for positive/negative words
+
+Part 4: Date Operations (3 sections)
+- Task 4.1: Parse dates using ymd() or mdy() (NOT as.Date!)
+- Task 4.2: Extract components (year, month, day, weekday, quarter) using lubridate functions
+- Task 4.3: Identify weekends using wday() %in% c(1, 7)
+
+Part 5: Recency Analysis (2 sections)
+- Task 5.1: Calculate days_since using today() - date_parsed
+- Task 5.2: Categorize customers (Recent ≤30, Moderate ≤90, At Risk >90) using case_when()
+
+Part 6: Combined Operations (3 sections)
+- Task 6.1: Extract first names with str_extract() and create personalized messages
+- Task 6.2: Analyze transaction patterns by weekday with group_by()
+- Task 6.3: Analyze monthly patterns with group_by() and n_distinct()
+
+Part 7: Business Intelligence (2 sections)
+- Task 7.1: Create comprehensive dashboard with all key metrics
+- Task 7.2: Identify top product categories
+
+Part 8: Reflection Questions (6 sections)
+- Question 8.1: Data quality impact with specific examples
+- Question 8.2: Pattern detection business value
+- Question 8.3: Date analysis importance (3+ applications required)
+- Question 8.4: Customer recency strategy with specific actions
+- Question 8.5: Sentiment analysis applications and limitations
+- Question 8.6: Real-world scenario combining string and date analysis
+
+CRITICAL VERIFICATION POINTS:
+
+1. REQUIRED FUNCTIONS - Must use these specific functions:
+   - String: str_trim(), str_squish(), str_to_title(), str_to_lower(), str_detect(), str_extract(), str_count()
+   - Date: ymd() or mdy() (NOT as.Date!), year(), month(), day(), wday(), quarter(), today()
+   - Logic: case_when() for categorization
+
+2. REQUIRED VARIABLES - Must create these exact names:
+   - products_clean (with product_name_clean, category_clean, is_wireless, is_premium, is_gaming, size_number)
+   - feedback_clean (with feedback_clean, positive_words, negative_words, sentiment_score)
+   - transactions_clean (with date_parsed, trans_year, trans_month, trans_day, trans_weekday, trans_quarter, is_weekend, days_since, recency_category)
+   - customer_outreach (with first_name, personalized_message)
+   - weekday_patterns (grouped by weekday)
+   - monthly_patterns (grouped by month)
+
+3. COMMON ERRORS TO CATCH:
+   - Using as.Date() instead of ymd() - WRONG APPROACH, penalize
+   - Using str_replace_all() instead of str_trim() - WRONG FUNCTION, penalize
+   - Using toupper()/tolower() instead of str_to_title() - WRONG FUNCTION, penalize
+   - Wrong patterns: "wifi" instead of "wireless", "expensive" instead of "premium" - WRONG PATTERN, penalize
+   - Hardcoded values instead of calculations (e.g., days_since = 30) - INCOMPLETE, penalize
+   - Missing required variables - INCOMPLETE, zero points for that section
+   - Date parsing errors resulting in NA values - INCOMPLETE, penalize
+
+4. SCORING STRICTNESS:
+   - Each wrong function = -50% for that task
+   - Each missing required variable = 0 points for that task
+   - Each hardcoded value = -25% for that task
+   - Date parsing with >10% NA values = -50% for date tasks
+   - Wrong patterns in str_detect() = -50% for pattern detection
+
+5. OUTPUT VALIDATION:
+   - Wireless products: Should find ~15-20 products
+   - Premium products: Should find ~10-15 products
+   - Gaming products: Should find ~0-5 products
+   - Sentiment: Average score should be between -1 and 1
+   - Weekend transactions: Should be 0-30% of total
+   - Recency categories: Should have all three categories (Recent, Moderate, At Risk)
+
+COMPLETION CALCULATION:
+Total sections: 25
+Count only sections with:
+- Correct function usage (not wrong alternatives)
+- Required variables created
+- Valid outputs (no errors, no excessive NAs)
+- Correct logic (not hardcoded values)
+
+Score = (completed sections / 25) × 100
+
+EXAMPLE FEEDBACK FOR COMMON ISSUES:
+
+Wrong function:
+"You used as.Date() to parse dates in Task 4.1, but the assignment requires ymd() from the lubridate package. This is a critical error because as.Date() doesn't handle the mixed date formats in this dataset correctly, resulting in 33 NA values (22% parsing failure). The correct approach is: date_parsed = ymd(transaction_date). This will parse all dates successfully."
+
+Missing variable:
+"You did not create the required variable 'is_gaming' in Task 3.1. The rubric specifically requires three boolean flags: is_wireless, is_premium, and is_gaming. Without this variable, the autograder cannot verify your work. Add: is_gaming = str_detect(str_to_lower(product_name_clean), 'gaming|gamer') to your mutate() function."
+
+Wrong pattern:
+"Your pattern detection in Task 3.1 uses 'wifi' instead of 'wireless'. This is incorrect because the product names contain 'wireless', not 'wifi'. Change your code from str_detect(product_name, 'wifi') to str_detect(str_to_lower(product_name_clean), 'wireless'). This will correctly identify 17 wireless products instead of 0."
+
+Hardcoded value:
+"In Task 5.1, you hardcoded days_since = 30 instead of calculating it. This defeats the purpose of the exercise, which is to learn date arithmetic. The correct approach is: days_since = as.numeric(today() - date_parsed). This will calculate the actual days since each transaction dynamically."
