@@ -1,0 +1,43 @@
+{
+  "parallax": {
+    "scheduler_url": "http://169.254.150.101:3001",
+    "enabled": true,
+    "default_model": "Qwen/Qwen3-0.6B",
+    "production_models": {
+      "code_analysis": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "feedback": "openai/gpt-oss"
+    }
+  },
+  "cluster_nodes": {
+    "mac_1": {
+      "ip": "169.254.150.101",
+      "role": "scheduler",
+      "chip": "M3 Ultra",
+      "memory_gb": 512
+    },
+    "mac_2": {
+      "ip": "169.254.150.102",
+      "role": "worker",
+      "chip": "M4 Ultra",
+      "memory_gb": 128
+    },
+    "spark_1": {
+      "ip": "169.254.150.106",
+      "hostname": "spark-2935",
+      "role": "prefill",
+      "gpu": "NVIDIA"
+    },
+    "spark_2": {
+      "ip": "169.254.150.105",
+      "hostname": "RR191562IP01",
+      "role": "prefill",
+      "gpu": "NVIDIA"
+    }
+  },
+  "batch_processing": {
+    "concurrent_enabled": true,
+    "default_batch_size": 4,
+    "max_batch_size": 8,
+    "cooling_break_seconds": 5
+  }
+}

@@ -88,16 +88,34 @@ class BusinessAnalyticsGraderV2:
         else:
             raise ValueError("Rubric path is required - cannot grade without a rubric")
         
-        # Check for disaggregated inference system (DGX prefill + Mac decode)
+        # Check for Parallax distributed inference cluster (highest priority)
+        self.use_parallax = False
+        self.parallax_client = None
+
+        parallax_scheduler_url = os.getenv('PARALLAX_SCHEDULER_URL', 'http://169.254.150.101:3001')
+        try:
+            from models.parallax_client import ParallaxClient
+            self.parallax_client = ParallaxClient(scheduler_url=parallax_scheduler_url)
+            status = self.parallax_client.get_system_status()
+            if status['distributed_ready']:
+                self.use_parallax = True
+                print(f"🚀 Using Parallax Distributed Inference Cluster:")
+                print(f"   Scheduler: {parallax_scheduler_url}")
+                print(f"   Mac Studios + DGX Sparks connected via 10Gb Thunderbolt")
+        except Exception as e:
+            print(f"⚠️ Parallax cluster not available: {e}")
+            self.use_parallax = False
+
+        # Check for disaggregated inference system (DGX prefill + Mac decode) - fallback
         self.use_disaggregated = False
         self.disaggregated_client = None
-        
-        if os.path.exists('disaggregated_inference/config_current.json'):
+
+        if not self.use_parallax and os.path.exists('disaggregated_inference/config_current.json'):
             try:
                 from disaggregated_client import DisaggregatedClient
                 self.disaggregated_client = DisaggregatedClient()
                 self.use_disaggregated = True
-                print(f"🚀 Using Disaggregated Inference System:")
+                print(f"🚀 Using Disaggregated Inference System (fallback):")
                 print(f"   DGX Sparks (prefill) + Mac Studios (decode)")
                 print(f"   Qwen: DGX Spark 1 → Mac Studio 2")
                 print(f"   GPT-OSS: DGX Spark 2 → Mac Studio 1")
@@ -107,11 +125,11 @@ class BusinessAnalyticsGraderV2:
                 traceback.print_exc()
                 self.use_disaggregated = False
         
-        # Check for distributed MLX system (fallback)
+        # Check for distributed MLX system (lowest priority fallback)
         self.use_distributed_mlx = False
         self.distributed_client = None
-        
-        if os.path.exists('distributed_config.json'):
+
+        if not self.use_parallax and not self.use_disaggregated and os.path.exists('distributed_config.json'):
             try:
                 from models.distributed_mlx_client import DistributedMLXClient
                 
@@ -133,8 +151,16 @@ class BusinessAnalyticsGraderV2:
                 print(f"⚠️ Distributed MLX setup failed: {e}, using Ollama")
         
         print(f"🎓 Business Analytics Grading System V2 Initialized")
-        print(f"🤖 Code Analyzer: {code_model}")
-        print(f"📝 Feedback Generator: {feedback_model}")
+        if self.use_parallax:
+            print(f"🚀 AI Backend: Parallax Distributed Cluster")
+        elif self.use_disaggregated:
+            print(f"🔧 AI Backend: Disaggregated Inference (DGX + Mac)")
+        elif self.use_distributed_mlx:
+            print(f"🖥️ AI Backend: Distributed MLX System")
+        else:
+            print(f"🤖 AI Backend: Ollama (local)")
+            print(f"   Code Analyzer: {code_model}")
+            print(f"   Feedback Generator: {feedback_model}")
         print(f"✅ 4-Layer Validation: {'Enabled' if self.systematic_validator else 'Disabled (Legacy Mode)'}")
         
         # Performance tracking
@@ -472,8 +498,81 @@ class BusinessAnalyticsGraderV2:
         
         # Execute AI analysis in parallel
         parallel_start = time.time()
-        
-        if self.use_distributed_mlx:
+
+        if self.use_parallax:
+            # Use Parallax distributed inference cluster (highest priority)
+            print("🚀 Using Parallax Cluster for AI analysis...")
+
+            # Build enhanced context with student changes analysis and reflections
+            enhanced_context = f"{student_changes['ai_context']}\n\n{validation_summary}"
+            if reflection_comparison:
+                enhanced_context += f"\n\n{reflection_comparison}"
+
+            code_prompt = self.prompt_manager.get_combined_prompt(
+                assignment_name,
+                "code_analysis",
+                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
+                template_code=template_code if template_code else "# No template provided",
+                student_code=student_code,
+                solution_code=solution_code,
+                rubric_criteria=rubric_summary,
+                validation_context=enhanced_context
+            )
+
+            feedback_prompt = self.prompt_manager.get_combined_prompt(
+                assignment_name,
+                "feedback",
+                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
+                student_markdown=student_markdown,
+                student_code_summary=student_code[:800],
+                rubric_criteria=rubric_summary,
+                validation_context=enhanced_context,
+                reflection_comparison=reflection_comparison
+            )
+
+            try:
+                result = self.parallax_client.generate_parallel_sync(code_prompt, feedback_prompt)
+
+                if result.get('error'):
+                    raise RuntimeError(f"Parallax generation failed: {result['error']}")
+
+                # Parse the responses
+                code_analysis = self._parse_code_analysis_response(result['code_analysis'])
+                comprehensive_feedback = self._parse_feedback_response(result['feedback'])
+
+                # Update timing stats with detailed metrics
+                self.grading_stats['code_analysis_time'] = result.get('qwen_time', 0)
+                self.grading_stats['feedback_generation_time'] = result.get('gemma_time', 0)
+
+                # Extract detailed performance metrics if available
+                if 'qwen_metrics' in result:
+                    qwen_metrics = result['qwen_metrics']
+                    self.grading_stats['qwen_tokens_per_second'] = qwen_metrics.get('tokens_per_second', 0)
+                    self.grading_stats['qwen_total_tokens'] = qwen_metrics.get('total_tokens', 0)
+                    self.grading_stats['qwen_metrics'] = qwen_metrics
+
+                if 'gemma_metrics' in result:
+                    gemma_metrics = result['gemma_metrics']
+                    self.grading_stats['gemma_tokens_per_second'] = gemma_metrics.get('tokens_per_second', 0)
+                    self.grading_stats['gemma_total_tokens'] = gemma_metrics.get('total_tokens', 0)
+                    self.grading_stats['gemma_metrics'] = gemma_metrics
+
+                # Store parallel efficiency
+                if 'parallel_efficiency' in result:
+                    self.grading_stats['parallel_efficiency'] = result['parallel_efficiency']
+
+                print(f"✅ Parallax AI analysis completed")
+                print(f"   🔧 Code Analysis: {result.get('qwen_time', 0):.1f}s")
+                print(f"   📝 Feedback: {result.get('gemma_time', 0):.1f}s")
+                print(f"   ⚡ Parallel Efficiency: {result.get('parallel_efficiency', 0):.2f}x")
+
+            except Exception as e:
+                print(f"⚠️ Parallax AI analysis failed: {e}")
+                print("📝 Falling back to validation-only feedback")
+                code_analysis = None
+                comprehensive_feedback = None
+
+        elif self.use_distributed_mlx:
             # Use distributed MLX system
             print("🖥️ Using Distributed MLX System for AI analysis...")
             

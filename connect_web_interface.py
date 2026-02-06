@@ -560,8 +560,17 @@ def grade_single_submission(grader, submission, assignment_id, use_validation=Tr
         import traceback
         st.error(f"Details: {traceback.format_exc()}")
 
-def grade_batch_submissions(grader, submissions, assignment_id, use_validation=True):
-    """Grade multiple submissions in batch with performance metrics tracking"""
+def grade_batch_submissions(grader, submissions, assignment_id, use_validation=True, use_concurrent=False, batch_size=4):
+    """Grade multiple submissions in batch with performance metrics tracking
+
+    Args:
+        grader: The grader instance
+        submissions: DataFrame of submissions to grade
+        assignment_id: Assignment ID
+        use_validation: Whether to validate results
+        use_concurrent: Whether to use concurrent processing (requires Parallax)
+        batch_size: Number of concurrent submissions when use_concurrent=True
+    """
     print("🔄 BATCH GRADING FUNCTION LOADED - CODE UPDATED")
     
     total_submissions = len(submissions)
@@ -634,7 +643,15 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
         st.info("🤖 **Enhanced 4-Layer Grading System**: Systematic Validation + Output Comparison + AI Analysis")
     else:
         st.info("🤖 **Parallel Two-Model Processing**: Code analysis + feedback generation running simultaneously")
-    
+
+    # Check if Parallax is available for concurrent processing
+    parallax_available = business_grader.use_parallax if hasattr(business_grader, 'use_parallax') else False
+    if use_concurrent and parallax_available:
+        st.success(f"⚡ **Concurrent Processing Enabled**: Processing {batch_size} submissions in parallel")
+    elif use_concurrent:
+        st.warning("⚠️ Concurrent processing requires Parallax cluster - falling back to sequential")
+        use_concurrent = False
+
     # Performance metrics tracking
     batch_performance = {
         'total_submissions': total_submissions,
@@ -664,92 +681,203 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
     
     graded_count = 0
     failed_count = 0
-    
-    for i, (_, submission) in enumerate(submissions.iterrows()):
-        
-        progress = (i + 1) / total_submissions
-        progress_bar.progress(progress)
-        
-        student_name = submission['student_name'] or f"Student {submission['student_identifier']}"
-        display_name = anonymize_name(student_name, submission['student_identifier'])
-        status_text.text(f"Grading {i+1}/{total_submissions}: {display_name}")
-        
-        try:
-            # Track submission start time
-            submission_start = time.time()
-            
-            # Grade this submission (similar to single submission logic)
-            result = grade_submission_internal(business_grader, submission, assignment_id, grader)
-            
-            # Add delay between submissions to prevent server overload and thermal throttling
-            # Give servers time to cool down and free memory
-            if i < total_submissions - 1:  # Don't delay after last submission
-                # Every 10 submissions, take a longer cooling break
-                if (i + 1) % 10 == 0:
-                    status_text.text(f"🌡️ Cooling break after {i+1} submissions... (30 seconds)")
-                    time.sleep(30)  # 30 second cooling break every 10 submissions
+
+    # Concurrent processing mode (when Parallax available)
+    if use_concurrent and parallax_available:
+        import concurrent.futures
+
+        def grade_single_concurrent(submission_tuple):
+            """Grade a single submission - for concurrent processing"""
+            idx, submission = submission_tuple
+            student_name = submission['student_name'] or f"Student {submission['student_identifier']}"
+            display_name = anonymize_name(student_name, submission['student_identifier'])
+
+            try:
+                submission_start = time.time()
+                result = grade_submission_internal(business_grader, submission, assignment_id, grader)
+                submission_time = time.time() - submission_start
+                return {
+                    'success': True,
+                    'display_name': display_name,
+                    'submission_id': submission['id'],
+                    'result': result,
+                    'submission_time': submission_time
+                }
+            except Exception as e:
+                import traceback
+                return {
+                    'success': False,
+                    'display_name': display_name,
+                    'error': str(e),
+                    'traceback': traceback.format_exc()
+                }
+
+        # Process in batches
+        submission_list = list(submissions.iterrows())
+        total_batches = (len(submission_list) + batch_size - 1) // batch_size
+
+        for batch_num in range(total_batches):
+            batch_start = batch_num * batch_size
+            batch_end = min(batch_start + batch_size, len(submission_list))
+            current_batch = submission_list[batch_start:batch_end]
+
+            status_text.text(f"⚡ Processing batch {batch_num + 1}/{total_batches} ({len(current_batch)} submissions in parallel)")
+            batch_start_time = time.time()
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=batch_size) as executor:
+                futures = [executor.submit(grade_single_concurrent, sub) for sub in current_batch]
+                results = [f.result() for f in concurrent.futures.as_completed(futures)]
+
+            batch_time = time.time() - batch_start_time
+
+            # Process batch results
+            for grade_result in results:
+                progress = (batch_start + len([r for r in results if r]) + 1) / total_submissions
+                progress_bar.progress(min(progress, 1.0))
+
+                if grade_result['success']:
+                    result = grade_result['result']
+                    submission_time = grade_result['submission_time']
+
+                    # Track metrics
+                    batch_performance['submission_times'].append(submission_time)
+
+                    perf_diag = result.get('performance_diagnostics', {})
+                    if perf_diag:
+                        qwen_perf = perf_diag.get('qwen_performance', {})
+                        gemma_perf = perf_diag.get('gemma_performance', {})
+                        combined = perf_diag.get('combined_metrics', {})
+
+                        batch_performance['qwen_metrics'].append(qwen_perf.get('tokens_per_second', 0))
+                        batch_performance['gemma_metrics'].append(gemma_perf.get('tokens_per_second', 0))
+                        batch_performance['parallel_efficiencies'].append(combined.get('parallel_efficiency', 0))
+                        batch_performance['combined_throughput_history'].append(combined.get('combined_throughput_tokens_per_second', 0))
+
+                    # Validate
+                    if validator:
+                        is_valid, errors = validator.validate_grading_result(result)
+                        if not is_valid:
+                            print(f"⚠️ Validation errors: {errors}")
+
+                    # Save result
+                    save_grading_result(grader, grade_result['submission_id'], result)
+
+                    with results_container:
+                        max_score = result.get('max_points', 37.5)
+                        st.success(f"✅ {grade_result['display_name']}: {result['final_score']:.1f}/{max_score} ({result['final_score_percentage']:.1f}%) - {submission_time:.1f}s")
+
+                    graded_count += 1
                 else:
-                    time.sleep(2)  # 2 second delay between submissions
-            
-            # Capture performance metrics from result
-            submission_time = time.time() - submission_start
-            batch_performance['submission_times'].append(submission_time)
-            
-            # Extract performance diagnostics if available
-            perf_diag = result.get('performance_diagnostics', {})
-            if perf_diag:
-                qwen_perf = perf_diag.get('qwen_performance', {})
-                gemma_perf = perf_diag.get('gemma_performance', {})
-                combined = perf_diag.get('combined_metrics', {})
-                
-                batch_performance['qwen_metrics'].append(qwen_perf.get('tokens_per_second', 0))
-                batch_performance['gemma_metrics'].append(gemma_perf.get('tokens_per_second', 0))
-                batch_performance['parallel_efficiencies'].append(combined.get('parallel_efficiency', 0))
-                batch_performance['combined_throughput_history'].append(combined.get('combined_throughput_tokens_per_second', 0))
-                
-                # Update real-time metrics display
-                if batch_performance['qwen_metrics']:
-                    avg_qwen = sum(batch_performance['qwen_metrics']) / len(batch_performance['qwen_metrics'])
-                    avg_gemma = sum(batch_performance['gemma_metrics']) / len(batch_performance['gemma_metrics'])
-                    avg_efficiency = sum(batch_performance['parallel_efficiencies']) / len(batch_performance['parallel_efficiencies'])
-                    avg_throughput = sum(batch_performance['combined_throughput_history']) / len(batch_performance['combined_throughput_history'])
-                    
-                    qwen_metric.metric("🔧 Qwen Avg", f"{avg_qwen:.1f} tok/s")
-                    gemma_metric.metric("📝 GPT-OSS Avg", f"{avg_gemma:.1f} tok/s")
-                    efficiency_metric.metric("⚡ Efficiency", f"{avg_efficiency:.1f}x")
-                    throughput_metric.metric("🚀 Throughput", f"{avg_throughput:.1f} tok/s")
-            
-            # Validate if requested (but don't fix - causes score corruption)
-            if validator:
-                is_valid, errors = validator.validate_grading_result(result)
-                if not is_valid:
-                    print(f"⚠️ Validation errors: {errors} (NOT fixing to preserve correct scores)")
-                    # result = validator.fix_calculation_errors(result)  # DISABLED
-            
-            # Save result
-            save_grading_result(grader, submission['id'], result)
-            
-            # Show progress
-            with results_container:
-                max_score = result.get('max_points', 37.5)
-                st.success(f"✅ {display_name}: {result['final_score']:.1f}/{max_score} ({result['final_score_percentage']:.1f}%) - {submission_time:.1f}s")
-            
-            graded_count += 1
-            
-        except Exception as e:
-            # Log full error details
-            import traceback
-            error_trace = traceback.format_exc()
-            print(f"❌ GRADING ERROR for {display_name}:")
-            print(f"Error: {str(e)}")
-            print(f"Full traceback:\n{error_trace}")
-            
-            with results_container:
-                st.error(f"❌ {display_name}: Failed - {str(e)}")
-                with st.expander("Show error details"):
-                    st.code(error_trace)
-            failed_count += 1
-    
+                    with results_container:
+                        st.error(f"❌ {grade_result['display_name']}: Failed - {grade_result['error']}")
+                        with st.expander("Show error details"):
+                            st.code(grade_result['traceback'])
+                    failed_count += 1
+
+            # Update metrics display
+            if batch_performance['qwen_metrics']:
+                avg_qwen = sum(batch_performance['qwen_metrics']) / len(batch_performance['qwen_metrics'])
+                avg_gemma = sum(batch_performance['gemma_metrics']) / len(batch_performance['gemma_metrics'])
+                avg_efficiency = sum(batch_performance['parallel_efficiencies']) / len(batch_performance['parallel_efficiencies']) if batch_performance['parallel_efficiencies'] else 0
+                avg_throughput = sum(batch_performance['combined_throughput_history']) / len(batch_performance['combined_throughput_history']) if batch_performance['combined_throughput_history'] else 0
+
+                qwen_metric.metric("🔧 Qwen Avg", f"{avg_qwen:.1f} tok/s")
+                gemma_metric.metric("📝 GPT-OSS Avg", f"{avg_gemma:.1f} tok/s")
+                efficiency_metric.metric("⚡ Efficiency", f"{avg_efficiency:.1f}x")
+                throughput_metric.metric("🚀 Throughput", f"{avg_throughput:.1f} tok/s")
+
+            # Brief cooling break between batches
+            if batch_num < total_batches - 1:
+                status_text.text(f"🌡️ Cooling break before next batch... (5 seconds)")
+                time.sleep(5)
+
+    else:
+        # Sequential processing (original logic)
+        for i, (_, submission) in enumerate(submissions.iterrows()):
+
+            progress = (i + 1) / total_submissions
+            progress_bar.progress(progress)
+
+            student_name = submission['student_name'] or f"Student {submission['student_identifier']}"
+            display_name = anonymize_name(student_name, submission['student_identifier'])
+            status_text.text(f"Grading {i+1}/{total_submissions}: {display_name}")
+
+            try:
+                # Track submission start time
+                submission_start = time.time()
+
+                # Grade this submission (similar to single submission logic)
+                result = grade_submission_internal(business_grader, submission, assignment_id, grader)
+
+                # Add delay between submissions to prevent server overload and thermal throttling
+                # Give servers time to cool down and free memory
+                if i < total_submissions - 1:  # Don't delay after last submission
+                    # Every 10 submissions, take a longer cooling break
+                    if (i + 1) % 10 == 0:
+                        status_text.text(f"🌡️ Cooling break after {i+1} submissions... (30 seconds)")
+                        time.sleep(30)  # 30 second cooling break every 10 submissions
+                    else:
+                        time.sleep(2)  # 2 second delay between submissions
+
+                # Capture performance metrics from result
+                submission_time = time.time() - submission_start
+                batch_performance['submission_times'].append(submission_time)
+
+                # Extract performance diagnostics if available
+                perf_diag = result.get('performance_diagnostics', {})
+                if perf_diag:
+                    qwen_perf = perf_diag.get('qwen_performance', {})
+                    gemma_perf = perf_diag.get('gemma_performance', {})
+                    combined = perf_diag.get('combined_metrics', {})
+
+                    batch_performance['qwen_metrics'].append(qwen_perf.get('tokens_per_second', 0))
+                    batch_performance['gemma_metrics'].append(gemma_perf.get('tokens_per_second', 0))
+                    batch_performance['parallel_efficiencies'].append(combined.get('parallel_efficiency', 0))
+                    batch_performance['combined_throughput_history'].append(combined.get('combined_throughput_tokens_per_second', 0))
+
+                    # Update real-time metrics display
+                    if batch_performance['qwen_metrics']:
+                        avg_qwen = sum(batch_performance['qwen_metrics']) / len(batch_performance['qwen_metrics'])
+                        avg_gemma = sum(batch_performance['gemma_metrics']) / len(batch_performance['gemma_metrics'])
+                        avg_efficiency = sum(batch_performance['parallel_efficiencies']) / len(batch_performance['parallel_efficiencies'])
+                        avg_throughput = sum(batch_performance['combined_throughput_history']) / len(batch_performance['combined_throughput_history'])
+
+                        qwen_metric.metric("🔧 Qwen Avg", f"{avg_qwen:.1f} tok/s")
+                        gemma_metric.metric("📝 GPT-OSS Avg", f"{avg_gemma:.1f} tok/s")
+                        efficiency_metric.metric("⚡ Efficiency", f"{avg_efficiency:.1f}x")
+                        throughput_metric.metric("🚀 Throughput", f"{avg_throughput:.1f} tok/s")
+
+                # Validate if requested (but don't fix - causes score corruption)
+                if validator:
+                    is_valid, errors = validator.validate_grading_result(result)
+                    if not is_valid:
+                        print(f"⚠️ Validation errors: {errors} (NOT fixing to preserve correct scores)")
+                        # result = validator.fix_calculation_errors(result)  # DISABLED
+
+                # Save result
+                save_grading_result(grader, submission['id'], result)
+
+                # Show progress
+                with results_container:
+                    max_score = result.get('max_points', 37.5)
+                    st.success(f"✅ {display_name}: {result['final_score']:.1f}/{max_score} ({result['final_score_percentage']:.1f}%) - {submission_time:.1f}s")
+
+                graded_count += 1
+
+            except Exception as e:
+                # Log full error details
+                import traceback
+                error_trace = traceback.format_exc()
+                print(f"❌ GRADING ERROR for {display_name}:")
+                print(f"Error: {str(e)}")
+                print(f"Full traceback:\n{error_trace}")
+
+                with results_container:
+                    st.error(f"❌ {display_name}: Failed - {str(e)}")
+                    with st.expander("Show error details"):
+                        st.code(error_trace)
+                failed_count += 1
+
     # Calculate final batch performance metrics
     batch_performance['total_time'] = time.time() - batch_performance['start_time']
     
@@ -1211,49 +1339,79 @@ def save_manual_correction(grader, submission_id, score, feedback):
 def show_batch_processing_interface(grader, assignment_id, ungraded_submissions):
     """Interface for batch processing options"""
     st.subheader("📊 Batch Processing")
-    
+
     if ungraded_submissions.empty:
         st.info("No ungraded submissions for batch processing.")
         return
-    
+
     st.write(f"**{len(ungraded_submissions)} submissions ready for batch processing**")
-    
+
+    # Processing mode options
+    st.markdown("**Processing Options:**")
+    col_opt1, col_opt2 = st.columns(2)
+
+    with col_opt1:
+        use_concurrent = st.checkbox(
+            "⚡ Enable Concurrent Processing",
+            value=False,
+            help="Process multiple submissions in parallel (requires Parallax cluster)"
+        )
+
+    with col_opt2:
+        batch_size = st.selectbox(
+            "Concurrent batch size",
+            options=[2, 4, 6, 8],
+            index=1,
+            disabled=not use_concurrent,
+            help="Number of submissions to process in parallel"
+        )
+
+    # Store in session state for use by grading functions
+    st.session_state['use_concurrent'] = use_concurrent
+    st.session_state['batch_size'] = batch_size
+
     # Batch options
     col1, col2 = st.columns(2)
-    
+
     with col1:
         if st.button("🚀 Grade All & Generate Reports", type="primary"):
-            batch_grade_and_report(grader, ungraded_submissions, assignment_id)
-    
+            batch_grade_and_report(grader, ungraded_submissions, assignment_id,
+                                   use_concurrent=use_concurrent, batch_size=batch_size)
+
     with col2:
         if st.button("📊 Grade All & Export CSV"):
-            batch_grade_and_export(grader, ungraded_submissions, assignment_id)
+            batch_grade_and_export(grader, ungraded_submissions, assignment_id,
+                                   use_concurrent=use_concurrent, batch_size=batch_size)
 
-def batch_grade_and_report(grader, submissions, assignment_id):
+def batch_grade_and_report(grader, submissions, assignment_id, use_concurrent=False, batch_size=4):
     """Grade all submissions and generate reports"""
-    
-    with st.spinner("Processing batch grading and report generation..."):
-        
+
+    mode_str = f"concurrent (batch_size={batch_size})" if use_concurrent else "sequential"
+    with st.spinner(f"Processing batch grading ({mode_str}) and report generation..."):
+
         # Grade all submissions
-        grade_batch_submissions(grader, submissions, assignment_id, use_validation=True)
-        
+        grade_batch_submissions(grader, submissions, assignment_id, use_validation=True,
+                                use_concurrent=use_concurrent, batch_size=batch_size)
+
         # Generate reports for all
         st.info("Generating PDF reports...")
-        
+
         # This would call the report generation logic
         st.success("✅ Batch processing complete!")
 
-def batch_grade_and_export(grader, submissions, assignment_id):
+def batch_grade_and_export(grader, submissions, assignment_id, use_concurrent=False, batch_size=4):
     """Grade all submissions and export to CSV"""
-    
-    with st.spinner("Processing batch grading and CSV export..."):
-        
+
+    mode_str = f"concurrent (batch_size={batch_size})" if use_concurrent else "sequential"
+    with st.spinner(f"Processing batch grading ({mode_str}) and CSV export..."):
+
         # Grade all submissions
-        grade_batch_submissions(grader, submissions, assignment_id, use_validation=True)
-        
+        grade_batch_submissions(grader, submissions, assignment_id, use_validation=True,
+                                use_concurrent=use_concurrent, batch_size=batch_size)
+
         # Export to CSV
         st.info("Generating CSV export...")
-        
+
         # This would call the CSV export logic
         st.success("✅ Batch processing and export complete!")
 
