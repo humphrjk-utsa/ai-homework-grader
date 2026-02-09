@@ -16,6 +16,7 @@ from prompt_manager import PromptManager
 from notebook_validation import NotebookValidator
 from score_validator import validate_and_adjust_scores
 from output_comparator import OutputComparator, compare_and_generate_prompt
+from submission_preprocessor import SubmissionPreprocessor
 
 # Import validators
 from validators.rubric_driven_validator import RubricDrivenValidator
@@ -88,77 +89,40 @@ class BusinessAnalyticsGraderV2:
         else:
             raise ValueError("Rubric path is required - cannot grade without a rubric")
         
-        # Check for Parallax distributed inference cluster (highest priority)
-        self.use_parallax = False
-        self.parallax_client = None
+        # Check for vLLM direct inference on DGX Sparks (highest priority)
+        self.use_vllm = False
+        self.vllm_client = None
 
-        parallax_scheduler_url = os.getenv('PARALLAX_SCHEDULER_URL', 'http://169.254.150.101:3001')
         try:
-            from models.parallax_client import ParallaxClient
-            self.parallax_client = ParallaxClient(scheduler_url=parallax_scheduler_url)
-            status = self.parallax_client.get_system_status()
-            if status['distributed_ready']:
-                self.use_parallax = True
-                print(f"🚀 Using Parallax Distributed Inference Cluster:")
-                print(f"   Scheduler: {parallax_scheduler_url}")
-                print(f"   Mac Studios + DGX Sparks connected via 10Gb Thunderbolt")
-        except Exception as e:
-            print(f"⚠️ Parallax cluster not available: {e}")
-            self.use_parallax = False
-
-        # Check for disaggregated inference system (DGX prefill + Mac decode) - fallback
-        self.use_disaggregated = False
-        self.disaggregated_client = None
-
-        if not self.use_parallax and os.path.exists('disaggregated_inference/config_current.json'):
-            try:
-                from disaggregated_client import DisaggregatedClient
-                self.disaggregated_client = DisaggregatedClient()
-                self.use_disaggregated = True
-                print(f"🚀 Using Disaggregated Inference System (fallback):")
-                print(f"   DGX Sparks (prefill) + Mac Studios (decode)")
-                print(f"   Qwen: DGX Spark 1 → Mac Studio 2")
-                print(f"   GPT-OSS: DGX Spark 2 → Mac Studio 1")
-            except Exception as e:
-                print(f"⚠️ Disaggregated system failed to load: {e}")
-                import traceback
-                traceback.print_exc()
-                self.use_disaggregated = False
-        
-        # Check for distributed MLX system (lowest priority fallback)
-        self.use_distributed_mlx = False
-        self.distributed_client = None
-
-        if not self.use_parallax and not self.use_disaggregated and os.path.exists('distributed_config.json'):
-            try:
-                from models.distributed_mlx_client import DistributedMLXClient
-                
-                with open('distributed_config.json', 'r') as f:
-                    config = json.load(f)
-                
-                qwen_url = config['urls']['qwen_server']
-                gemma_url = config['urls']['gemma_server']
-                
-                self.distributed_client = DistributedMLXClient(qwen_url, gemma_url)
-                
-                status = self.distributed_client.get_system_status()
+            from models.vllm_client import VLLMClient
+            vllm_config = {}
+            if os.path.exists('cluster_config.json'):
+                with open('cluster_config.json', 'r') as f:
+                    vllm_config = json.load(f).get('vllm', {})
+            if vllm_config.get('enabled', True):
+                qwen_url = os.getenv('VLLM_QWEN_URL', vllm_config.get('qwen_server_url', 'http://169.254.150.106:8000'))
+                gptoss_url = os.getenv('VLLM_GPTOSS_URL', vllm_config.get('gptoss_server_url', 'http://169.254.150.105:8000'))
+                self.vllm_client = VLLMClient(qwen_server_url=qwen_url, gptoss_server_url=gptoss_url)
+                status = self.vllm_client.get_system_status()
                 if status['distributed_ready']:
-                    self.use_distributed_mlx = True
-                    print(f"🖥️ Using Distributed MLX System!")
-                    print(f"📡 Qwen Server: {qwen_url}")
-                    print(f"📡 GPT-OSS Server: {gemma_url}")
-            except Exception as e:
-                print(f"⚠️ Distributed MLX setup failed: {e}, using Ollama")
-        
+                    self.use_vllm = True
+                    print(f"⚡ Using vLLM Direct Inference on DGX Sparks:")
+                    print(f"   Qwen FP8: {qwen_url}")
+                    print(f"   GPT-OSS MXFP4: {gptoss_url}")
+        except Exception as e:
+            print(f"⚠️ vLLM servers not available: {e}")
+            self.use_vllm = False
+
+        # Legacy flags kept for compatibility (always False now)
+        self.use_parallax = False
+        self.use_disaggregated = False
+        self.use_distributed_mlx = False
+
         print(f"🎓 Business Analytics Grading System V2 Initialized")
-        if self.use_parallax:
-            print(f"🚀 AI Backend: Parallax Distributed Cluster")
-        elif self.use_disaggregated:
-            print(f"🔧 AI Backend: Disaggregated Inference (DGX + Mac)")
-        elif self.use_distributed_mlx:
-            print(f"🖥️ AI Backend: Distributed MLX System")
+        if self.use_vllm:
+            print(f"⚡ AI Backend: vLLM Direct Inference (DGX Sparks)")
         else:
-            print(f"🤖 AI Backend: Ollama (local)")
+            print(f"⚠️ vLLM not available — will use Ollama (local) as fallback")
             print(f"   Code Analyzer: {code_model}")
             print(f"   Feedback Generator: {feedback_model}")
         print(f"✅ 4-Layer Validation: {'Enabled' if self.systematic_validator else 'Disabled (Legacy Mode)'}")
@@ -496,12 +460,46 @@ class BusinessAnalyticsGraderV2:
             except:
                 pass
         
+        # ─── Optimize prompt content to reduce token usage ────────────────
+        preprocessor = SubmissionPreprocessor()
+
+        # 1. Paired diff: student vs solution cells side by side for comparison
+        optimized_student_code = student_code
+        optimized_solution_code = solution_code
+        if template_code and notebook_path and self.solution_path:
+            paired_diff, modified_count = preprocessor.extract_paired_diff(
+                notebook_path, self.solution_path, template_code
+            )
+            if paired_diff:
+                optimized_student_code = paired_diff
+                optimized_solution_code = "Included in paired comparison above"
+                print(f"📊 Prompt optimization: {modified_count} student-modified sections in paired comparison")
+        elif template_code and notebook_path:
+            # No solution available - fall back to student diff only
+            diff_code, diff_count = preprocessor.extract_student_diff(notebook_path, template_code)
+            if diff_code:
+                optimized_student_code = diff_code
+                print(f"📊 Prompt optimization: {diff_count} modified cells extracted (diff mode)")
+
+        # 2. Template summary instead of full template code
+        if template_code:
+            todo_count = template_code.count('YOUR CODE HERE') + template_code.upper().count('# TODO')
+            template_summary = f"Template provided with {todo_count} TODO sections for student completion."
+        else:
+            template_summary = "# No template provided"
+
+        # 3. Smart code summary for feedback prompt (2000 chars vs 800)
+        smart_code_summary = SubmissionPreprocessor.create_smart_code_summary(
+            student_code, template_code, max_chars=2000
+        )
+        # ─────────────────────────────────────────────────────────────────
+
         # Execute AI analysis in parallel
         parallel_start = time.time()
 
-        if self.use_parallax:
-            # Use Parallax distributed inference cluster (highest priority)
-            print("🚀 Using Parallax Cluster for AI analysis...")
+        if self.use_vllm:
+            # Use vLLM direct inference on DGX Sparks (highest priority)
+            print("⚡ Using vLLM Direct Inference for AI analysis...")
 
             # Build enhanced context with student changes analysis and reflections
             enhanced_context = f"{student_changes['ai_context']}\n\n{validation_summary}"
@@ -512,9 +510,9 @@ class BusinessAnalyticsGraderV2:
                 assignment_name,
                 "code_analysis",
                 assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
-                template_code=template_code if template_code else "# No template provided",
-                student_code=student_code,
-                solution_code=solution_code,
+                template_code=template_summary,
+                student_code=optimized_student_code,
+                solution_code=optimized_solution_code,
                 rubric_criteria=rubric_summary,
                 validation_context=enhanced_context
             )
@@ -524,17 +522,25 @@ class BusinessAnalyticsGraderV2:
                 "feedback",
                 assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
                 student_markdown=student_markdown,
-                student_code_summary=student_code[:800],
+                student_code_summary=smart_code_summary,
                 rubric_criteria=rubric_summary,
                 validation_context=enhanced_context,
                 reflection_comparison=reflection_comparison
             )
 
             try:
-                result = self.parallax_client.generate_parallel_sync(code_prompt, feedback_prompt)
+                result = self.vllm_client.generate_parallel_sync(code_prompt, feedback_prompt)
 
                 if result.get('error'):
-                    raise RuntimeError(f"Parallax generation failed: {result['error']}")
+                    raise RuntimeError(f"vLLM generation failed: {result['error']}")
+
+                if not result.get('code_analysis') or not result.get('feedback'):
+                    missing = []
+                    if not result.get('code_analysis'):
+                        missing.append("code_analysis")
+                    if not result.get('feedback'):
+                        missing.append("feedback")
+                    raise RuntimeError(f"vLLM returned empty results for: {', '.join(missing)}. Check prompt size vs model context length.")
 
                 # Parse the responses
                 code_analysis = self._parse_code_analysis_response(result['code_analysis'])
@@ -544,7 +550,6 @@ class BusinessAnalyticsGraderV2:
                 self.grading_stats['code_analysis_time'] = result.get('qwen_time', 0)
                 self.grading_stats['feedback_generation_time'] = result.get('gemma_time', 0)
 
-                # Extract detailed performance metrics if available
                 if 'qwen_metrics' in result:
                     qwen_metrics = result['qwen_metrics']
                     self.grading_stats['qwen_tokens_per_second'] = qwen_metrics.get('tokens_per_second', 0)
@@ -557,92 +562,23 @@ class BusinessAnalyticsGraderV2:
                     self.grading_stats['gemma_total_tokens'] = gemma_metrics.get('total_tokens', 0)
                     self.grading_stats['gemma_metrics'] = gemma_metrics
 
-                # Store parallel efficiency
                 if 'parallel_efficiency' in result:
                     self.grading_stats['parallel_efficiency'] = result['parallel_efficiency']
 
-                print(f"✅ Parallax AI analysis completed")
-                print(f"   🔧 Code Analysis: {result.get('qwen_time', 0):.1f}s")
-                print(f"   📝 Feedback: {result.get('gemma_time', 0):.1f}s")
-                print(f"   ⚡ Parallel Efficiency: {result.get('parallel_efficiency', 0):.2f}x")
+                print(f"✅ vLLM AI analysis completed")
+                print(f"   Code Analysis: {result.get('qwen_time', 0):.1f}s")
+                print(f"   Feedback: {result.get('gemma_time', 0):.1f}s")
+                print(f"   Parallel Efficiency: {result.get('parallel_efficiency', 0):.2f}x")
 
             except Exception as e:
-                print(f"⚠️ Parallax AI analysis failed: {e}")
-                print("📝 Falling back to validation-only feedback")
-                code_analysis = None
-                comprehensive_feedback = None
+                # vLLM failed — raise to halt grading and warn user
+                raise RuntimeError(
+                    f"vLLM AI analysis failed: {e}\n"
+                    f"Check that vLLM servers are running on DGX Sparks.\n"
+                    f"Qwen: {self.vllm_client.qwen_server_url}\n"
+                    f"GPT-OSS: {self.vllm_client.gptoss_server_url}"
+                ) from e
 
-        elif self.use_distributed_mlx:
-            # Use distributed MLX system
-            print("🖥️ Using Distributed MLX System for AI analysis...")
-            
-            # Build enhanced context with student changes analysis and reflections
-            enhanced_context = f"{student_changes['ai_context']}\n\n{validation_summary}"
-            if reflection_comparison:
-                enhanced_context += f"\n\n{reflection_comparison}"
-            
-            code_prompt = self.prompt_manager.get_combined_prompt(
-                assignment_name,
-                "code_analysis",
-                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
-                template_code=template_code if template_code else "# No template provided",
-                student_code=student_code,
-                solution_code=solution_code,
-                rubric_criteria=rubric_summary,
-                validation_context=enhanced_context
-            )
-            
-            feedback_prompt = self.prompt_manager.get_combined_prompt(
-                assignment_name,
-                "feedback",
-                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
-                student_markdown=student_markdown,
-                student_code_summary=student_code[:800],
-                rubric_criteria=rubric_summary,
-                validation_context=enhanced_context,
-                reflection_comparison=reflection_comparison
-            )
-            
-            try:
-                result = self.distributed_client.generate_parallel_sync(code_prompt, feedback_prompt)
-                
-                if result.get('error'):
-                    raise RuntimeError(f"Distributed MLX generation failed: {result['error']}")
-                
-                # Parse the responses
-                code_analysis = self._parse_code_analysis_response(result['code_analysis'])
-                comprehensive_feedback = self._parse_feedback_response(result['feedback'])
-                
-                # Update timing stats with detailed metrics
-                self.grading_stats['code_analysis_time'] = result.get('qwen_time', 0)
-                self.grading_stats['feedback_generation_time'] = result.get('gemma_time', 0)
-                
-                # Extract detailed performance metrics if available
-                if 'qwen_metrics' in result:
-                    qwen_metrics = result['qwen_metrics']
-                    self.grading_stats['qwen_tokens_per_second'] = qwen_metrics.get('tokens_per_second', 0)
-                    self.grading_stats['qwen_total_tokens'] = qwen_metrics.get('total_tokens', 0)
-                    self.grading_stats['qwen_prompt_eval_time'] = qwen_metrics.get('prompt_eval_time', 0)
-                
-                if 'gemma_metrics' in result:
-                    gemma_metrics = result['gemma_metrics']
-                    self.grading_stats['gemma_tokens_per_second'] = gemma_metrics.get('tokens_per_second', 0)
-                    self.grading_stats['gemma_total_tokens'] = gemma_metrics.get('total_tokens', 0)
-                    self.grading_stats['gemma_prompt_eval_time'] = gemma_metrics.get('prompt_eval_time', 0)
-                
-                # Store parallel efficiency
-                if 'parallel_efficiency' in result:
-                    self.grading_stats['parallel_efficiency'] = result['parallel_efficiency']
-                
-                print(f"✅ AI analysis completed")
-                print(f"   🔧 Qwen: {result.get('qwen_time', 0):.1f}s")
-                print(f"   📝 GPT-OSS: {result.get('gemma_time', 0):.1f}s")
-                
-            except Exception as e:
-                print(f"⚠️ AI analysis failed: {e}")
-                print("📝 Using validation-only feedback")
-                code_analysis = None
-                comprehensive_feedback = None
         else:
             # Use Ollama system (fallback)
             print("🤖 Using Ollama for AI analysis...")
@@ -653,13 +589,13 @@ class BusinessAnalyticsGraderV2:
                 
                 # Submit both tasks simultaneously with validation context
                 future_code = self.executor.submit(
-                    self._execute_ollama_code_analysis, 
-                    student_code, template_code, solution_code, assignment_info, validation_results
+                    self._execute_ollama_code_analysis,
+                    optimized_student_code, template_summary, optimized_solution_code, assignment_info, validation_results
                 )
-                
+
                 future_feedback = self.executor.submit(
                     self._execute_ollama_feedback_generation,
-                    student_code, student_markdown, assignment_info, validation_results
+                    student_code, student_markdown, assignment_info, validation_results, smart_code_summary
                 )
                 
                 # Wait for both results
@@ -691,21 +627,22 @@ class BusinessAnalyticsGraderV2:
         total_time = time.time() - start_time
         self.grading_stats['total_time'] = total_time
         
-        # Add performance diagnostics if using disaggregated system
-        if self.use_disaggregated and 'qwen_metrics' in self.grading_stats and 'gemma_metrics' in self.grading_stats:
+        # Add performance diagnostics if using vLLM or disaggregated system
+        if (self.use_vllm or self.use_disaggregated) and 'qwen_metrics' in self.grading_stats and 'gemma_metrics' in self.grading_stats:
             qwen_m = self.grading_stats['qwen_metrics']
             gemma_m = self.grading_stats['gemma_metrics']
-            
+            model_label = 'vLLM (DGX Spark)' if self.use_vllm else 'Disaggregated (DGX+Mac)'
+
             structured_feedback['performance_diagnostics'] = {
                 'qwen_performance': {
-                    'tokens_per_second': qwen_m.get('decode_speed', 0),
+                    'tokens_per_second': qwen_m.get('tokens_per_second', qwen_m.get('decode_speed', 0)),
                     'generation_time_seconds': self.grading_stats.get('code_analysis_time', 0),
-                    'model': 'Disaggregated (DGX+Mac)'
+                    'model': model_label
                 },
                 'gemma_performance': {
-                    'tokens_per_second': gemma_m.get('decode_speed', 0),
+                    'tokens_per_second': gemma_m.get('tokens_per_second', gemma_m.get('decode_speed', 0)),
                     'generation_time_seconds': self.grading_stats.get('feedback_generation_time', 0),
-                    'model': 'Disaggregated (DGX+Mac)'
+                    'model': model_label
                 },
                 'combined_metrics': {
                     'parallel_efficiency': self.grading_stats.get('parallel_efficiency', 0),
@@ -1032,56 +969,22 @@ class BusinessAnalyticsGraderV2:
         
         # Create enhanced context for AI
         context = f"""
-IMPORTANT GRADING CONTEXT:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 TEMPLATE vs STUDENT CODE ANALYSIS:
+GRADING CONTEXT:
 - Template provided: {'Yes' if template_code else 'No'}
-- Student wrote: {len(student_written)} lines of new code
-- Template unchanged: {len(template_unchanged)} lines
+- Student wrote {len(student_written)} new lines of code (template unchanged: {len(template_unchanged)} lines)
+- NOTE: Student submission below shows ONLY modified cells (template boilerplate removed)
 
-🎯 GRADING RULES - CRITICAL:
-1. ONLY evaluate code the STUDENT wrote (not template code)
-2. IGNORE all TODO comments and placeholder comments
-3. IGNORE commented-out code
-4. Compare STUDENT code to SOLUTION code (not template)
-5. If student used template code correctly, that's GOOD (not bad)
+GRADING PRIORITIES (in order):
+1. OUTPUT CORRECTNESS - Does output match solution? If yes = FULL CREDIT regardless of style
+2. LOGIC CORRECTNESS - Is the analytical approach sound?
+3. CODE QUALITY - Are functions used appropriately?
+4. VARIABLE NAMING - Least important; different names with correct output = FULL CREDIT
 
-🔬 OUTPUT VALIDATION RULES - MOST IMPORTANT:
-1. IF OUTPUT MATCHES SOLUTION → Student's approach is CORRECT (even if different variable names)
-2. IF OUTPUT MATCHES → DO NOT penalize for different variable names or code style
-3. IF OUTPUT MATCHES → DO NOT suggest "fixing" working code
-4. ONLY flag issues when OUTPUT DOES NOT MATCH or is MISSING
-5. Different approach with same result = GOOD, not bad!
-
-EXAMPLES:
-✅ CORRECT: Student used "my_analysis" instead of "customer_metrics" but output matches → FULL CREDIT
-✅ CORRECT: Student used different grouping order but got same result → FULL CREDIT
-❌ WRONG: Student used inner_join instead of full_join and output has wrong row count → DEDUCT POINTS
-
-⚠️ COMMON MISTAKES TO AVOID:
-- DO NOT penalize students for template code they didn't write
-- DO NOT suggest fixing code that was already correct in template
-- DO NOT count TODO comments as missing work if code is present
-- DO NOT flag issues in commented-out code
+KEY RULES:
+- ONLY evaluate code the STUDENT wrote, not template boilerplate
+- Different approach with same result = GOOD, not bad
 - DO NOT penalize for different variable names if outputs match
-- DO NOT penalize for different code style if outputs match
-- DO NOT suggest "missing variables" if the work was done with different names
-
-✅ WHAT TO FOCUS ON:
-- Code the student actually wrote
-- OUTPUT ACCURACY (does it match solution?)
-- Logic errors that cause WRONG outputs
-- Missing required functionality (not missing variable names)
-- Incorrect use of R functions that cause WRONG results
-
-🚨 PRIORITY ORDER:
-1. Output correctness (most important)
-2. Logic correctness
-3. Code quality
-4. Variable naming (least important)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- ONLY flag issues when OUTPUT DOES NOT MATCH or is MISSING
 """
         
         changes_summary['ai_context'] = context
@@ -1171,7 +1074,8 @@ EXAMPLES:
         return self._parse_code_analysis_response(response)
     
     def _execute_ollama_feedback_generation(self, student_code: str, student_markdown: str,
-                                           assignment_info: Dict, validation_results: Dict = None) -> Dict[str, Any]:
+                                           assignment_info: Dict, validation_results: Dict = None,
+                                           smart_code_summary: str = None) -> Dict[str, Any]:
         """Execute feedback generation using Ollama"""
         start_time = time.time()
         
@@ -1187,7 +1091,7 @@ EXAMPLES:
                 assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
                 assignment_name=assignment_name,
                 student_markdown=student_markdown,
-                student_code_summary=student_code[:800]
+                student_code_summary=smart_code_summary or student_code[:800]
             )
         else:
             prompt = self.prompt_manager.get_combined_prompt(
@@ -1195,7 +1099,7 @@ EXAMPLES:
                 "feedback",
                 assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
                 student_markdown=student_markdown,
-                student_code_summary=student_code[:800]
+                student_code_summary=smart_code_summary or student_code[:800]
             )
         
         response = self._generate_with_ollama(self.feedback_model, prompt, max_tokens=3500)

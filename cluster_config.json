@@ -1,4 +1,14 @@
 {
+  "vllm": {
+    "enabled": true,
+    "qwen_server_url": "http://169.254.150.106:8000",
+    "gptoss_server_url": "http://169.254.150.105:8000",
+    "models": {
+      "code_analysis": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "feedback": "openai/gpt-oss-120b"
+    },
+    "timeout": 300
+  },
   "parallax": {
     "scheduler_url": "http://169.254.150.101:3001",
     "enabled": true,

@@ -1,0 +1,101 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-08T14:39:13",
+    "type": "vllm_benchmark",
+    "servers": [
+      "http://169.254.150.106:8000"
+    ],
+    "model": "openai/gpt-oss-120b",
+    "prompt_tokens_target": 2500,
+    "max_tokens": 500,
+    "concurrent": 1,
+    "iterations": 3
+  },
+  "results": [
+    [
+      {
+        "request_id": 0,
+        "server": "http://169.254.150.106:8000",
+        "prompt_tokens": 1637,
+        "completion_tokens": 500,
+        "ttft": 4.46797391702421,
+        "total_time": 14.871387167018838,
+        "decode_time": 10.403413249994628,
+        "prefill_speed": 366.38530806157564,
+        "decode_speed": 48.06114954630473,
+        "throughput": 143.698767034951,
+        "generated_text_length": 1646,
+        "error": null
+      }
+    ],
+    [
+      {
+        "request_id": 0,
+        "server": "http://169.254.150.106:8000",
+        "prompt_tokens": 1637,
+        "completion_tokens": 500,
+        "ttft": 4.459688124945387,
+        "total_time": 14.885652250028215,
+        "decode_time": 10.425964125082828,
+        "prefill_speed": 367.06602662266806,
+        "decode_speed": 47.957195517016785,
+        "throughput": 143.56105893821007,
+        "generated_text_length": 1646,
+        "error": null
+      }
+    ],
+    [
+      {
+        "request_id": 0,
+        "server": "http://169.254.150.106:8000",
+        "prompt_tokens": 1637,
+        "completion_tokens": 500,
+        "ttft": 4.469294207985513,
+        "total_time": 14.909385874983855,
+        "decode_time": 10.440091666998342,
+        "prefill_speed": 366.2770728038198,
+        "decode_speed": 47.892299794696754,
+        "throughput": 143.33253012021288,
+        "generated_text_length": 1646,
+        "error": null
+      }
+    ]
+  ],
+  "summary": {
+    "ttft": {
+      "mean": 4.46565208331837,
+      "median": 4.46797391702421,
+      "stdev": 0.005206956084088723,
+      "min": 4.459688124945387,
+      "max": 4.469294207985513
+    },
+    "prefill_speed": {
+      "mean": 366.5761358293545,
+      "median": 366.38530806157564,
+      "stdev": 0.4276955222882382,
+      "min": 366.2770728038198,
+      "max": 367.06602662266806
+    },
+    "decode_speed": {
+      "mean": 47.970214952672755,
+      "median": 47.957195517016785,
+      "stdev": 0.08517446174246757,
+      "min": 47.892299794696754,
+      "max": 48.06114954630473
+    },
+    "total_time": {
+      "mean": 14.888808430676969,
+      "median": 14.885652250028215,
+      "stdev": 0.0191949618121091,
+      "min": 14.871387167018838,
+      "max": 14.909385874983855
+    },
+    "throughput": {
+      "mean": 143.53078536445798,
+      "median": 143.56105893821007,
+      "stdev": 0.18498577345303374,
+      "min": 143.33253012021288,
+      "max": 143.698767034951
+    }
+  }
+}

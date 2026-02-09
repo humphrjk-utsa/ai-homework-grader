@@ -1,0 +1,184 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-07T14:06:10.583786",
+    "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "cluster_config": "full_cluster",
+    "scheduler_url": "http://169.254.150.101:3001",
+    "max_tokens": 500,
+    "iterations": 3,
+    "prompt_sizes": [
+      2500,
+      6500
+    ]
+  },
+  "results": {
+    "2500": {
+      "target_prompt_tokens": 2500,
+      "actual_prompt_tokens": null,
+      "iterations": [
+        {
+          "ttft": null,
+          "total_time": null,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "prefill_speed": null,
+          "decode_speed": null,
+          "throughput": null,
+          "generated_text_length": 0,
+          "error": "Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions",
+          "streaming": false,
+          "iteration": 1
+        },
+        {
+          "ttft": null,
+          "total_time": null,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "prefill_speed": null,
+          "decode_speed": null,
+          "throughput": null,
+          "generated_text_length": 0,
+          "error": "Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions",
+          "streaming": false,
+          "iteration": 2
+        },
+        {
+          "ttft": null,
+          "total_time": null,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "prefill_speed": null,
+          "decode_speed": null,
+          "throughput": null,
+          "generated_text_length": 0,
+          "error": "Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions",
+          "streaming": false,
+          "iteration": 3
+        }
+      ],
+      "statistics": {
+        "ttft": {
+          "mean": null,
+          "median": null,
+          "stdev": null,
+          "min": null,
+          "max": null
+        },
+        "total_time": {
+          "mean": null,
+          "median": null,
+          "stdev": null,
+          "min": null,
+          "max": null
+        },
+        "prefill_speed": {
+          "mean": null,
+          "median": null,
+          "stdev": null,
+          "min": null,
+          "max": null
+        },
+        "decode_speed": {
+          "mean": null,
+          "median": null,
+          "stdev": null,
+          "min": null,
+          "max": null
+        },
+        "throughput": {
+          "mean": null,
+          "median": null,
+          "stdev": null,
+          "min": null,
+          "max": null
+        }
+      },
+      "successful_runs": 0,
+      "total_runs": 3
+    },
+    "6500": {
+      "target_prompt_tokens": 6500,
+      "actual_prompt_tokens": null,
+      "iterations": [
+        {
+          "ttft": null,
+          "total_time": null,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "prefill_speed": null,
+          "decode_speed": null,
+          "throughput": null,
+          "generated_text_length": 0,
+          "error": "Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions",
+          "streaming": false,
+          "iteration": 1
+        },
+        {
+          "ttft": null,
+          "total_time": null,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "prefill_speed": null,
+          "decode_speed": null,
+          "throughput": null,
+          "generated_text_length": 0,
+          "error": "Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions",
+          "streaming": false,
+          "iteration": 2
+        },
+        {
+          "ttft": null,
+          "total_time": null,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "prefill_speed": null,
+          "decode_speed": null,
+          "throughput": null,
+          "generated_text_length": 0,
+          "error": "Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions",
+          "streaming": false,
+          "iteration": 3
+        }
+      ],
+      "statistics": {
+        "ttft": {
+          "mean": null,
+          "median": null,
+          "stdev": null,
+          "min": null,
+          "max": null
+        },
+        "total_time": {
+          "mean": null,
+          "median": null,
+          "stdev": null,
+          "min": null,
+          "max": null
+        },
+        "prefill_speed": {
+          "mean": null,
+          "median": null,
+          "stdev": null,
+          "min": null,
+          "max": null
+        },
+        "decode_speed": {
+          "mean": null,
+          "median": null,
+          "stdev": null,
+          "min": null,
+          "max": null
+        },
+        "throughput": {
+          "mean": null,
+          "median": null,
+          "stdev": null,
+          "min": null,
+          "max": null
+        }
+      },
+      "successful_runs": 0,
+      "total_runs": 3
+    }
+  }
+}

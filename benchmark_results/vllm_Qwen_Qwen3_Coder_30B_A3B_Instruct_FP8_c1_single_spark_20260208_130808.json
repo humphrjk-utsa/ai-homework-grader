@@ -1,0 +1,101 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-08T13:08:08",
+    "type": "vllm_benchmark",
+    "servers": [
+      "http://169.254.150.106:8000"
+    ],
+    "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+    "prompt_tokens_target": 2500,
+    "max_tokens": 500,
+    "concurrent": 1,
+    "iterations": 3
+  },
+  "results": [
+    [
+      {
+        "request_id": 0,
+        "server": "http://169.254.150.106:8000",
+        "prompt_tokens": 1577,
+        "completion_tokens": 500,
+        "ttft": 0.08557070896495134,
+        "total_time": 10.184519917005673,
+        "decode_time": 10.098949208040722,
+        "prefill_speed": 18429.203393019907,
+        "decode_speed": 49.51010146698263,
+        "throughput": 203.93695696268557,
+        "generated_text_length": 2440,
+        "error": null
+      }
+    ],
+    [
+      {
+        "request_id": 0,
+        "server": "http://169.254.150.106:8000",
+        "prompt_tokens": 1577,
+        "completion_tokens": 500,
+        "ttft": 0.07593466702383012,
+        "total_time": 10.165900750085711,
+        "decode_time": 10.089966083061881,
+        "prefill_speed": 20767.852968988456,
+        "decode_speed": 49.55418044857005,
+        "throughput": 204.31047391275075,
+        "generated_text_length": 2440,
+        "error": null
+      }
+    ],
+    [
+      {
+        "request_id": 0,
+        "server": "http://169.254.150.106:8000",
+        "prompt_tokens": 1577,
+        "completion_tokens": 500,
+        "ttft": 0.07606087496969849,
+        "total_time": 10.150480415904894,
+        "decode_time": 10.074419540935196,
+        "prefill_speed": 20733.392833414724,
+        "decode_speed": 49.630650973821325,
+        "throughput": 204.62085683604954,
+        "generated_text_length": 2440,
+        "error": null
+      }
+    ]
+  ],
+  "summary": {
+    "ttft": {
+      "mean": 0.07918875031949331,
+      "median": 0.07606087496969849,
+      "stdev": 0.005527298546817639,
+      "min": 0.07593466702383012,
+      "max": 0.08557070896495134
+    },
+    "prefill_speed": {
+      "mean": 19976.816398474362,
+      "median": 20733.392833414724,
+      "stdev": 1340.3829252212852,
+      "min": 18429.203393019907,
+      "max": 20767.852968988456
+    },
+    "decode_speed": {
+      "mean": 49.564977629791336,
+      "median": 49.55418044857005,
+      "stdev": 0.060995739535699874,
+      "min": 49.51010146698263,
+      "max": 49.630650973821325
+    },
+    "total_time": {
+      "mean": 10.166967027665427,
+      "median": 10.165900750085711,
+      "stdev": 0.01704478277084306,
+      "min": 10.150480415904894,
+      "max": 10.184519917005673
+    },
+    "throughput": {
+      "mean": 204.28942923716195,
+      "median": 204.31047391275075,
+      "stdev": 0.34243527559933395,
+      "min": 203.93695696268557,
+      "max": 204.62085683604954
+    }
+  }
+}

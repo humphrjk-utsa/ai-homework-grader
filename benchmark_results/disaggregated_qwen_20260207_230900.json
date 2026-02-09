@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-07T23:09:00",
+    "type": "disaggregated",
+    "prefill_server": "http://169.254.150.106:8800",
+    "decode_model": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-8bit",
+    "prompt_tokens_target": 6500,
+    "max_tokens": 500
+  },
+  "results": [
+    {
+      "prompt_tokens": 4085,
+      "completion_tokens": 500,
+      "spark_prefill_time": 5.646380994468927,
+      "network_transfer_time": 0.6459206305444241,
+      "kv_size_mb": 401.57184,
+      "deserialize_time": 0.02215833298396319,
+      "cache_inject_time": 5.683302879333496e-05,
+      "decode_time": 13.70778383302968,
+      "total_time": 20.022330458043143,
+      "prefill_speed": 723.472256654586,
+      "decode_speed": 36.475626263905745,
+      "effective_transfer_gbps": 0.6217046197479852,
+      "throughput": 228.99432259435943
+    },
+    {
+      "prompt_tokens": 4085,
+      "completion_tokens": 500,
+      "spark_prefill_time": 6.465383671224117,
+      "network_transfer_time": 0.6581079537281767,
+      "kv_size_mb": 401.57184,
+      "deserialize_time": 0.022453917074017227,
+      "cache_inject_time": 6.0249934904277325e-05,
+      "decode_time": 13.670367208076641,
+      "total_time": 20.81640537502244,
+      "prefill_speed": 631.8263861402938,
+      "decode_speed": 36.57546226736273,
+      "effective_transfer_gbps": 0.6101914400594896,
+      "throughput": 220.25896966349106
+    },
+    {
+      "prompt_tokens": 4085,
+      "completion_tokens": 500,
+      "spark_prefill_time": 6.090816831216216,
+      "network_transfer_time": 0.6547500437591225,
+      "kv_size_mb": 401.57184,
+      "deserialize_time": 0.022158458014018834,
+      "cache_inject_time": 6.183295045047998e-05,
+      "decode_time": 13.670101208030246,
+      "total_time": 20.43792079098057,
+      "prefill_speed": 670.6818006845735,
+      "decode_speed": 36.576173972017436,
+      "effective_transfer_gbps": 0.6133208295710099,
+      "throughput": 224.33788871632186
+    }
+  ],
+  "summary": {
+    "spark_prefill_time": 6.06752716563642,
+    "network_transfer_time": 0.6529262093439078,
+    "decode_time": 13.68275074971219,
+    "total_time": 20.425552208015386,
+    "prefill_speed": 675.3268144931511,
+    "decode_speed": 36.54242083442864,
+    "throughput": 224.53039365805748
+  }
+}

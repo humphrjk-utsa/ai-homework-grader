@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-07T17:51:21.538571",
+    "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "cluster_config": "sparks_only",
+    "scheduler_url": "http://169.254.150.101:3001",
+    "max_tokens": 500,
+    "iterations": 1,
+    "prompt_sizes": [
+      2500
+    ]
+  },
+  "results": {
+    "2500": {
+      "target_prompt_tokens": 2500,
+      "actual_prompt_tokens": 1691,
+      "iterations": [
+        {
+          "ttft": 1.0696,
+          "total_time": 20.2794,
+          "prompt_tokens": 1691,
+          "completion_tokens": 500,
+          "prefill_speed": 1580.9,
+          "decode_speed": 26.0,
+          "throughput": 108.0,
+          "generated_text_length": 3246,
+          "error": null,
+          "streaming": true,
+          "iteration": 1
+        }
+      ],
+      "statistics": {
+        "ttft": {
+          "mean": 1.0696,
+          "median": 1.0696,
+          "stdev": 0,
+          "min": 1.0696,
+          "max": 1.0696
+        },
+        "total_time": {
+          "mean": 20.2794,
+          "median": 20.2794,
+          "stdev": 0,
+          "min": 20.2794,
+          "max": 20.2794
+        },
+        "prefill_speed": {
+          "mean": 1580.9,
+          "median": 1580.9,
+          "stdev": 0,
+          "min": 1580.9,
+          "max": 1580.9
+        },
+        "decode_speed": {
+          "mean": 26.0,
+          "median": 26.0,
+          "stdev": 0,
+          "min": 26.0,
+          "max": 26.0
+        },
+        "throughput": {
+          "mean": 108.0,
+          "median": 108.0,
+          "stdev": 0,
+          "min": 108.0,
+          "max": 108.0
+        }
+      },
+      "successful_runs": 1,
+      "total_runs": 1
+    }
+  }
+}

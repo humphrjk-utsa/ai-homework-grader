@@ -1,0 +1,54 @@
+
+======================================================================
+BENCHMARK: Qwen/Qwen3-Coder-30B-A3B-Instruct
+Config: full_cluster | Max tokens: 500 | Iterations: 3
+Scheduler: http://169.254.150.101:3001
+======================================================================
+
+Verifying cluster is online...
+  Running warmup request...
+  Warmup returned status 500
+
+--- Prompt size: ~2500 tokens ---
+  Generated prompt: 10000 chars (targeting ~2500 tokens)
+
+  Iteration 1/3...
+    ERROR: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    Falling back to non-streaming mode (TTFT unavailable)...
+    ERROR: Fallback failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    FAILED: Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+
+  Iteration 2/3...
+    ERROR: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    Falling back to non-streaming mode (TTFT unavailable)...
+    ERROR: Fallback failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    FAILED: Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+
+  Iteration 3/3...
+    ERROR: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    Falling back to non-streaming mode (TTFT unavailable)...
+    ERROR: Fallback failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    FAILED: Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+
+--- Prompt size: ~6500 tokens ---
+  Generated prompt: 26000 chars (targeting ~6500 tokens)
+
+  Iteration 1/3...
+    ERROR: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    Falling back to non-streaming mode (TTFT unavailable)...
+    ERROR: Fallback failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    FAILED: Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+
+  Iteration 2/3...
+    ERROR: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    Falling back to non-streaming mode (TTFT unavailable)...
+    ERROR: Fallback failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    FAILED: Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+
+  Iteration 3/3...
+    ERROR: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    Falling back to non-streaming mode (TTFT unavailable)...
+    ERROR: Fallback failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+    FAILED: Non-streaming fallback also failed: 500 Server Error: Internal Server Error for url: http://169.254.150.101:3001/v1/chat/completions
+
+Results saved to: /Users/humphrjk/Library/CloudStorage/OneDrive-ionxs.ai/analytics/ai-homework-grader/benchmark_results/full_cluster_Qwen_Qwen3-Coder-30B-A3B-Instruct_20260207_140610.json

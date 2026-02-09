@@ -26,11 +26,11 @@ class DisaggregatedClient:
     Maintains backward compatibility with the old llama.cpp KV cache interface.
     """
 
-    def __init__(self, config_path: str = "parallax_config.json"):
+    def __init__(self, config_path: str = "cluster_config.json"):
         """Initialize Parallax client with configuration
 
         Args:
-            config_path: Path to Parallax config (defaults to parallax_config.json)
+            config_path: Path to Parallax config (defaults to cluster_config.json)
                         Falls back to disaggregated_inference/config_current.json for compatibility
         """
         # Try loading Parallax config first

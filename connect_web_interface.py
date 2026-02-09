@@ -644,12 +644,15 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
     else:
         st.info("🤖 **Parallel Two-Model Processing**: Code analysis + feedback generation running simultaneously")
 
-    # Check if Parallax is available for concurrent processing
-    parallax_available = business_grader.use_parallax if hasattr(business_grader, 'use_parallax') else False
-    if use_concurrent and parallax_available:
-        st.success(f"⚡ **Concurrent Processing Enabled**: Processing {batch_size} submissions in parallel")
+    # Check if a high-performance backend is available for concurrent processing
+    vllm_available = getattr(business_grader, 'use_vllm', False)
+    parallax_available = getattr(business_grader, 'use_parallax', False)
+    high_perf_available = vllm_available or parallax_available
+    if use_concurrent and high_perf_available:
+        backend_name = "vLLM (DGX Sparks)" if vllm_available else "Parallax Cluster"
+        st.success(f"⚡ **Concurrent Processing Enabled**: Processing {batch_size} submissions in parallel via {backend_name}")
     elif use_concurrent:
-        st.warning("⚠️ Concurrent processing requires Parallax cluster - falling back to sequential")
+        st.warning("⚠️ Concurrent processing requires vLLM or Parallax cluster - falling back to sequential")
         use_concurrent = False
 
     # Performance metrics tracking
@@ -682,8 +685,8 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
     graded_count = 0
     failed_count = 0
 
-    # Concurrent processing mode (when Parallax available)
-    if use_concurrent and parallax_available:
+    # Concurrent processing mode (when vLLM or Parallax available)
+    if use_concurrent and high_perf_available:
         import concurrent.futures
 
         def grade_single_concurrent(submission_tuple):
@@ -702,6 +705,16 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
                     'submission_id': submission['id'],
                     'result': result,
                     'submission_time': submission_time
+                }
+            except RuntimeError as e:
+                # vLLM backend failure - propagate distinctly so batch can halt
+                import traceback
+                return {
+                    'success': False,
+                    'vllm_failure': True,
+                    'display_name': display_name,
+                    'error': str(e),
+                    'traceback': traceback.format_exc()
                 }
             except Exception as e:
                 import traceback
@@ -729,6 +742,32 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
                 results = [f.result() for f in concurrent.futures.as_completed(futures)]
 
             batch_time = time.time() - batch_start_time
+
+            # Check for vLLM backend failures - halt batch if detected
+            vllm_failures = [r for r in results if r.get('vllm_failure')]
+            if vllm_failures:
+                # Save any successful results from this batch first
+                for grade_result in results:
+                    if grade_result['success']:
+                        save_grading_result(grader, grade_result['submission_id'], grade_result['result'])
+                        graded_count += 1
+
+                # Show halt warning
+                failure_detail = vllm_failures[0]['error']
+                with results_container:
+                    st.error(
+                        f"**vLLM Backend Failure** - Batch grading halted after {graded_count} submissions.\n\n"
+                        f"```\n{failure_detail}\n```"
+                    )
+                    st.warning(
+                        "**The vLLM servers on the DGX Sparks appear to be down.**\n\n"
+                        "The system can fall back to Ollama on the Mac Studios, but inference will be significantly slower.\n\n"
+                        "**To continue:**\n"
+                        "1. Check and restart the vLLM servers, then re-run the batch\n"
+                        "2. Or restart the grader with vLLM servers offline to use Ollama fallback"
+                    )
+                failed_count += len(vllm_failures)
+                break  # HALT - do not process more batches
 
             # Process batch results
             for grade_result in results:
@@ -863,6 +902,30 @@ def grade_batch_submissions(grader, submissions, assignment_id, use_validation=T
                     st.success(f"✅ {display_name}: {result['final_score']:.1f}/{max_score} ({result['final_score_percentage']:.1f}%) - {submission_time:.1f}s")
 
                 graded_count += 1
+
+            except RuntimeError as e:
+                # vLLM backend failure - halt batch and warn user
+                import traceback
+                error_trace = traceback.format_exc()
+                print(f"🛑 vLLM BACKEND FAILURE at {display_name}:")
+                print(f"Error: {str(e)}")
+                print(f"Full traceback:\n{error_trace}")
+
+                with results_container:
+                    st.error(
+                        f"**vLLM Backend Failure** - Batch grading halted at {display_name} "
+                        f"({graded_count}/{total_submissions} completed).\n\n"
+                        f"```\n{str(e)}\n```"
+                    )
+                    st.warning(
+                        "**The vLLM servers on the DGX Sparks appear to be down.**\n\n"
+                        "The system can fall back to Ollama on the Mac Studios, but inference will be significantly slower.\n\n"
+                        "**To continue:**\n"
+                        "1. Check and restart the vLLM servers, then re-run the batch\n"
+                        "2. Or restart the grader with vLLM servers offline to use Ollama fallback"
+                    )
+                failed_count += 1
+                break  # HALT - do not continue grading
 
             except Exception as e:
                 # Log full error details
@@ -1168,32 +1231,16 @@ def generate_pdf_report(student_name, assignment_title, result):
     """Generate PDF report with comprehensive feedback from Business Analytics Grader"""
     
     try:
-        # Convert result to format expected by report generator with comprehensive feedback
+        # Pass full result to report generator
         analysis_result = {
             'total_score': result['final_score'],
             'max_score': result.get('max_points', 37.5),
-            'element_scores': {
-                'technical_execution': result['component_scores']['technical_points'],
-                'business_thinking': result['component_scores']['business_points'],
-                'data_analysis': result['component_scores']['analysis_points'],
-                'communication': result['component_scores']['communication_points']
-            },
-            # Include comprehensive feedback from Business Analytics Grader
+            # Section-level validation data for breakdown table
+            'validation_results': result.get('validation_results', {}),
+            # AI-generated feedback
             'comprehensive_feedback': result.get('comprehensive_feedback', {}),
-            # Include technical analysis from Business Analytics Grader
             'technical_analysis': result.get('technical_analysis', {}),
-            # Legacy support
-            'detailed_feedback': [
-                f"Technical Execution: {result['component_scores']['technical_points']:.1f}/9.375 points",
-                f"Business Thinking: {result['component_scores']['business_points']:.1f}/11.25 points",
-                f"Data Analysis: {result['component_scores']['analysis_points']:.1f}/9.375 points",
-                f"Communication: {result['component_scores']['communication_points']:.1f}/7.5 points"
-            ],
-            'overall_assessment': result.get('comprehensive_feedback', {}).get('instructor_comments', 'Good work!'),
-            # Add grading metadata
-            'grading_method': result.get('grading_method', 'business_analytics_system'),
             'grading_timestamp': result.get('grading_timestamp', ''),
-            'parallel_processing': result.get('parallel_processing', False)
         }
         
         # Generate report

@@ -1,0 +1,144 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-08T16:01:35",
+    "type": "vllm_benchmark",
+    "servers": [
+      "http://169.254.150.106:8000",
+      "http://169.254.150.105:8000"
+    ],
+    "model": "openai/gpt-oss-120b",
+    "prompt_tokens_target": 6500,
+    "max_tokens": 500,
+    "concurrent": 2,
+    "iterations": 3
+  },
+  "results": [
+    [
+      {
+        "request_id": 0,
+        "server": "http://169.254.150.106:8000",
+        "prompt_tokens": 4145,
+        "completion_tokens": 500,
+        "ttft": 5.736284332931973,
+        "total_time": 15.1150322080357,
+        "decode_time": 9.378747875103727,
+        "prefill_speed": 722.5931908925052,
+        "decode_speed": 53.31202060855806,
+        "throughput": 307.3099637545297,
+        "generated_text_length": 1459,
+        "error": null
+      },
+      {
+        "request_id": 1,
+        "server": "http://169.254.150.105:8000",
+        "prompt_tokens": 4145,
+        "completion_tokens": 500,
+        "ttft": 5.68394250003621,
+        "total_time": 15.869539042003453,
+        "decode_time": 10.185596541967243,
+        "prefill_speed": 729.2473489965098,
+        "decode_speed": 49.08892649928486,
+        "throughput": 292.6991129172452,
+        "generated_text_length": 1459,
+        "error": null
+      }
+    ],
+    [
+      {
+        "request_id": 0,
+        "server": "http://169.254.150.106:8000",
+        "prompt_tokens": 4145,
+        "completion_tokens": 500,
+        "ttft": 5.740736833075061,
+        "total_time": 15.13138170808088,
+        "decode_time": 9.390644875005819,
+        "prefill_speed": 722.0327495450971,
+        "decode_speed": 53.24447965557745,
+        "throughput": 306.97791448347033,
+        "generated_text_length": 1459,
+        "error": null
+      },
+      {
+        "request_id": 1,
+        "server": "http://169.254.150.105:8000",
+        "prompt_tokens": 4145,
+        "completion_tokens": 500,
+        "ttft": 4.362221457995474,
+        "total_time": 14.944133665994741,
+        "decode_time": 10.581912207999267,
+        "prefill_speed": 950.2039362083896,
+        "decode_speed": 47.250439256340755,
+        "throughput": 310.8243076391682,
+        "generated_text_length": 1624,
+        "error": null
+      }
+    ],
+    [
+      {
+        "request_id": 0,
+        "server": "http://169.254.150.106:8000",
+        "prompt_tokens": 4145,
+        "completion_tokens": 500,
+        "ttft": 5.749114457983524,
+        "total_time": 15.160933666978963,
+        "decode_time": 9.41181920899544,
+        "prefill_speed": 720.9806014983811,
+        "decode_speed": 53.12469235725651,
+        "throughput": 306.3795477264682,
+        "generated_text_length": 1459,
+        "error": null
+      },
+      {
+        "request_id": 1,
+        "server": "http://169.254.150.105:8000",
+        "prompt_tokens": 4145,
+        "completion_tokens": 500,
+        "ttft": 4.388280458981171,
+        "total_time": 15.02302670897916,
+        "decode_time": 10.634746249997988,
+        "prefill_speed": 944.5613239046135,
+        "decode_speed": 47.01569630776048,
+        "throughput": 309.19202168652976,
+        "generated_text_length": 1624,
+        "error": null
+      }
+    ]
+  ],
+  "summary": {
+    "ttft": {
+      "mean": 5.276763340167236,
+      "median": 5.710113416484091,
+      "stdev": 0.6987317190529476,
+      "min": 4.362221457995474,
+      "max": 5.749114457983524
+    },
+    "prefill_speed": {
+      "mean": 798.2698585075827,
+      "median": 725.9202699445075,
+      "stdev": 115.55254016015992,
+      "min": 720.9806014983811,
+      "max": 950.2039362083896
+    },
+    "decode_speed": {
+      "mean": 50.50604244746302,
+      "median": 51.10680942827068,
+      "stdev": 3.066580018748967,
+      "min": 47.01569630776048,
+      "max": 53.31202060855806
+    },
+    "total_time": {
+      "mean": 15.207341166678816,
+      "median": 15.12320695805829,
+      "stdev": 0.3341258664164147,
+      "min": 14.944133665994741,
+      "max": 15.869539042003453
+    },
+    "throughput": {
+      "mean": 305.5638113679019,
+      "median": 307.14393911900004,
+      "stdev": 6.512316929450013,
+      "min": 292.6991129172452,
+      "max": 310.8243076391682
+    }
+  }
+}

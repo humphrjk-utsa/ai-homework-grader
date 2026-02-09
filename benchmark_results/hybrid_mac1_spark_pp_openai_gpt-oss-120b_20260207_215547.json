@@ -1,0 +1,99 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-07T21:55:47.117410",
+    "model": "openai/gpt-oss-120b",
+    "cluster_config": "hybrid_mac1_spark_pp",
+    "scheduler_url": "http://169.254.150.101:3001",
+    "max_tokens": 500,
+    "iterations": 3,
+    "prompt_sizes": [
+      2500
+    ]
+  },
+  "results": {
+    "2500": {
+      "target_prompt_tokens": 2500,
+      "actual_prompt_tokens": 1752,
+      "iterations": [
+        {
+          "ttft": 4.2872,
+          "total_time": 18.4863,
+          "prompt_tokens": 1752,
+          "completion_tokens": 500,
+          "prefill_speed": 408.7,
+          "decode_speed": 35.2,
+          "throughput": 121.8,
+          "generated_text_length": 2486,
+          "error": null,
+          "streaming": true,
+          "iteration": 1
+        },
+        {
+          "ttft": 1.3252,
+          "total_time": 15.3407,
+          "prompt_tokens": 1752,
+          "completion_tokens": 500,
+          "prefill_speed": 1322.0,
+          "decode_speed": 35.7,
+          "throughput": 146.8,
+          "generated_text_length": 2643,
+          "error": null,
+          "streaming": true,
+          "iteration": 2
+        },
+        {
+          "ttft": 1.3309,
+          "total_time": 15.1278,
+          "prompt_tokens": 1752,
+          "completion_tokens": 500,
+          "prefill_speed": 1316.4,
+          "decode_speed": 36.2,
+          "throughput": 148.9,
+          "generated_text_length": 2558,
+          "error": null,
+          "streaming": true,
+          "iteration": 3
+        }
+      ],
+      "statistics": {
+        "ttft": {
+          "mean": 2.3144,
+          "median": 1.3309,
+          "stdev": 1.7085,
+          "min": 1.3252,
+          "max": 4.2872
+        },
+        "total_time": {
+          "mean": 16.3183,
+          "median": 15.3407,
+          "stdev": 1.8806,
+          "min": 15.1278,
+          "max": 18.4863
+        },
+        "prefill_speed": {
+          "mean": 1015.7,
+          "median": 1316.4,
+          "stdev": 525.6849,
+          "min": 408.7,
+          "max": 1322.0
+        },
+        "decode_speed": {
+          "mean": 35.7,
+          "median": 35.7,
+          "stdev": 0.5,
+          "min": 35.2,
+          "max": 36.2
+        },
+        "throughput": {
+          "mean": 139.1667,
+          "median": 146.8,
+          "stdev": 15.0766,
+          "min": 121.8,
+          "max": 148.9
+        }
+      },
+      "successful_runs": 3,
+      "total_runs": 3
+    }
+  }
+}

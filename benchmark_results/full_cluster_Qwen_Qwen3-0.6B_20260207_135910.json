@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-07T13:59:10.309693",
+    "model": "Qwen/Qwen3-0.6B",
+    "cluster_config": "full_cluster",
+    "scheduler_url": "http://169.254.150.101:3001",
+    "max_tokens": 500,
+    "iterations": 1,
+    "prompt_sizes": [
+      2500
+    ]
+  },
+  "results": {
+    "2500": {
+      "target_prompt_tokens": 2500,
+      "actual_prompt_tokens": 1695,
+      "iterations": [
+        {
+          "ttft": 0.3189,
+          "total_time": 3.1252,
+          "prompt_tokens": 1695,
+          "completion_tokens": 500,
+          "prefill_speed": 5315.8,
+          "decode_speed": 178.2,
+          "throughput": 702.4,
+          "generated_text_length": 2937,
+          "error": null,
+          "streaming": true,
+          "iteration": 1
+        }
+      ],
+      "statistics": {
+        "ttft": {
+          "mean": 0.3189,
+          "median": 0.3189,
+          "stdev": 0,
+          "min": 0.3189,
+          "max": 0.3189
+        },
+        "total_time": {
+          "mean": 3.1252,
+          "median": 3.1252,
+          "stdev": 0,
+          "min": 3.1252,
+          "max": 3.1252
+        },
+        "prefill_speed": {
+          "mean": 5315.8,
+          "median": 5315.8,
+          "stdev": 0,
+          "min": 5315.8,
+          "max": 5315.8
+        },
+        "decode_speed": {
+          "mean": 178.2,
+          "median": 178.2,
+          "stdev": 0,
+          "min": 178.2,
+          "max": 178.2
+        },
+        "throughput": {
+          "mean": 702.4,
+          "median": 702.4,
+          "stdev": 0,
+          "min": 702.4,
+          "max": 702.4
+        }
+      },
+      "successful_runs": 1,
+      "total_runs": 1
+    }
+  }
+}
