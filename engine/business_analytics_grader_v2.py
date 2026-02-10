@@ -398,14 +398,16 @@ class BusinessAnalyticsGraderV2:
         
         return "\n".join(summary_lines)
     
-    def grade_submission(self, 
+    def grade_submission(self,
                         student_code: str,
                         student_markdown: str,
                         template_code: str = "",
                         solution_code: str = "",
                         assignment_info: Dict = None,
                         notebook_path: str = None,
-                        preprocessing_info: Dict = None) -> Dict[str, Any]:
+                        preprocessing_info: Dict = None,
+                        custom_prompts: Dict = None,
+                        capture_prompts: bool = False) -> Dict[str, Any]:
         """
         Grade submission using 4-layer validation + AI analysis
         Returns structured feedback in the standard format
@@ -499,14 +501,17 @@ class BusinessAnalyticsGraderV2:
 
         if self.use_vllm:
             # Use vLLM direct inference on DGX Sparks (highest priority)
-            print("⚡ Using vLLM Direct Inference for AI analysis...")
+            print("⚡ Using vLLM Direct Inference for AI analysis (prefix-cached)...")
 
             # Build enhanced context with student changes analysis and reflections
             enhanced_context = f"{student_changes['ai_context']}\n\n{validation_summary}"
             if reflection_comparison:
                 enhanced_context += f"\n\n{reflection_comparison}"
+            if custom_prompts and custom_prompts.get('rag_context'):
+                enhanced_context += f"\n\n{custom_prompts['rag_context']}"
 
-            code_prompt = self.prompt_manager.get_combined_prompt(
+            # Build structured 3-layer prompts for prefix caching
+            code_messages = self.prompt_manager.get_prefix_optimized_prompt(
                 assignment_name,
                 "code_analysis",
                 assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
@@ -517,7 +522,7 @@ class BusinessAnalyticsGraderV2:
                 validation_context=enhanced_context
             )
 
-            feedback_prompt = self.prompt_manager.get_combined_prompt(
+            feedback_messages = self.prompt_manager.get_prefix_optimized_prompt(
                 assignment_name,
                 "feedback",
                 assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
@@ -528,8 +533,18 @@ class BusinessAnalyticsGraderV2:
                 reflection_comparison=reflection_comparison
             )
 
+            # Capture raw prompts for playground debugging
+            if capture_prompts:
+                # Flatten structured messages for readability
+                self._captured_prompts = {
+                    'code_analysis': f"[SYSTEM]\n{code_messages['system']}\n\n[ASSIGNMENT]\n{code_messages['assignment']}\n\n[STUDENT]\n{code_messages['student']}",
+                    'feedback': f"[SYSTEM]\n{feedback_messages['system']}\n\n[ASSIGNMENT]\n{feedback_messages['assignment']}\n\n[STUDENT]\n{feedback_messages['student']}",
+                }
+
             try:
-                result = self.vllm_client.generate_parallel_sync(code_prompt, feedback_prompt)
+                result = self.vllm_client.generate_parallel_sync_structured(
+                    code_messages, feedback_messages
+                )
 
                 if result.get('error'):
                     raise RuntimeError(f"vLLM generation failed: {result['error']}")
@@ -549,6 +564,10 @@ class BusinessAnalyticsGraderV2:
                 # Update timing stats with detailed metrics
                 self.grading_stats['code_analysis_time'] = result.get('qwen_time', 0)
                 self.grading_stats['feedback_generation_time'] = result.get('gemma_time', 0)
+
+                # Prefix cache metrics
+                if 'prefix_cache_metrics' in result:
+                    self.grading_stats['prefix_cache_metrics'] = result['prefix_cache_metrics']
 
                 if 'qwen_metrics' in result:
                     qwen_metrics = result['qwen_metrics']
@@ -586,6 +605,8 @@ class BusinessAnalyticsGraderV2:
                 # Add reflection comparison to validation results for Ollama
                 if reflection_comparison:
                     validation_results['reflection_comparison'] = reflection_comparison
+                if custom_prompts and custom_prompts.get('rag_context'):
+                    validation_results['rag_context'] = custom_prompts['rag_context']
                 
                 # Submit both tasks simultaneously with validation context
                 future_code = self.executor.submit(
@@ -654,7 +675,10 @@ class BusinessAnalyticsGraderV2:
             structured_feedback['grading_stats'] = self.grading_stats
         
         print(f"\n✅ Grading completed in {total_time:.1f}s")
-        
+
+        if capture_prompts and hasattr(self, '_captured_prompts'):
+            structured_feedback['raw_prompts'] = self._captured_prompts
+
         return structured_feedback
     
     def _create_structured_feedback_from_validation(self, validation_results: Dict) -> Dict[str, Any]:
@@ -1060,7 +1084,11 @@ KEY RULES:
                 student_code=student_code,
                 solution_code=solution_code
             )
-        
+
+        # Append RAG context if available
+        if validation_results and validation_results.get('rag_context'):
+            prompt += f"\n\n{validation_results['rag_context']}"
+
         response = self._generate_with_ollama(self.code_model, prompt, max_tokens=3000)
         
         analysis_time = time.time() - start_time
@@ -1101,7 +1129,11 @@ KEY RULES:
                 student_markdown=student_markdown,
                 student_code_summary=smart_code_summary or student_code[:800]
             )
-        
+
+        # Append RAG context if available
+        if validation_results and validation_results.get('rag_context'):
+            prompt += f"\n\n{validation_results['rag_context']}"
+
         response = self._generate_with_ollama(self.feedback_model, prompt, max_tokens=3500)
         
         feedback_time = time.time() - start_time

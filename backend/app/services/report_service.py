@@ -37,7 +37,8 @@ class ReportService:
         report_path = os.path.join(report_dir, filename)
 
         # Build analysis_result dict for PDFReportGenerator
-        feedback = submission.ai_feedback or {}
+        # Prefer professor-edited feedback over original AI feedback
+        feedback = submission.edited_feedback or submission.ai_feedback or {}
         analysis_result = {
             'total_score': submission.final_score or submission.ai_score or 0,
             'max_score': submission.max_score or assignment.total_points,

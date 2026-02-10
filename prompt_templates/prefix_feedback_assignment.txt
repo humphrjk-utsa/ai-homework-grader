@@ -1,0 +1,7 @@
+ASSIGNMENT: {assignment_title}
+
+{rubric_criteria}
+
+{correction_learning}
+
+{assignment_specific_instructions}

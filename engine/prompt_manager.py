@@ -148,7 +148,74 @@ This means the student HAS completed work. Focus on quality and approach, not co
                 st.error(f"Missing required variable in prompt: {e}")
             return general_prompt
     
-    def generate_rubric_with_ai(self, assignment_description: str, total_points: float, 
+    def _load_prefix_template(self, name: str) -> str:
+        """Load a prefix template file."""
+        path = self.prompt_templates_dir / f"{name}.txt"
+        if path.exists():
+            with open(path, 'r') as f:
+                return f.read()
+        return ""
+
+    @staticmethod
+    def _normalize_prefix(text: str) -> str:
+        """Normalize whitespace for byte-identical prefixes across submissions."""
+        import re
+        # Collapse multiple blank lines into one, strip trailing whitespace per line
+        lines = [line.rstrip() for line in text.split('\n')]
+        text = '\n'.join(lines)
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        return text.strip()
+
+    def get_prefix_optimized_prompt(self, assignment_name: str, prompt_type: str, **kwargs) -> dict:
+        """Get prompt split into 3 layers for vLLM prefix caching.
+
+        Returns:
+            dict with 'system', 'assignment', 'student' keys — each a string.
+            The system + assignment portions form a cacheable prefix.
+        """
+        # Load prefix templates
+        system_template = self._load_prefix_template(f"prefix_{prompt_type}_system")
+        assignment_template = self._load_prefix_template(f"prefix_{prompt_type}_assignment")
+        student_template = self._load_prefix_template(f"prefix_{prompt_type}_student")
+
+        # Load assignment-specific instructions
+        assignment_specific = self.load_assignment_prompt(assignment_name, prompt_type)
+        if assignment_specific:
+            kwargs['assignment_specific_instructions'] = f"\nASSIGNMENT-SPECIFIC INSTRUCTIONS:\n{assignment_specific}\n"
+        else:
+            kwargs['assignment_specific_instructions'] = ""
+
+        # Add correction learning
+        try:
+            from correction_analyzer import CorrectionAnalyzer
+            analyzer = CorrectionAnalyzer()
+            assignment_id = kwargs.get('assignment_id')
+            correction_summary = analyzer.get_correction_summary_for_prompt(assignment_id, limit=5)
+            kwargs['correction_learning'] = f"\n{correction_summary}\n" if correction_summary else ""
+        except Exception:
+            kwargs['correction_learning'] = ""
+
+        # Format each layer with available kwargs (missing keys become empty)
+        def safe_format(template, **kw):
+            try:
+                return template.format(**kw)
+            except KeyError:
+                # Partial format: replace known keys, leave unknown as-is
+                for key, value in kw.items():
+                    template = template.replace(f"{{{key}}}", str(value))
+                return template
+
+        system_msg = self._normalize_prefix(system_template)
+        assignment_msg = self._normalize_prefix(safe_format(assignment_template, **kwargs))
+        student_msg = safe_format(student_template, **kwargs).strip()
+
+        return {
+            'system': system_msg,
+            'assignment': assignment_msg,
+            'student': student_msg,
+        }
+
+    def generate_rubric_with_ai(self, assignment_description: str, total_points: float,
                                 ollama_url: str = "http://localhost:11434") -> Dict:
         """Generate a rubric using AI based on assignment description"""
         

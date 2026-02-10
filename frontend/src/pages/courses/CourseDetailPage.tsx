@@ -42,6 +42,14 @@ export default function CourseDetailPage() {
             {course.code && `${course.code} - `}{course.semester} {course.year}
           </p>
         </div>
+        {user?.role !== 'ta' && (
+          <Link
+            to={`/courses/${courseId}/training`}
+            className="px-4 py-2 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700"
+          >
+            Training & Models
+          </Link>
+        )}
       </div>
 
       {/* Tabs */}

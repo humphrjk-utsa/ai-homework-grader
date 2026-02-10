@@ -1,0 +1,12 @@
+STUDENT'S WRITTEN ANALYSIS (contains reflection questions and responses):
+{student_markdown}
+
+CODE SUMMARY:
+{student_code_summary}
+
+VALIDATION CONTEXT:
+{validation_context}
+
+{reflection_comparison}
+
+Provide feedback according to the rules and output format specified in the system instructions. Output PURE JSON only.

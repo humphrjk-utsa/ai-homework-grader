@@ -1,0 +1,14 @@
+ASSIGNMENT: {assignment_title}
+STUDENT LEVEL: First-year business analytics (introductory R programming)
+
+{rubric_criteria}
+
+{correction_learning}
+
+TEMPLATE:
+{template_code}
+
+REFERENCE SOLUTION:
+{solution_code}
+
+{assignment_specific_instructions}

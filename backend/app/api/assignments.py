@@ -2,7 +2,10 @@
 import os
 import re
 import json
+import logging
 import tempfile
+
+logger = logging.getLogger(__name__)
 
 from flask import Blueprint, request, jsonify, g, current_app
 from werkzeug.utils import secure_filename
@@ -17,6 +20,7 @@ assignments_bp = Blueprint('assignments', __name__)
 ALLOWED_NOTEBOOK_EXT = {'.ipynb'}
 ALLOWED_RUBRIC_EXT = {'.json'}
 ALLOWED_DOC_EXT = {'.pdf', '.docx', '.doc'}
+ALLOWED_RUBRIC_IMPORT_EXT = {'.csv', '.docx', '.pdf'}
 
 
 def _slugify(text):
@@ -536,3 +540,59 @@ def generate_prompts(assignment_id):
         code_analysis_prompt=analysis_prompt,
         feedback_prompt=feedback_prompt,
     )
+
+
+@assignments_bp.route('/assignments/<int:assignment_id>/rubric/import', methods=['POST'])
+@tenant_required
+def import_rubric(assignment_id):
+    """Parse a CSV/Word/PDF file into RubricCategory[] for the builder.
+
+    Returns parsed categories for preview/editing. Does NOT save anything.
+    """
+    assignment = Assignment.query.get_or_404(assignment_id)
+    if assignment.course.organization_id != g.organization_id:
+        return jsonify(error='Not found'), 404
+
+    if 'file' not in request.files:
+        return jsonify(error='No file provided'), 400
+
+    file = request.files['file']
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_RUBRIC_IMPORT_EXT:
+        return jsonify(error=f'Unsupported format: {ext}. Use .csv, .docx, or .pdf'), 400
+
+    fd, tmp_path = tempfile.mkstemp(suffix=ext)
+    try:
+        os.close(fd)
+        file.save(tmp_path)
+
+        from app.services.rubric_import_service import (
+            parse_rubric_csv, parse_rubric_docx, parse_rubric_pdf,
+        )
+
+        if ext == '.csv':
+            categories = parse_rubric_csv(tmp_path)
+        elif ext == '.docx':
+            categories = parse_rubric_docx(tmp_path)
+        elif ext == '.pdf':
+            categories = parse_rubric_pdf(tmp_path)
+        else:
+            return jsonify(error=f'Unsupported format: {ext}'), 400
+
+        if not categories:
+            return jsonify(
+                error='Could not extract rubric categories from this file. '
+                      'For CSV, ensure columns named "name" and "max_points" exist. '
+                      'For Word/PDF, ensure the rubric uses tables or clearly labeled sections with point values.'
+            ), 422
+
+        return jsonify(categories=categories)
+
+    except ValueError as e:
+        return jsonify(error=str(e)), 422
+    except Exception as e:
+        logger.exception('Rubric import failed')
+        return jsonify(error=f'Failed to parse file: {str(e)}'), 500
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)

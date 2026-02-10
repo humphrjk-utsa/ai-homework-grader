@@ -92,6 +92,7 @@ services:
       --max-model-len 32768
       --dtype auto
       --trust-remote-code
+      --enable-prefix-caching
     environment:
       NVIDIA_VISIBLE_DEVICES: "0"
       HF_TOKEN: ${HF_TOKEN:-}
@@ -122,6 +123,7 @@ services:
       --max-model-len 16384
       --dtype auto
       --trust-remote-code
+      --enable-prefix-caching
     environment:
       NVIDIA_VISIBLE_DEVICES: "0,1"
       HF_TOKEN: ${HF_TOKEN:-}
@@ -152,6 +154,7 @@ services:
       --max-model-len 16384
       --dtype auto
       --trust-remote-code
+      --enable-prefix-caching
     environment:
       NVIDIA_VISIBLE_DEVICES: "1"
       HF_TOKEN: ${HF_TOKEN:-}

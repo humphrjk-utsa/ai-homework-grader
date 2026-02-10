@@ -216,7 +216,7 @@ def cancel_job(job_id):
 @grading_bp.route('/submissions/<int:submission_id>/review', methods=['PUT'])
 @tenant_required
 def submit_review(submission_id):
-    """Submit human review (override score, add feedback)."""
+    """Submit human review (override score, add feedback, edit AI feedback)."""
     submission = Submission.query.get_or_404(submission_id)
     if submission.assignment.course.organization_id != g.organization_id:
         return jsonify(error='Not found'), 404
@@ -229,8 +229,82 @@ def submit_review(submission_id):
     if 'human_feedback' in data:
         submission.human_feedback = data['human_feedback']
 
+    # Accept structured feedback edits (same shape as ai_feedback)
+    if 'edited_feedback' in data:
+        submission.edited_feedback = data['edited_feedback']
+        # If professor edited feedback but didn't set a score override,
+        # derive final_score from the edited feedback
+        if 'human_score' not in data and data['edited_feedback'].get('final_score') is not None:
+            submission.final_score = float(data['edited_feedback']['final_score'])
+            submission.human_score = submission.final_score
+
     submission.reviewed_at = datetime.utcnow()
     submission.status = 'reviewed'
     db.session.commit()
 
     return jsonify(submission=submission.to_dict(include_feedback=True))
+
+
+@grading_bp.route('/assignments/<int:assignment_id>/review-queue', methods=['GET'])
+@tenant_required
+def get_review_queue(assignment_id):
+    """Get all graded/reviewed submissions for batch review, sorted by score."""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    if assignment.course.organization_id != g.organization_id:
+        return jsonify(error='Not found'), 404
+
+    submissions = Submission.query.filter(
+        Submission.assignment_id == assignment.id,
+        Submission.status.in_(['graded', 'reviewed']),
+    ).order_by(Submission.ai_score.asc()).all()
+
+    return jsonify(
+        submissions=[s.to_dict(include_feedback=True) for s in submissions],
+        assignment=assignment.to_dict(),
+    )
+
+
+@grading_bp.route('/submissions/<int:submission_id>/preview-report', methods=['POST'])
+@tenant_required
+def preview_report(submission_id):
+    """Generate a preview PDF using edited (or original) feedback."""
+    import tempfile
+    from flask import current_app, send_file
+
+    submission = Submission.query.get_or_404(submission_id)
+    if submission.assignment.course.organization_id != g.organization_id:
+        return jsonify(error='Not found'), 404
+
+    if submission.status not in ('graded', 'reviewed'):
+        return jsonify(error='Submission must be graded first'), 400
+
+    feedback = submission.edited_feedback or submission.ai_feedback or {}
+    assignment = submission.assignment
+    student = submission.student
+
+    analysis_result = {
+        'total_score': submission.final_score or submission.ai_score or 0,
+        'max_score': submission.max_score or assignment.total_points,
+        'validation_results': submission.validation_results or {},
+        'comprehensive_feedback': feedback.get('comprehensive_feedback', {}),
+        'technical_analysis': feedback.get('technical_analysis', {}),
+        'grading_timestamp': (
+            submission.graded_at.strftime('%Y-%m-%d %H:%M:%S')
+            if submission.graded_at else ''
+        ),
+    }
+
+    from engine.report_generator import PDFReportGenerator
+    generator = PDFReportGenerator()
+    student_name = f"{student.first_name} {student.last_name}"
+
+    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+        tmp_path = tmp.name
+
+    generator.generate_report(student_name, assignment.name, analysis_result, tmp_path)
+    return send_file(
+        tmp_path,
+        mimetype='application/pdf',
+        as_attachment=False,
+        download_name=f'{student.last_name}_{student.first_name}_preview.pdf',
+    )

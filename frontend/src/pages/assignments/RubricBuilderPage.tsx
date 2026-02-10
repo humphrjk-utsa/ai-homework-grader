@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getAssignment } from '../../api/assignments';
-import { getRubricData, saveRubricData, generatePrompts } from '../../api/rubric';
+import { getRubricData, saveRubricData, generatePrompts, importRubricFile } from '../../api/rubric';
 import type { Assignment, RubricCategory } from '../../types';
 
 const inputCls = 'block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500';
@@ -28,6 +28,27 @@ export default function RubricBuilderPage() {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [importing, setImporting] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
+
+  const handleImportFile = async (file: File) => {
+    setError('');
+    setImporting(true);
+    try {
+      const imported = await importRubricFile(id, file);
+      const hasContent = categories.some(c => c.name.trim());
+      if (hasContent && !confirm(`This will replace your current ${categories.length} categories with ${imported.length} imported categories. Continue?`)) {
+        return;
+      }
+      setCategories(imported);
+      setExpandedIdx(null);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to import rubric from file');
+    } finally {
+      setImporting(false);
+      if (importFileRef.current) importFileRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     Promise.all([getAssignment(id), getRubricData(id)])
@@ -133,6 +154,35 @@ export default function RubricBuilderPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400">
           {assignment.name} &middot; {totalAssignment} points
         </p>
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+          Build categories below, or import from an existing CSV, Word, or PDF rubric. Imported rubrics land here for review before saving.
+        </p>
+        <div className="mt-3 flex items-center gap-3">
+          <label className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer ${
+            importing
+              ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-wait'
+              : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+          }`}>
+            <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+            </svg>
+            {importing ? 'Importing...' : 'Import from File'}
+            <input
+              ref={importFileRef}
+              type="file"
+              accept=".csv,.docx,.pdf"
+              className="hidden"
+              disabled={importing}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImportFile(file);
+              }}
+            />
+          </label>
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            CSV, Word (.docx), or PDF
+          </span>
+        </div>
       </div>
 
       {error && (

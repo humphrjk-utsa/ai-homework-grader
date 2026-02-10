@@ -41,11 +41,14 @@ class GradingService:
 
         return paths
 
-    def grade_submission(self, submission) -> dict:
+    def grade_submission(self, submission, capture_prompts: bool = False,
+                         custom_prompt_overrides: dict = None) -> dict:
         """Grade a single submission using the engine pipeline.
 
         Args:
             submission: Submission ORM object with related assignment/student
+            capture_prompts: If True, include raw prompts sent to the model in the result
+            custom_prompt_overrides: Override assignment prompts (for playground testing)
 
         Returns:
             Structured grading result dict (same format as BusinessAnalyticsGraderV2)
@@ -111,11 +114,30 @@ class GradingService:
         }
 
         # Step 6: Build custom prompts from DB-stored assignment prompts
+        # Playground overrides take priority over assignment-stored prompts
         custom_prompts = {}
-        if assignment.code_analysis_prompt:
-            custom_prompts['code_analysis'] = assignment.code_analysis_prompt
-        if assignment.feedback_prompt:
-            custom_prompts['feedback'] = assignment.feedback_prompt
+        if custom_prompt_overrides:
+            if custom_prompt_overrides.get('code_analysis'):
+                custom_prompts['code_analysis'] = custom_prompt_overrides['code_analysis']
+            if custom_prompt_overrides.get('feedback'):
+                custom_prompts['feedback'] = custom_prompt_overrides['feedback']
+        else:
+            if assignment.code_analysis_prompt:
+                custom_prompts['code_analysis'] = assignment.code_analysis_prompt
+            if assignment.feedback_prompt:
+                custom_prompts['feedback'] = assignment.feedback_prompt
+
+        # Step 6b: Inject RAG context if enabled
+        rag_config = assignment.grading_config or {}
+        if rag_config.get('rag_enabled'):
+            try:
+                from app.services.rag_service import RAGService
+                rag_svc = RAGService(self.storage_root)
+                rag_context = rag_svc.build_rag_prompt_section(assignment, student_code)
+                if rag_context:
+                    custom_prompts['rag_context'] = rag_context
+            except Exception as e:
+                logger.warning(f"RAG context retrieval failed: {e}")
 
         # Step 7: Grade
         result = grader.grade_submission(
@@ -129,6 +151,7 @@ class GradingService:
                 'fixes_applied': fixes,
             },
             custom_prompts=custom_prompts or None,
+            capture_prompts=capture_prompts,
         )
 
         # Step 8: Validate

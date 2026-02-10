@@ -27,8 +27,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
       <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div>
-          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white">AI Homework Grader</h2>
+        <div className="flex flex-col items-center">
+          <img src="/deepsight-logo.png" alt="DeepSight" className="h-32 w-auto rounded-lg" />
+          <h2 className="mt-4 text-3xl font-bold text-center text-gray-900 dark:text-white">DeepSight</h2>
+          <p className="mt-1 text-center text-xs text-gray-500 dark:text-gray-400">AI-Assisted Grading</p>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">Sign in to your account</p>
         </div>
         <form className="space-y-6" onSubmit={handleSubmit}>

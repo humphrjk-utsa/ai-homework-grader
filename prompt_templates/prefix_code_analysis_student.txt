@@ -1,0 +1,7 @@
+STUDENT'S SUBMISSION:
+{student_code}
+
+VALIDATION CONTEXT:
+{validation_context}
+
+Analyze this submission according to the rules and output format specified in the system instructions. Output PURE JSON only.

@@ -51,6 +51,16 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Import suggestion — shown when professor has courses but hasn't started grading */}
+      {dashboard && courses.length > 0 && !dashboard.pending_review_count && dashboard.recent_jobs.length === 0 && (
+        <div className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+          <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Already graded assignments by hand?</p>
+          <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
+            Import your existing scores and feedback to teach the AI your grading style. Open any assignment and click "Import Existing Grades" to get started.
+          </p>
+        </div>
+      )}
+
       {/* Recent Grading Jobs */}
       {dashboard && dashboard.recent_jobs.length > 0 && (
         <div className="mt-8">

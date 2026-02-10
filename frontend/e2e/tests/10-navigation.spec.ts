@@ -19,7 +19,7 @@ test.describe('Navigation and Auth Guards', () => {
   test('nav bar shows correct links', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('link', { name: 'AI Grader' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'DeepSight' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Courses' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Canvas' })).toBeVisible();
   });
@@ -42,7 +42,7 @@ test.describe('Navigation and Auth Guards', () => {
   test('dashboard link works from courses page', async ({ page }) => {
     await page.goto('/courses');
 
-    await page.getByRole('link', { name: 'AI Grader' }).click();
+    await page.getByRole('link', { name: 'DeepSight' }).click();
 
     await expect(page).toHaveURL('/');
   });

@@ -57,6 +57,39 @@ export interface Student {
   created_at: string;
 }
 
+export interface TechnicalAnalysis {
+  code_strengths: string[];
+  code_suggestions: string[];
+  technical_observations: string[];
+}
+
+export interface DetailedFeedback {
+  reflection_assessment: string[];
+  analytical_strengths: string[];
+  business_application: string[];
+  areas_for_development: string[];
+  recommendations: string[];
+}
+
+export interface ComprehensiveFeedback {
+  instructor_comments: string;
+  detailed_feedback: DetailedFeedback;
+}
+
+export interface AIFeedback {
+  final_score: number;
+  final_score_percentage?: number;
+  max_points: number;
+  component_scores: Record<string, number>;
+  component_percentages: Record<string, number>;
+  technical_analysis: TechnicalAnalysis;
+  comprehensive_feedback: ComprehensiveFeedback;
+  validation_results?: Record<string, unknown>;
+  grading_timestamp?: string;
+  grading_system?: string;
+  grading_stats?: Record<string, unknown>;
+}
+
 export interface Submission {
   id: number;
   assignment_id: number;
@@ -75,10 +108,11 @@ export interface Submission {
   reviewed_at: string | null;
   student?: Student;
   assignment?: Assignment;
-  ai_feedback?: Record<string, unknown> | null;
+  ai_feedback?: AIFeedback | null;
+  edited_feedback?: AIFeedback | null;
   human_feedback?: string | null;
-  component_scores?: Record<string, unknown> | null;
-  component_percentages?: Record<string, unknown> | null;
+  component_scores?: Record<string, { score: number; max: number; evidence?: string }> | null;
+  component_percentages?: Record<string, number> | null;
   validation_results?: Record<string, unknown> | null;
 }
 

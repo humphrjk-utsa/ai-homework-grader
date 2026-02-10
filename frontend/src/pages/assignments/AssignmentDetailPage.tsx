@@ -5,6 +5,7 @@ import { getAssignment, updateAssignment, uploadRubric, uploadSolution, uploadTe
 import { listSubmissions, uploadSubmission, uploadBatch, gradeSingle, gradeBatch, getGradingJob, downloadReport } from '../../api/submissions';
 import { generatePrompts } from '../../api/rubric';
 import type { Assignment, Submission, GradingJob } from '../../types';
+import RAGSettingsPanel from '../../components/assignments/RAGSettingsPanel';
 
 export default function AssignmentDetailPage() {
   const { user } = useAuth();
@@ -257,6 +258,12 @@ export default function AssignmentDetailPage() {
                   Generate from Rubric
                 </button>
               )}
+              <Link
+                to={`/assignments/${id}/playground`}
+                className="px-4 py-2 bg-amber-600 text-white text-sm rounded-md hover:bg-amber-700"
+              >
+                Test in Playground
+              </Link>
               {promptSaved && (
                 <span className="text-sm text-green-600 dark:text-green-400">Saved</span>
               )}
@@ -264,6 +271,9 @@ export default function AssignmentDetailPage() {
           </div>
         )}
       </div>
+
+      {/* RAG Settings */}
+      <RAGSettingsPanel assignmentId={id} />
 
       {/* Submissions */}
       <div className="mt-6">
@@ -283,16 +293,38 @@ export default function AssignmentDetailPage() {
                 onChange={handleSubmissionUpload}
               />
             </label>
+            <Link
+              to={`/assignments/${id}/ground-truth`}
+              className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700"
+            >
+              Import Existing Grades
+            </Link>
             {submissions.length > 0 && (
               <>
                 {user?.role !== 'ta' && (
-                  <button
-                    onClick={handleGradeAll}
-                    disabled={!!gradingJob && gradingJob.status === 'running'}
-                    className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                  <>
+                    <button
+                      onClick={handleGradeAll}
+                      disabled={!!gradingJob && gradingJob.status === 'running'}
+                      className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      Grade All
+                    </button>
+                    <Link
+                      to={`/assignments/${id}/playground`}
+                      className="px-4 py-2 bg-amber-600 text-white text-sm rounded-md hover:bg-amber-700"
+                    >
+                      Test Prompts
+                    </Link>
+                  </>
+                )}
+                {submissions.some((s) => s.status === 'graded' || s.status === 'reviewed') && (
+                  <Link
+                    to={`/assignments/${id}/review`}
+                    className="px-4 py-2 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700"
                   >
-                    Grade All
-                  </button>
+                    Review All
+                  </Link>
                 )}
                 <a
                   href={`/api/reports/assignments/${id}/export/csv`}
@@ -337,8 +369,66 @@ export default function AssignmentDetailPage() {
         )}
 
         {submissions.length === 0 ? (
-          <div className="mt-4 p-8 text-center bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
-            <p className="text-gray-500 dark:text-gray-400">No submissions yet. Upload student files to get started.</p>
+          <div className="mt-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Get Started</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Set up this assignment for AI-assisted grading. You can do these in any order.
+            </p>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                  assignment.rubric_path || assignment.solution_path || assignment.template_path
+                    ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                }`}>
+                  {assignment.rubric_path || assignment.solution_path || assignment.template_path ? '\u2713' : '1'}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Upload rubric, solution, or template</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    These help the AI understand expectations.
+                    {assignment.rubric_path && <span className="ml-1 text-green-600 dark:text-green-400">Rubric uploaded.</span>}
+                    {assignment.solution_path && <span className="ml-1 text-green-600 dark:text-green-400">Solution uploaded.</span>}
+                    {assignment.template_path && <span className="ml-1 text-green-600 dark:text-green-400">Template uploaded.</span>}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">2</div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Add student work</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Upload new submissions with "Upload Files" above, or import work you have already graded
+                    with <Link to={`/assignments/${id}/ground-truth`} className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">Import Existing Grades</Link>.
+                    Importing graded work teaches the AI your grading style.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                  assignment.code_analysis_prompt || assignment.feedback_prompt
+                    ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                }`}>
+                  {assignment.code_analysis_prompt || assignment.feedback_prompt ? '\u2713' : '3'}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Customize AI prompts (optional)</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Fine-tune how the AI grades by adjusting prompts above, or auto-generate them from your rubric.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">4</div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Grade, review, and improve</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Run AI grading, then review and edit the feedback. Each edit you make helps the AI learn your preferences for future assignments.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="mt-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">

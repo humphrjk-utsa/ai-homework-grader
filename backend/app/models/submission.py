@@ -19,6 +19,7 @@ class Submission(db.Model):
     # Grading results
     ai_score = db.Column(db.Float)
     ai_feedback = db.Column(db.JSON)
+    edited_feedback = db.Column(db.JSON)  # Professor's corrected version of ai_feedback
     human_score = db.Column(db.Float)
     human_feedback = db.Column(db.Text)
     final_score = db.Column(db.Float)
@@ -69,6 +70,7 @@ class Submission(db.Model):
         }
         if include_feedback:
             d['ai_feedback'] = self.ai_feedback
+            d['edited_feedback'] = self.edited_feedback
             d['component_scores'] = self.component_scores
             d['component_percentages'] = self.component_percentages
             d['validation_results'] = self.validation_results

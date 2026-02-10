@@ -1,5 +1,5 @@
 import api from './client';
-import type { RubricData } from '../types';
+import type { RubricData, RubricCategory } from '../types';
 
 export async function getRubricData(assignmentId: number): Promise<RubricData> {
   const { data } = await api.get(`/assignments/${assignmentId}/rubric/data`);
@@ -20,4 +20,13 @@ export async function generatePrompts(assignmentId: number): Promise<{
 }> {
   const { data } = await api.post(`/assignments/${assignmentId}/generate-prompts`);
   return data;
+}
+
+export async function importRubricFile(assignmentId: number, file: File): Promise<RubricCategory[]> {
+  const form = new FormData();
+  form.append('file', file);
+  const { data } = await api.post(`/assignments/${assignmentId}/rubric/import`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.categories;
 }

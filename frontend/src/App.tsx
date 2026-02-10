@@ -15,6 +15,10 @@ import RubricBuilderPage from './pages/assignments/RubricBuilderPage';
 import NewStudentPage from './pages/students/NewStudentPage';
 import ImportStudentsPage from './pages/students/ImportStudentsPage';
 import SubmissionDetailPage from './pages/submissions/SubmissionDetailPage';
+import BatchReviewPage from './pages/assignments/BatchReviewPage';
+import TrainingDashboardPage from './pages/training/TrainingDashboardPage';
+import GroundTruthUploadPage from './pages/assignments/GroundTruthUploadPage';
+import PromptPlaygroundPage from './pages/assignments/PromptPlaygroundPage';
 import CanvasSettingsPage from './pages/canvas/CanvasSettingsPage';
 
 export default function App() {
@@ -38,7 +42,11 @@ export default function App() {
             <Route path="/courses/:courseId/students/import" element={<ImportStudentsPage />} />
             <Route path="/assignments/:assignmentId" element={<AssignmentDetailPage />} />
             <Route path="/assignments/:assignmentId/rubric/edit" element={<RubricBuilderPage />} />
+            <Route path="/assignments/:assignmentId/review" element={<BatchReviewPage />} />
+            <Route path="/assignments/:assignmentId/ground-truth" element={<GroundTruthUploadPage />} />
+            <Route path="/assignments/:assignmentId/playground" element={<PromptPlaygroundPage />} />
             <Route path="/submissions/:submissionId" element={<SubmissionDetailPage />} />
+            <Route path="/courses/:courseId/training" element={<TrainingDashboardPage />} />
             <Route path="/canvas/settings" element={<CanvasSettingsPage />} />
           </Route>
         </Routes>

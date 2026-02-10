@@ -1,5 +1,5 @@
 import api from './client';
-import type { Submission, GradingJob, Report } from '../types';
+import type { Submission, GradingJob, Report, AIFeedback, Assignment } from '../types';
 
 export async function listSubmissions(assignmentId: number): Promise<Submission[]> {
   const { data } = await api.get(`/assignments/${assignmentId}/submissions`);
@@ -49,9 +49,22 @@ export async function getSubmission(submissionId: number): Promise<Submission> {
 export async function submitReview(submissionId: number, payload: {
   human_score?: number;
   human_feedback?: string;
+  edited_feedback?: AIFeedback;
 }): Promise<Submission> {
   const { data } = await api.put(`/grading/submissions/${submissionId}/review`, payload);
   return data.submission;
+}
+
+export async function getReviewQueue(assignmentId: number): Promise<{ submissions: Submission[]; assignment: Assignment }> {
+  const { data } = await api.get(`/grading/assignments/${assignmentId}/review-queue`);
+  return data;
+}
+
+export async function previewReport(submissionId: number): Promise<Blob> {
+  const { data } = await api.post(`/grading/submissions/${submissionId}/preview-report`, {}, {
+    responseType: 'blob',
+  });
+  return data;
 }
 
 export async function generateReport(submissionId: number): Promise<Report> {

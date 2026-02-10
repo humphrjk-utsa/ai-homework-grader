@@ -6,6 +6,8 @@ from app.models.student import Student, CourseEnrollment
 from app.models.submission import Submission
 from app.models.grading_job import GradingJob
 from app.models.report import Report, ReportTemplate
+from app.models.training import TrainingJob, CustomModel
+from app.models.prompt_test_run import PromptTestRun
 
 __all__ = [
     'Organization', 'User',
@@ -15,4 +17,6 @@ __all__ = [
     'Submission',
     'GradingJob',
     'Report', 'ReportTemplate',
+    'TrainingJob', 'CustomModel',
+    'PromptTestRun',
 ]

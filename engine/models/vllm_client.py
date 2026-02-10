@@ -261,6 +261,222 @@ class VLLMClient:
                 'error': f"{type(e).__name__}: {str(e)}"
             }
 
+    def _extract_cache_metrics(self, result: dict) -> dict:
+        """Extract prefix cache metrics from a vLLM response."""
+        usage = result.get('usage', {})
+        prompt_tokens = usage.get('prompt_tokens', 0)
+        prompt_details = usage.get('prompt_tokens_details', {})
+        cached_tokens = prompt_details.get('cached_tokens', 0)
+        cache_hit_rate = (cached_tokens / prompt_tokens * 100) if prompt_tokens > 0 else 0
+        return {
+            'prompt_tokens': prompt_tokens,
+            'cached_tokens': cached_tokens,
+            'cache_hit_rate': round(cache_hit_rate, 1),
+        }
+
+    def _call_vllm_structured(self, server_url: str, model: str, messages: list,
+                              max_tokens: int = 2000, temperature: float = 0.1) -> tuple:
+        """Make a call with structured messages (system + multiple user messages).
+
+        Same as _call_vllm but also returns prefix cache metrics.
+        Returns:
+            Tuple of (generated_text, metrics_dict) or (None, {}) on failure
+        """
+        try:
+            payload = {
+                "model": model,
+                "messages": messages,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "stream": False
+            }
+
+            start_time = time.time()
+            response = requests.post(server_url, json=payload, timeout=self.timeout)
+            generation_time = time.time() - start_time
+
+            if response.status_code == 200:
+                result = response.json()
+                content = result.get('choices', [{}])[0].get('message', {}).get('content', '')
+                usage = result.get('usage', {})
+                prompt_tokens = usage.get('prompt_tokens', 0)
+                completion_tokens = usage.get('completion_tokens', 0)
+                tokens_per_second = completion_tokens / generation_time if generation_time > 0 else 0
+
+                cache_metrics = self._extract_cache_metrics(result)
+
+                return content, {
+                    'prompt_tokens': prompt_tokens,
+                    'completion_tokens': completion_tokens,
+                    'total_tokens': prompt_tokens + completion_tokens,
+                    'generation_time': generation_time,
+                    'tokens_per_second': tokens_per_second,
+                    'cached_tokens': cache_metrics['cached_tokens'],
+                    'cache_hit_rate': cache_metrics['cache_hit_rate'],
+                }
+            else:
+                print(f"  vLLM API returned status {response.status_code}: {response.text[:200]}")
+                return None, {}
+
+        except requests.exceptions.Timeout:
+            print(f"  vLLM API timeout after {self.timeout} seconds")
+            return None, {}
+        except requests.exceptions.ConnectionError as e:
+            print(f"  vLLM connection error: {e}")
+            return None, {}
+        except Exception as e:
+            print(f"  vLLM API error: {e}")
+            return None, {}
+
+    def generate_code_analysis_structured(self, system_msg: str, assignment_msg: str,
+                                           student_msg: str, max_tokens: int = 2400) -> Optional[str]:
+        """Generate code analysis with structured messages for prefix caching.
+
+        Messages: system + assignment context (cached) + student submission (unique).
+        """
+        start_time = time.time()
+
+        messages = [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": assignment_msg},
+            {"role": "user", "content": student_msg},
+        ]
+
+        result, metrics = self._call_vllm_structured(
+            server_url=self.qwen_api_url,
+            model=self.code_model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=0.1
+        )
+
+        generation_time = time.time() - start_time
+        self.last_response_times['qwen'] = generation_time
+        self.last_response_times['qwen_metrics'] = metrics
+
+        if result:
+            output_tokens = metrics.get('completion_tokens', len(result.split()))
+            tokens_per_second = output_tokens / generation_time if generation_time > 0 else 0
+            cached = metrics.get('cached_tokens', 0)
+            hit_rate = metrics.get('cache_hit_rate', 0)
+            print(f"  [VLLM/CODE] {output_tokens} tokens in {generation_time:.1f}s ({tokens_per_second:.1f} tok/s)")
+            if cached > 0:
+                print(f"  [PREFIX CACHE] {cached}/{metrics.get('prompt_tokens', 0)} tokens cached ({hit_rate}% hit rate)")
+
+        return result
+
+    def generate_feedback_structured(self, system_msg: str, assignment_msg: str,
+                                      student_msg: str, max_tokens: int = 3500) -> Optional[str]:
+        """Generate feedback with structured messages for prefix caching.
+
+        Messages: system + assignment context (cached) + student submission (unique).
+        """
+        start_time = time.time()
+
+        messages = [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": assignment_msg},
+            {"role": "user", "content": student_msg},
+        ]
+
+        result, metrics = self._call_vllm_structured(
+            server_url=self.gptoss_api_url,
+            model=self.feedback_model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=0.3
+        )
+
+        generation_time = time.time() - start_time
+        self.last_response_times['gemma'] = generation_time
+        self.last_response_times['gemma_metrics'] = metrics
+
+        if result:
+            output_tokens = metrics.get('completion_tokens', len(result.split()))
+            tokens_per_second = output_tokens / generation_time if generation_time > 0 else 0
+            cached = metrics.get('cached_tokens', 0)
+            hit_rate = metrics.get('cache_hit_rate', 0)
+            print(f"  [VLLM/FEEDBACK] {output_tokens} tokens in {generation_time:.1f}s ({tokens_per_second:.1f} tok/s)")
+            if cached > 0:
+                print(f"  [PREFIX CACHE] {cached}/{metrics.get('prompt_tokens', 0)} tokens cached ({hit_rate}% hit rate)")
+
+        return result
+
+    def generate_parallel_sync_structured(self, code_messages: dict, feedback_messages: dict) -> Dict[str, Any]:
+        """Generate both code analysis and feedback in parallel using structured messages.
+
+        Args:
+            code_messages: dict with 'system', 'assignment', 'student' keys
+            feedback_messages: dict with 'system', 'assignment', 'student' keys
+
+        Returns:
+            Dict with 'code_analysis', 'feedback', timing metrics, prefix_cache_metrics
+        """
+        print(f"  Starting vLLM parallel generation (prefix-cached)...")
+
+        try:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                start_time = time.time()
+
+                code_future = executor.submit(
+                    self.generate_code_analysis_structured,
+                    code_messages['system'], code_messages['assignment'], code_messages['student']
+                )
+                feedback_future = executor.submit(
+                    self.generate_feedback_structured,
+                    feedback_messages['system'], feedback_messages['assignment'], feedback_messages['student']
+                )
+
+                code_result = code_future.result(timeout=self.timeout)
+                feedback_result = feedback_future.result(timeout=self.timeout)
+
+                total_time = time.time() - start_time
+
+                qwen_metrics = self.last_response_times.get('qwen_metrics', {})
+                gemma_metrics = self.last_response_times.get('gemma_metrics', {})
+
+                qwen_time = self.last_response_times.get('qwen', 0)
+                gemma_time = self.last_response_times.get('gemma', 0)
+                sequential_time = qwen_time + gemma_time
+
+                return {
+                    'code_analysis': code_result,
+                    'feedback': feedback_result,
+                    'parallel_time': total_time,
+                    'qwen_time': qwen_time,
+                    'gemma_time': gemma_time,
+                    'parallel_efficiency': sequential_time / total_time if total_time > 0 else 0,
+                    'qwen_metrics': qwen_metrics,
+                    'gemma_metrics': gemma_metrics,
+                    'prefix_cache_metrics': {
+                        'qwen_cached_tokens': qwen_metrics.get('cached_tokens', 0),
+                        'qwen_cache_hit_rate': qwen_metrics.get('cache_hit_rate', 0),
+                        'gptoss_cached_tokens': gemma_metrics.get('cached_tokens', 0),
+                        'gptoss_cache_hit_rate': gemma_metrics.get('cache_hit_rate', 0),
+                    },
+                    'performance_metrics': {
+                        'qwen': qwen_metrics,
+                        'gemma': gemma_metrics,
+                        'total_tokens': qwen_metrics.get('total_tokens', 0) + gemma_metrics.get('total_tokens', 0),
+                        'combined_tokens_per_second': (
+                            qwen_metrics.get('completion_tokens', 0) + gemma_metrics.get('completion_tokens', 0)
+                        ) / total_time if total_time > 0 else 0
+                    }
+                }
+
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"  vLLM parallel generation EXCEPTION: {e}")
+            print(f"Full traceback:\n{error_details}")
+
+            return {
+                'code_analysis': None,
+                'feedback': None,
+                'parallel_time': 0,
+                'error': f"{type(e).__name__}: {str(e)}"
+            }
+
     def get_system_status(self) -> Dict[str, Any]:
         """Get status of vLLM servers."""
         qwen_available = self._check_single_server(self.qwen_server_url)
