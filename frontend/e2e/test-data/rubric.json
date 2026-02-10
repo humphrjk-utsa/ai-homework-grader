@@ -1,0 +1,42 @@
+{
+  "rubric_elements": {
+    "technical_execution": {
+      "weight": 0.40,
+      "max_points": 40,
+      "description": "Correctness and completeness of code",
+      "criteria": {
+        "excellent": {"range": "90-100%", "description": "All code runs correctly with proper output"},
+        "good": {"range": "75-89%", "description": "Most code runs correctly with minor issues"},
+        "satisfactory": {"range": "60-74%", "description": "Code runs with some errors"},
+        "needs_improvement": {"range": "0-59%", "description": "Code has significant errors or does not run"}
+      }
+    },
+    "analysis_quality": {
+      "weight": 0.35,
+      "max_points": 35,
+      "description": "Quality of data analysis and interpretation",
+      "criteria": {
+        "excellent": {"range": "90-100%", "description": "Deep, insightful analysis with clear conclusions"},
+        "good": {"range": "75-89%", "description": "Good analysis with reasonable conclusions"},
+        "satisfactory": {"range": "60-74%", "description": "Basic analysis with some conclusions"},
+        "needs_improvement": {"range": "0-59%", "description": "Minimal or no analysis"}
+      }
+    },
+    "presentation": {
+      "weight": 0.25,
+      "max_points": 25,
+      "description": "Code organization, comments, and documentation",
+      "criteria": {
+        "excellent": {"range": "90-100%", "description": "Well-organized, thoroughly documented"},
+        "good": {"range": "75-89%", "description": "Good organization with adequate documentation"},
+        "satisfactory": {"range": "60-74%", "description": "Basic organization, minimal documentation"},
+        "needs_improvement": {"range": "0-59%", "description": "Disorganized, no documentation"}
+      }
+    }
+  },
+  "assignment_info": {
+    "name": "homework-3",
+    "title": "Homework 3",
+    "total_points": 100
+  }
+}

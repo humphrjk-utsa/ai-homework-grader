@@ -1,0 +1,42 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - link "AI Grader" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - link "Courses" [ref=e9] [cursor=pointer]:
+          - /url: /courses
+        - link "Canvas" [ref=e10] [cursor=pointer]:
+          - /url: /canvas/settings
+      - generic [ref=e11]:
+        - button "Switch to dark mode" [ref=e12]:
+          - img [ref=e13]
+        - generic [ref=e15]: E2E Tester
+        - button "Logout" [ref=e16]
+  - main [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - heading "Courses" [level=1] [ref=e20]
+        - link "New Course" [ref=e21] [cursor=pointer]:
+          - /url: /courses/new
+      - table [ref=e23]:
+        - rowgroup [ref=e24]:
+          - row "Name Code Semester Assignments Students" [ref=e25]:
+            - columnheader "Name" [ref=e26]
+            - columnheader "Code" [ref=e27]
+            - columnheader "Semester" [ref=e28]
+            - columnheader "Assignments" [ref=e29]
+            - columnheader "Students" [ref=e30]
+        - rowgroup [ref=e31]:
+          - row "E2E Analytics BA-E2E Spring 2026 1 4" [ref=e32]:
+            - cell "E2E Analytics" [ref=e33]:
+              - link "E2E Analytics" [ref=e34] [cursor=pointer]:
+                - /url: /courses/1
+            - cell "BA-E2E" [ref=e35]
+            - cell "Spring 2026" [ref=e36]
+            - cell "1" [ref=e37]
+            - cell "4" [ref=e38]
+```

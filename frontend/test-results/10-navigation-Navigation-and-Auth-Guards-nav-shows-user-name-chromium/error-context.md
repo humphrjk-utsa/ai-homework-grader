@@ -1,0 +1,49 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - link "AI Grader" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - link "Courses" [ref=e9] [cursor=pointer]:
+          - /url: /courses
+        - link "Canvas" [ref=e10] [cursor=pointer]:
+          - /url: /canvas/settings
+      - generic [ref=e11]:
+        - button "Switch to dark mode" [ref=e12]:
+          - img [ref=e13]
+        - generic [ref=e15]: E2E Tester
+        - button "Logout" [ref=e16]
+  - main [ref=e17]:
+    - generic [ref=e18]:
+      - heading "Welcome, E2E" [level=1] [ref=e19]
+      - paragraph [ref=e20]: Here's an overview of your grading workspace.
+      - generic [ref=e21]:
+        - generic [ref=e22]:
+          - paragraph [ref=e23]: Courses
+          - paragraph [ref=e24]: "1"
+        - generic [ref=e25]:
+          - paragraph [ref=e26]: Assignments
+          - paragraph [ref=e27]: "1"
+        - generic [ref=e28]:
+          - paragraph [ref=e29]: Students
+          - paragraph [ref=e30]: "4"
+        - generic [ref=e31]:
+          - paragraph [ref=e32]: Pending Reviews
+          - paragraph [ref=e33]: "0"
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - heading "Your Courses" [level=2] [ref=e36]
+          - link "New Course" [ref=e37] [cursor=pointer]:
+            - /url: /courses/new
+        - link "E2E Analytics BA-E2E Spring 2026 1 assignments 4 students" [ref=e39] [cursor=pointer]:
+          - /url: /courses/1
+          - heading "E2E Analytics" [level=3] [ref=e40]
+          - paragraph [ref=e41]: BA-E2E
+          - paragraph [ref=e42]: Spring 2026
+          - generic [ref=e43]:
+            - generic [ref=e44]: 1 assignments
+            - generic [ref=e45]: 4 students
+```

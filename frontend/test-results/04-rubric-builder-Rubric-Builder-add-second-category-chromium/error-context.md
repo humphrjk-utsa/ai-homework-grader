@@ -1,0 +1,131 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - link "AI Grader" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - link "Courses" [ref=e9] [cursor=pointer]:
+          - /url: /courses
+        - link "Canvas" [ref=e10] [cursor=pointer]:
+          - /url: /canvas/settings
+      - generic [ref=e11]:
+        - button "Switch to dark mode" [ref=e12]:
+          - img [ref=e13]
+        - generic [ref=e15]: E2E Tester
+        - button "Logout" [ref=e16]
+  - main [ref=e17]:
+    - generic [ref=e18]:
+      - link "Back to assignment" [ref=e19] [cursor=pointer]:
+        - /url: /assignments/1
+      - generic [ref=e20]:
+        - heading "Rubric Builder" [level=1] [ref=e21]
+        - paragraph [ref=e22]: E2E Homework · 100 points
+      - generic [ref=e23]:
+        - generic [ref=e24]: "Category points: 100 / 100"
+        - generic [ref=e25]: Points match
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - generic [ref=e30]:
+                - generic [ref=e31]: Category Name
+                - textbox "e.g. Technical Execution" [ref=e32]: Technical Execution
+              - generic [ref=e33]:
+                - generic [ref=e34]:
+                  - text: Points
+                  - generic [ref=e35]: (40%)
+                - spinbutton [ref=e36]: "40"
+            - generic [ref=e37]:
+              - button "Move up" [disabled] [ref=e38]:
+                - img [ref=e39]
+              - button "Move down" [ref=e41]:
+                - img [ref=e42]
+              - button "Remove category" [ref=e44]:
+                - img [ref=e45]
+          - generic [ref=e47]:
+            - generic [ref=e48]: Description
+            - textbox "What does this category assess?" [ref=e49]: Correctness and completeness of code
+          - button "Scoring Levels (defined)" [ref=e50]:
+            - img [ref=e51]
+            - text: Scoring Levels (defined)
+        - generic [ref=e53]:
+          - generic [ref=e54]:
+            - generic [ref=e55]:
+              - generic [ref=e56]:
+                - generic [ref=e57]: Category Name
+                - textbox "e.g. Technical Execution" [ref=e58]: Analysis Quality
+              - generic [ref=e59]:
+                - generic [ref=e60]:
+                  - text: Points
+                  - generic [ref=e61]: (35%)
+                - spinbutton [ref=e62]: "35"
+            - generic [ref=e63]:
+              - button "Move up" [ref=e64]:
+                - img [ref=e65]
+              - button "Move down" [ref=e67]:
+                - img [ref=e68]
+              - button "Remove category" [ref=e70]:
+                - img [ref=e71]
+          - generic [ref=e73]:
+            - generic [ref=e74]: Description
+            - textbox "What does this category assess?" [ref=e75]: Quality of data analysis and interpretation
+          - button "Scoring Levels (defined)" [ref=e76]:
+            - img [ref=e77]
+            - text: Scoring Levels (defined)
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - generic [ref=e82]:
+                - generic [ref=e83]: Category Name
+                - textbox "e.g. Technical Execution" [ref=e84]: Presentation
+              - generic [ref=e85]:
+                - generic [ref=e86]:
+                  - text: Points
+                  - generic [ref=e87]: (25%)
+                - spinbutton [ref=e88]: "25"
+            - generic [ref=e89]:
+              - button "Move up" [ref=e90]:
+                - img [ref=e91]
+              - button "Move down" [ref=e93]:
+                - img [ref=e94]
+              - button "Remove category" [ref=e96]:
+                - img [ref=e97]
+          - generic [ref=e99]:
+            - generic [ref=e100]: Description
+            - textbox "What does this category assess?" [ref=e101]: Code organization, comments, and documentation
+          - button "Scoring Levels (defined)" [ref=e102]:
+            - img [ref=e103]
+            - text: Scoring Levels (defined)
+        - generic [ref=e105]:
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - generic [ref=e108]:
+                - generic [ref=e109]: Category Name
+                - textbox "e.g. Technical Execution" [ref=e110]
+              - generic [ref=e111]:
+                - generic [ref=e112]:
+                  - text: Points
+                  - generic [ref=e113]: (0%)
+                - spinbutton [ref=e114]
+            - generic [ref=e115]:
+              - button "Move up" [ref=e116]:
+                - img [ref=e117]
+              - button "Move down" [disabled] [ref=e119]:
+                - img [ref=e120]
+              - button "Remove category" [ref=e122]:
+                - img [ref=e123]
+          - generic [ref=e125]:
+            - generic [ref=e126]: Description
+            - textbox "What does this category assess?" [ref=e127]
+          - button "Scoring Levels (optional)" [ref=e128]:
+            - img [ref=e129]
+            - text: Scoring Levels (optional)
+      - button "+ Add Category" [active] [ref=e131]
+      - generic [ref=e132]:
+        - button "Save Rubric" [ref=e133]
+        - button "Save & Generate Prompts" [ref=e134]
+        - button "Cancel" [ref=e135]
+```

@@ -398,21 +398,23 @@ class BusinessAnalyticsGraderV2:
         
         return "\n".join(summary_lines)
     
-    def grade_submission(self, 
+    def grade_submission(self,
                         student_code: str,
                         student_markdown: str,
                         template_code: str = "",
                         solution_code: str = "",
                         assignment_info: Dict = None,
                         notebook_path: str = None,
-                        preprocessing_info: Dict = None) -> Dict[str, Any]:
+                        preprocessing_info: Dict = None,
+                        custom_prompts: Dict[str, str] = None) -> Dict[str, Any]:
         """
         Grade submission using 4-layer validation + AI analysis
         Returns structured feedback in the standard format
         """
         
+        self._custom_prompts = custom_prompts or {}
         start_time = time.time()
-        
+
         print("🎓 Starting Enhanced Business Analytics Grading...")
         
         # Run validation (Layer 1 & 2)
@@ -506,27 +508,33 @@ class BusinessAnalyticsGraderV2:
             if reflection_comparison:
                 enhanced_context += f"\n\n{reflection_comparison}"
 
-            code_prompt = self.prompt_manager.get_combined_prompt(
-                assignment_name,
-                "code_analysis",
-                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
-                template_code=template_summary,
-                student_code=optimized_student_code,
-                solution_code=optimized_solution_code,
-                rubric_criteria=rubric_summary,
-                validation_context=enhanced_context
-            )
+            if custom_prompts and custom_prompts.get('code_analysis'):
+                code_prompt = custom_prompts['code_analysis']
+            else:
+                code_prompt = self.prompt_manager.get_combined_prompt(
+                    assignment_name,
+                    "code_analysis",
+                    assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
+                    template_code=template_summary,
+                    student_code=optimized_student_code,
+                    solution_code=optimized_solution_code,
+                    rubric_criteria=rubric_summary,
+                    validation_context=enhanced_context
+                )
 
-            feedback_prompt = self.prompt_manager.get_combined_prompt(
-                assignment_name,
-                "feedback",
-                assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
-                student_markdown=student_markdown,
-                student_code_summary=smart_code_summary,
-                rubric_criteria=rubric_summary,
-                validation_context=enhanced_context,
-                reflection_comparison=reflection_comparison
-            )
+            if custom_prompts and custom_prompts.get('feedback'):
+                feedback_prompt = custom_prompts['feedback']
+            else:
+                feedback_prompt = self.prompt_manager.get_combined_prompt(
+                    assignment_name,
+                    "feedback",
+                    assignment_title=assignment_info.get('title', 'Business Analytics Assignment'),
+                    student_markdown=student_markdown,
+                    student_code_summary=smart_code_summary,
+                    rubric_criteria=rubric_summary,
+                    validation_context=enhanced_context,
+                    reflection_comparison=reflection_comparison
+                )
 
             try:
                 result = self.vllm_client.generate_parallel_sync(code_prompt, feedback_prompt)
@@ -1060,7 +1068,10 @@ KEY RULES:
                 student_code=student_code,
                 solution_code=solution_code
             )
-        
+
+        if self._custom_prompts.get('code_analysis'):
+            prompt = self._custom_prompts['code_analysis']
+
         response = self._generate_with_ollama(self.code_model, prompt, max_tokens=3000)
         
         analysis_time = time.time() - start_time
@@ -1101,7 +1112,10 @@ KEY RULES:
                 student_markdown=student_markdown,
                 student_code_summary=smart_code_summary or student_code[:800]
             )
-        
+
+        if self._custom_prompts.get('feedback'):
+            prompt = self._custom_prompts['feedback']
+
         response = self._generate_with_ollama(self.feedback_model, prompt, max_tokens=3500)
         
         feedback_time = time.time() - start_time

@@ -1,0 +1,21 @@
+{
+  "vllm": {
+    "enabled": true,
+    "qwen_server_url": "http://vllm-qwen:8000",
+    "gptoss_server_url": "http://vllm-gptoss:8001",
+    "models": {
+      "code_analysis": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "feedback": "openai/gpt-oss-120b"
+    },
+    "timeout": 300
+  },
+  "parallax": {
+    "enabled": false
+  },
+  "batch_processing": {
+    "concurrent_enabled": true,
+    "default_batch_size": 4,
+    "max_batch_size": 8,
+    "cooling_break_seconds": 5
+  }
+}

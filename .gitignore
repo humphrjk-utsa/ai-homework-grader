@@ -187,3 +187,12 @@ config/secrets.json
 # Test artifacts
 test_outputs/
 test_reports/
+
+# Backend
+backend/dev.db
+backend/instance/
+storage/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
