@@ -2,8 +2,10 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Navigation and Auth Guards', () => {
   test('unauthenticated user redirected to /login', async ({ browser }) => {
-    // Fresh context without stored auth state
-    const context = await browser.newContext();
+    // Fresh context with explicitly empty storage state (no auth tokens)
+    const context = await browser.newContext({
+      storageState: { cookies: [], origins: [] },
+    });
     const page = await context.newPage();
 
     await page.goto('http://localhost:5173/courses');
@@ -26,7 +28,7 @@ test.describe('Navigation and Auth Guards', () => {
     await page.goto('/');
 
     // User registered as "E2E Tester"
-    await expect(page.getByText('E2E')).toBeVisible();
+    await expect(page.getByText('E2E Tester')).toBeVisible();
   });
 
   test('logout button works', async ({ page }) => {

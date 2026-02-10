@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -11,9 +12,15 @@ test.describe('Submissions', () => {
     await page.getByText('E2E Analytics').click();
     await page.getByText('E2E Homework').click();
 
-    // Upload submission using the hidden file input
-    const fileInput = page.locator('input[type="file"][multiple]');
-    await fileInput.setInputFiles(path.join(TEST_DATA, 'sample-notebook.ipynb'));
+    // Upload with Canvas-format filename so backend can identify the student.
+    // Student "Jane Smith" has canvas_id=12345 (imported via CSV in test 05).
+    const fileInput = page.locator('input[type="file"][accept]');
+    const buffer = fs.readFileSync(path.join(TEST_DATA, 'sample-notebook.ipynb'));
+    await fileInput.setInputFiles({
+      name: 'smithjane_12345_submission.ipynb',
+      mimeType: 'application/octet-stream',
+      buffer,
+    });
 
     // Wait for submission to appear in table
     await expect(page.getByText('Submissions (1)')).toBeVisible({ timeout: 10_000 });
